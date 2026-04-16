@@ -2,8 +2,30 @@
 # 🏥 Gestão-BPA-Digital
 
 ## Ecossistema Hospitalar H.M.P.C.F
+<p align="center">
+  <img src="https://img.shields.io/badge/status-production-success?style=for-the-badge">
+</p>
 
+<p align="center">
+  <b>Core & Backend</b><br>
+  <img src="https://img.shields.io/badge/python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white">
+  <img src="https://img.shields.io/badge/framework-flask-black?style=for-the-badge&logo=flask">
+  <img src="https://img.shields.io/badge/database-sqlite-003B57?style=for-the-badge&logo=sqlite&logoColor=white">
+</p>
 
+<p align="center">
+  <b>Dados & Automação</b><br>
+  <img src="https://img.shields.io/badge/RPA-PyAutoGUI-red?style=for-the-badge">
+  <img src="https://img.shields.io/badge/cloud-Google_Sheets-34A853?style=for-the-badge&logo=googlesheets&logoColor=white">
+  <img src="https://img.shields.io/badge/data--science-pandas-150458?style=for-the-badge&logo=pandas&logoColor=white">
+</p>
+
+<p align="center">
+  <b>Front-end (Recepção)</b><br>
+  <img src="https://img.shields.io/badge/html-5-E34F26?style=for-the-badge&logo=html5&logoColor=white">
+  <img src="https://img.shields.io/badge/css-3-1572B6?style=for-the-badge&logo=css3&logoColor=white">
+  <img src="https://img.shields.io/badge/javascript-ES6-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black">
+</p>
 Este ecossistema foi desenvolvido para modernizar e automatizar o fluxo completo de dados do **Hospital Municipal Presidente Café Filho**. O projeto resolve o gargalo entre a recepção física e o faturamento governamental, transformando processos manuais em uma operação totalmente otimizada e digital
 
 ----------
