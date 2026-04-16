@@ -48,22 +48,8 @@ function pausarRelogio() {
 
 // GATILHO INICIAL DO SISTEMA
 // Assim que a janela inteira (window) terminar de carregar, chama o motor do relógio.
-<<<<<<< HEAD
-window.onload = function() {
-    iniciarRelogio();
-    
-    // NOVA MÁGICA: Trava a caixa para as recepcionistas não digitarem manualmente o Registro!
-    const campoRegistro = document.getElementById('db_registro');
-    if(campoRegistro) {
-        campoRegistro.setAttribute('readonly', 'true'); // Trava o teclado
-        campoRegistro.style.backgroundColor = "#e9ecef"; // Deixa fundo cinza para avisar
-        campoRegistro.placeholder = "Auto"; // Mostra que será automático
-    }
-};
-=======
 window.onload = iniciarRelogio;
 
->>>>>>> master
 
 // =========================================================================
 // 3. CÁLCULO INTELIGENTE DE IDADE (Lógica de Pediatria inclusa)
@@ -252,10 +238,6 @@ function validarFormulario() {
     const nome = document.getElementById('db_nome').value.trim();
     const cpf = document.getElementById('db_cpf').value.trim();
     const sus = document.getElementById('db_sus').value.trim();
-<<<<<<< HEAD
-    const sexoSelecionado = document.querySelector('input[name="sexo"]:checked');
-    
-=======
     const registro = document.getElementById('db_registro').value.trim(); // <-- Nova variável
     const sexoSelecionado = document.querySelector('input[name="sexo"]:checked');
     
@@ -266,7 +248,6 @@ function validarFormulario() {
         return false;
     }
 
->>>>>>> master
     if (nome.length < 3) {
         alert("⚠ O Nome do paciente é obrigatório e deve estar completo!");
         document.getElementById('db_nome').focus();
@@ -281,11 +262,7 @@ function validarFormulario() {
         alert("⚠ Por favor, marque o Sexo do paciente (M ou F)!");
         return false;
     }
-<<<<<<< HEAD
-    return true; // Se passou em tudo, libera a passagem!
-=======
     return true; 
->>>>>>> master
 }
 
 // =========================================================================
@@ -408,15 +385,9 @@ function salvarPaciente() {
     })
     .then(resposta => resposta.json()) // Transforma a resposta do banco em formato legível
     .then(data => {
-<<<<<<< HEAD
-        if(data.status === "sucesso") {
-            
-            // A GRANDE MÁGICA DO PLANTÃO: O servidor mandou o 001 gerado de volta? Injeta na tela na mesma hora!
-=======
   if(data.status === "sucesso") {
             
             // Mantém o número na tela caso a recepcionista precise conferir
->>>>>>> master
             if(data.registro_gerado) {
                 document.getElementById('db_registro').value = data.registro_gerado;
             }
@@ -426,13 +397,8 @@ function salvarPaciente() {
             botaoSalvar.style.color = "#fff";
             botaoSalvar.innerHTML = "✅ SALVO COM SUCESSO!";
             
-<<<<<<< HEAD
-            // Avisa a recepcionista e já mostra o número gerado no plantão!
-            alert(`✅ Salvo com sucesso! Número de Registro [ ${data.registro_gerado || "Auto"} ] gerado com êxito. Já pode Imprimir!`);
-=======
             // Alerta limpo e direto confirmando o número manual
             alert(`✅ Salvo com sucesso! Ficha número [ ${data.registro_gerado} ] registrada no sistema. Já pode Imprimir!`);
->>>>>>> master
         } else {
             alert("❌ Erro ao salvar no banco de dados: " + data.mensagem);
             botaoSalvar.disabled = false; // Destrava se der erro pra tentar de novo.

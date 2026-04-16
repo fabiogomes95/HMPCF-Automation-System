@@ -1,27 +1,10 @@
 # =========================================================================
 # SISTEMA DE BOLETIM DE ATENDIMENTO - HOSPITAL CAFÉ FILHO
-<<<<<<< HEAD
-# Arquivo Servidor (Backend) - Desenvolvido em Python com Flask
-=======
 # Arquivo Servidor (Backend) - Versão Final Otimizada e Didática
->>>>>>> master
 # =========================================================================
 
 import os
 import sqlite3
-<<<<<<< HEAD
-import re
-from datetime import datetime, timedelta # <--- MÁGICA DO TEMPO ADICIONADA
-from flask import Flask, render_template, request, jsonify
-
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
-app = Flask(__name__)
-DB_NAME = 'hospital.db'
-
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-=======
 import gspread
 import threading
 import time
@@ -57,7 +40,6 @@ def init_db():
     cursor = conn.cursor()
     
     # Tabela de Pacientes (Dados que não mudam com frequência)
->>>>>>> master
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS pacientes (
             cpf TEXT PRIMARY KEY, sus TEXT, nome TEXT, nomeSocial TEXT, naturalidade TEXT,
@@ -66,29 +48,12 @@ def init_db():
             bairro TEXT, cidade TEXT, estado TEXT
         )
     ''')
-<<<<<<< HEAD
-=======
     
     # Tabela de Atendimentos (O registro de cada visita ao hospital)
->>>>>>> master
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS atendimentos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             cpf TEXT, sus TEXT, data_atendimento TEXT, hora_atendimento TEXT,
-<<<<<<< HEAD
-            registro TEXT, procedencia TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-def limpar_id(v):
-    return re.sub(r'\D', '', str(v))
-
-@app.route('/')
-def index():
-    init_db()
-=======
             registro TEXT, procedencia TEXT, 
             enviado_nuvem INTEGER DEFAULT 0 
         )
@@ -227,119 +192,10 @@ def gari_da_nuvem():
 
 @app.route('/')
 def index():
->>>>>>> master
     return render_template('index.html')
 
 @app.route('/buscar/<identificador>', methods=['GET'])
 def buscar_paciente(identificador):
-<<<<<<< HEAD
-    id_busca = limpar_id(identificador)
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM pacientes WHERE replace(replace(cpf,'.',''),'-','')=? OR replace(sus,' ','')=?", (id_busca, id_busca))
-    row = cursor.fetchone()
-    conn.close()
-    if row:
-        return jsonify(dict(row))
-    return jsonify({"erro": "nao encontrado"}), 404
-
-@app.route('/salvar', methods=['POST'])
-def salvar():
-    dados = request.json
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    
-    try:
-        # 1. SALVA A FICHA DO PACIENTE
-        cursor.execute('''
-            INSERT OR REPLACE INTO pacientes (
-                cpf, sus, nome, nomeSocial, naturalidade, dn, idade, sexo, civil, 
-                raca, ocupacao, mae, responsavel, tel, endereco, numero, bairro, 
-                cidade, estado
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        ''', (
-            dados.get('cpf', ''), dados.get('sus', ''), dados.get('nome', ''), 
-            dados.get('nomeSocial', ''), dados.get('naturalidade', ''), dados.get('dn', ''), 
-            dados.get('idade', ''), dados.get('sexo', ''), dados.get('civil', ''), 
-            dados.get('raca', ''), dados.get('ocupacao', ''), dados.get('mae', ''),
-            dados.get('responsavel', ''), dados.get('tel', ''), dados.get('endereco', ''), 
-            dados.get('numero', ''), dados.get('bairro', ''), dados.get('cidade', ''), 
-            dados.get('estado', '')
-        ))
-
-        # 2. GERAÇÃO AUTOMÁTICA DO REGISTRO DE PLANTÃO (O ZERADOR DAS 07:00)
-        data_atend = dados.get('data_atendimento', '')
-        hora_atend = dados.get('hora_atendimento', '')
-        cpf_paciente = dados.get('cpf', '')
-        
-        if data_atend and hora_atend:
-            # Trava para impedir duplicação caso cliquem 2x seguidas
-            cursor.execute('''
-                SELECT id, registro FROM atendimentos 
-                WHERE cpf = ? AND data_atendimento = ? AND hora_atendimento = ?
-            ''', (cpf_paciente, data_atend, hora_atend))
-            resultado = cursor.fetchone()
-            
-            if not resultado:
-                # O CÁLCULO DE PLANTÃO (12 EM 12 HORAS - DIURNO E NOTURNO)
-                dt_obj = datetime.strptime(f"{data_atend} {hora_atend}", "%Y-%m-%d %H:%M")
-                hora = dt_obj.hour
-                
-                # ☀️ PLANTÃO DIURNO: das 07:00 às 18:59
-                if 7 <= hora < 19:
-                    dia_atual = dt_obj.strftime("%Y-%m-%d")
-                    cursor.execute('''
-                        SELECT COUNT(*) FROM atendimentos 
-                        WHERE data_atendimento = ? 
-                          AND hora_atendimento >= '07:00' 
-                          AND hora_atendimento <= '18:59'
-                    ''', (dia_atual,))
-                    
-                # 🌙 PLANTÃO NOTURNO: das 19:00 às 06:59 do dia seguinte
-                else:
-                    if hora >= 19:
-                        dia_inicio = dt_obj.strftime("%Y-%m-%d")
-                        dia_seguinte = (dt_obj + timedelta(days=1)).strftime("%Y-%m-%d")
-                    else: # hora < 7 (madrugada)
-                        dia_inicio = (dt_obj - timedelta(days=1)).strftime("%Y-%m-%d")
-                        dia_seguinte = dt_obj.strftime("%Y-%m-%d")
-                        
-                    cursor.execute('''
-                        SELECT COUNT(*) FROM atendimentos 
-                        WHERE (data_atendimento = ? AND hora_atendimento >= '19:00')
-                           OR (data_atendimento = ? AND hora_atendimento < '07:00')
-                    ''', (dia_inicio, dia_seguinte))
-                
-                # A sua correção de mestre aplicada aqui:
-                resultado_count = cursor.fetchone()
-                total_plantao = resultado_count if resultado_count else 0
-                
-                # Soma 1 ao total e coloca zeros na frente (.zfill)
-                novo_registro = str(total_plantao[0] + 1).zfill(3)
-                
-                # Salva o atendimento com o número novo gerado!
-                cursor.execute('''
-                    INSERT INTO atendimentos (cpf, sus, data_atendimento, hora_atendimento, registro, procedencia)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (
-                    cpf_paciente, dados.get('sus', ''), data_atend, hora_atend,
-                    novo_registro, dados.get('procedencia', '')
-                ))
-                
-                conn.commit()
-                return jsonify({"status": "sucesso", "registro_gerado": novo_registro})
-                
-            else:
-                # Se clilou 2x sem querer, não soma um novo registro, só devolve o que já tinha criado
-                return jsonify({"status": "sucesso", "registro_gerado": resultado[1]})
-
-        conn.commit()
-        return jsonify({"status": "sucesso"})
-        
-    except Exception as e:
-        print(f"ERRO AO SALVAR: {e}")
-=======
     """
     Busca paciente por CPF ou SUS ignorando qualquer formatação.
     """
@@ -405,17 +261,10 @@ def salvar():
         return jsonify({"status": "sucesso"})
         
     except Exception as e:
->>>>>>> master
         return jsonify({"status": "erro", "mensagem": str(e)}), 500
     finally:
         conn.close()
 
-<<<<<<< HEAD
-if __name__ == '__main__':
-    init_db()
-    # Permitindo que o PC 2 acesse o servidor
-    app.run(host='0.0.0.0', port=5000, debug=True)
-=======
 # =========================================================================
 # 🎬 LIGANDO OS MOTORES
 # =========================================================================
@@ -427,4 +276,3 @@ if __name__ == '__main__':
     
     # Inicia o servidor Flask
     app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
->>>>>>> master
