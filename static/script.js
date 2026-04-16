@@ -75,8 +75,12 @@ function calcularIdade() {
     let resultadoFinal;
     
     if (idade > 0) {
-        // Se a idade for 1 ano ou mais, o prato está pronto.
-        resultadoFinal = idade + " Anos"; 
+        // CORREÇÃO DO PLURAL: Se for 1, escreve "Ano", senão escreve "Anos"
+        if (idade === 1) {
+            resultadoFinal = "1 Ano";
+        } else {
+            resultadoFinal = idade + " Anos"; 
+        }
     } else {
         // SENÃO (Se idade for 0), entramos na lógica de bebês.
         // Multiplicamos a diferença de anos por 12 para cobrir casos da virada de ano.
@@ -89,14 +93,14 @@ function calcularIdade() {
         
         if (meses > 0) {
             // Se o bebê já tem pelo menos 1 mês
-            resultadoFinal = meses + " Meses"; 
+            resultadoFinal = meses === 1 ? "1 Mês" : meses + " Meses";
         } else {
             // SENÃO (Se meses também for 0), é um recém-nascido. Calculamos em dias.
             // O JS calcula a diferença de datas em milissegundos.
             const diferencaMilissegundos = hoje.getTime() - nasc.getTime();
             // O 'Math.floor' arredonda o número para baixo.
             const dias = Math.floor(diferencaMilissegundos / (1000 * 60 * 60 * 24));
-            resultadoFinal = dias + " Dias";
+            resultadoFinal = dias === 1 ? "1 Dia" : dias + " Dias";
         }
     }
     // 5. Injeta o prato pronto na caixa HTML de Idade.
@@ -190,26 +194,60 @@ function validarCpfFinal(c) {
 
 function validarSusFinal(c) {
     let sus = c.value.replace(/\D/g, "");
+    
     if (sus === "") {
         c.classList.remove("invalid-input");
         return true;
     }
-    if (sus.length !== 15) {
+    
+    // Trava 1: Tamanho e número inicial (Só existe SUS começando com 1, 2, 7, 8 e 9)
+    if (sus.length !== 15 || !['1', '2', '7', '8', '9'].includes(sus.charAt(0))) {
         c.classList.add("invalid-input");
         return false;
     }
-    
-    // Cálculo de verificação do Ministério da Saúde (Módulo 11)
-    let soma = 0;
-    for (let i = 0; i < 15; i++) {
-        soma += parseInt(sus.charAt(i)) * (15 - i);
+
+    let valido = false;
+
+    // MATEMÁTICA 1: Cartões Definitivos (Começam com 7, 8 ou 9)
+    if (['7', '8', '9'].includes(sus.charAt(0))) {
+        let soma = 0;
+        for (let i = 0; i < 15; i++) {
+            soma += parseInt(sus.charAt(i)) * (15 - i);
+        }
+        valido = (soma % 11 === 0);
+    } 
+    // MATEMÁTICA 2: Cartões Provisórios (Começam com 1 ou 2)
+    else {
+        let pis = sus.substring(0, 11);
+        let soma = 0;
+        for (let i = 0; i < 11; i++) {
+            soma += parseInt(pis.charAt(i)) * (15 - i);
+        }
+        
+        let resto = soma % 11;
+        let dv = 11 - resto;
+        if (dv === 11) dv = 0;
+
+        let resultado;
+        if (dv === 10) {
+            soma += 2;
+            resto = soma % 11;
+            dv = 11 - resto;
+            resultado = pis + "001" + dv;
+        } else {
+            resultado = pis + "000" + dv;
+        }
+        
+        valido = (sus === resultado);
     }
-    if (soma % 11 !== 0) {
+
+    // O Veredito
+    if (!valido) {
         c.classList.add("invalid-input");
         return false;
     }
-    
-    // Se passou, limpa o erro e formata com espaços visuais.
+
+    // Se passou, limpa o vermelho de erro e coloca os espaços bonitinhos
     c.classList.remove("invalid-input");
     c.value = sus.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, "$1 $2 $3 $4");
     return true;
