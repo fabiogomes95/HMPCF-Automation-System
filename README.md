@@ -26,6 +26,7 @@
   <img src="https://img.shields.io/badge/css-3-1572B6?style=for-the-badge&logo=css3&logoColor=white">
   <img src="https://img.shields.io/badge/javascript-ES6-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black">
 </p>
+
 Este ecossistema foi desenvolvido para modernizar e automatizar o fluxo completo de dados do **Hospital Municipal Presidente Café Filho**. O projeto resolve o gargalo entre a recepção física e o faturamento governamental, transformando processos manuais em uma operação totalmente otimizada e digital
 
 ----------
@@ -100,6 +101,7 @@ A recepção atua como um **filtro inteligente** (Gatekeeper) para garantir a sa
 
 ## 📂 Arquitetura do Sistema
 
+```text
 📦HMPCF-Automation-System
  ┣ 📂 analise      # Business Intelligence: Dashboards e relatórios automáticos.
  ┣ 📂 automacao    # Módulo RPA: O "robô" digitador e sua fila de dados (.csv).
@@ -109,7 +111,7 @@ A recepção atua como um **filtro inteligente** (Gatekeeper) para garantir a sa
  ┣ 📜 app.py       # Core: Servidor central e o motor do "Gari da Nuvem".
  ┣ 📜 utils.py     # Cérebro: Motor de validações matemáticas e limpeza de dados.
  ┗ 📜 hospital.db  # Persistência: Banco de dados local SQLite.
-
+```
 ----------
 
 ## 🚀 Instalação e Execução
