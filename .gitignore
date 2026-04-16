@@ -21,6 +21,7 @@ credentials.json
 hospital.db
 *.db
 *.sqlite3
+*.txt
 
 <<<<<<< HEAD
 # Pastas de Backup e Dados Originais
