@@ -96,6 +96,7 @@ for i, lote in enumerate(lotes):
         pyautogui.write('2')           # Código do caráter (Ex: Eletivo/Urgência)
         time.sleep(0.3)
         
+        pyautogui.press(['tab', 'tab'])
         pyautogui.press('enter')       # Salva o registro na folha
         print(f"✅ Digitado: {p}")
         time.sleep(1.2)                # Espera o sistema "respirar" para o próximo
