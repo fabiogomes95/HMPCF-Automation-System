@@ -1,22 +1,25 @@
 # ==============================================================================
 # 🤖 ROBÔ BPA: EXECUTOR RPA (MODO DATASUS NATIVO)
 # ==============================================================================
-# OBJETIVO: 
+# OBJETIVO:
 # Ler o arquivo diário da recepção (pacientes.csv), extrair o SUS de forma blindada,
 # validar se o SUS passa na regra matemática e CRUZAR com o arquivo oficial
 # do Ministério da Saúde (ExpPaciente.txt). Só digita se existir lá e a data for sã.
 # ==============================================================================
 
-import pyautogui    # Biblioteca para automação de mouse e teclado
-import time         # Biblioteca para pausas estratégicas (delay)
-import os           # Módulo do sistema operacional para lidar com caminhos de arquivos
-import sys          # Módulo para mexer nas variáveis do sistema Python
-import re           # Módulo de Expressões Regulares (Regex) para achar padrões de números
-from datetime import datetime # Módulo de tempo para pegar o ano atual e gerar o log de auditoria
+import pyautogui    # Biblioteca Mestra de RPA para automação de mouse e teclado.
+import time         # Biblioteca para pausas estratégicas (delay) entre cliques.
+import os           # Módulo para lidar com caminhos de arquivos.
+import sys          # Módulo para mexer nas variáveis de ambiente do Python.
+import re           # Módulo de Expressões Regulares (Regex) para achar padrões.
+from datetime import datetime # Módulo para pegar o ano atual e gerar o log.
 
-# --- CONFIGURAÇÃO E DEPENDÊNCIAS ---
-# Adiciona a pasta superior para podermos usar as suas ferramentas do utils.py
+# ==============================================================================
+# 1. CONFIGURAÇÃO E DEPENDÊNCIAS
+# ==============================================================================
+# Adiciona a pasta superior para podermos usar as ferramentas de validação do utils.py
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 try:
     from utils import valida_cns, apenas_numeros
 except ImportError:
@@ -29,10 +32,9 @@ print("==================================================\n")
 
 # --- COLETA DE DADOS INICIAIS (MENU DO ROBÔ) ---
 data_atend = input("👉 1. Digite a DATA do atendimento (Ex: 15042026): ").strip()
-
 print("\n👉 2. Escolha o PROCEDIMENTO:")
 print("   [1] Médico     (0301060029)")
-print("   [2] Enfermeiro (0301010048)")
+print("   [3] Enfermeiro (0301010048)")
 opcao_proc = input("=> Digite a opção (1 ou 2): ").strip()
 
 if opcao_proc == '1':
@@ -61,7 +63,7 @@ if not os.path.exists(arq_datasus):
     print(f"\n❌ ERRO: A base do SUS '{arq_datasus}' não foi encontrada.")
     exit()
 
-# Listas que vão separar quem vai ser digitado de quem vai para o relatório de erros
+# Listas de separação para o relatório de erros
 pacientes_validados = []
 rejeitados = []
 ano_atual = datetime.now().year
@@ -78,26 +80,25 @@ with open(arq_datasus, 'r', encoding='latin-1', errors='ignore') as f_sus:
     for linha in f_sus:
         # A linha do DATASUS é fixa. Se for menor que 53, é lixo ou final de arquivo.
         if len(linha) >= 53:
-            # Posições baseadas no layout do BPA: 
-            # SUS começa no índice 0 e vai até o 15 (exclusivo).
+            # SUS começa no índice 0 e vai até o 15.
             sus_ds = linha[0:15].strip()
-            # A data começa após o nome. Posição 45 até a 53, no formato AAAAMMDD.
+            # A data começa após o nome. Posição 45 até a 53 (Formato AAAAMMDD).
             data_nasc_ds = linha[45:53].strip()
             
-            # Só guarda se o número extraído realmente tiver 15 caracteres
+            # Só guarda no dicionário se o número tiver 15 caracteres exatos
             if len(sus_ds) == 15:
                 base_oficial[sus_ds] = data_nasc_ds
-
+                
 print(f"✅ Base carregada! {len(base_oficial)} pacientes encontrados no ExpPaciente.txt.")
 print(f"🔍 Cruzando arquivo diário com a base do DATASUS...\n")
 
 # ==============================================================================
-# FASE 2: LER A PLANILHA DO DIA E APLICAR AS TRAVAS DE SEGURANÇA
+# FASE 2: LER A PLANILHA DO DIA E APLICAR AS TRAVAS DE SEGURANÇA (FILTRO TRIPLO)
 # ==============================================================================
 with open(arq_diario, 'r', encoding='utf-8', errors='ignore') as f_diario:
     linhas_hoje = f_diario.readlines()
-
-    # Enumera as linhas para podermos dizer no arquivo de log onde exatamente está o erro
+    
+    # Enumera as linhas para informar no log onde exatamente está o erro
     for num_linha, linha_texto in enumerate(linhas_hoje, start=1):
         
         # --- BLINDAGEM DO SUS ---
@@ -109,7 +110,7 @@ with open(arq_diario, 'r', encoding='utf-8', errors='ignore') as f_diario:
         match_sus = re.search(r'\b\d{15}\b', linha_limpa)
         
         if match_sus:
-            sus_limpo = match_sus.group(0) 
+            sus_limpo = match_sus.group(0)
         else:
             # Fallback antigo: limpa a linha toda e vê se sobram só 15 números
             limpo_bruto = apenas_numeros(linha_texto)
@@ -118,54 +119,52 @@ with open(arq_diario, 'r', encoding='utf-8', errors='ignore') as f_diario:
             else:
                 continue # Linha vazia ou ilegível, pula.
 
-        # --- TRAVA 1: VALIDAÇÃO MATEMÁTICA OFICIAL ---
+        # --- TRAVA 1: VALIDAÇÃO MATEMÁTICA OFICIAL (Módulo 11) ---
         if not valida_cns(sus_limpo):
             rejeitados.append(f"Linha {num_linha:03d} | SUS: {sus_limpo} -> CNS INVÁLIDO (Erro Matemático/Digitação)")
             continue
-
+            
         # --- TRAVA 2: CRUZAMENTO COM O EXPPACIENTE.TXT ---
         if sus_limpo in base_oficial:
-            # O SUS existe no Datasus! Vamos testar a data de nascimento.
+            # O SUS existe no Datasus! Vamos testar a sanidade da data de nascimento.
             data_nasc = base_oficial[sus_limpo]
             
-            # A data vem no formato AAAAMMDD (Ex: 20070320)
             if len(data_nasc) == 8:
                 try:
-                    # Pega apenas os 4 primeiros dígitos que representam o ano
-                    ano = int(data_nasc[0:4]) 
+                    ano = int(data_nasc[0:4]) # Pega apenas os 4 primeiros dígitos (O Ano)
                     
-                    # Trava de Segurança Humana (Nada antes de 1900 ou no futuro)
+                    # Trava 3: Segurança Humana (Bloqueia datas bizarras antes de digitar)
                     if ano < 1900 or ano > ano_atual:
                         rejeitados.append(f"Linha {num_linha:03d} | SUS: {sus_limpo} -> DATA EXTRAPOLADA NO BPA ({data_nasc})")
                         continue
                 except ValueError:
                     rejeitados.append(f"Linha {num_linha:03d} | SUS: {sus_limpo} -> DATA CORROMPIDA NO BPA ({data_nasc})")
                     continue
-            
-            # Sobreviveu a todas as travas. Está apto para o robô!
+                    
+            # Se sobreviveu a todas as travas, está apto para o robô!
             pacientes_validados.append(sus_limpo)
         else:
-            # O SUS passou no cálculo, mas não está no seu arquivo do BPA
+            # O SUS passou no cálculo matemático, mas não está registrado na base do Ministério
             rejeitados.append(f"Linha {num_linha:03d} | SUS: {sus_limpo} -> NÃO ENCONTRADO NO ExpPaciente.txt")
 
 # ==============================================================================
-# FASE 3: RELATÓRIO DE AUDITORIA (LOG)
+# FASE 3: RELATÓRIO DE AUDITORIA (LOG DE REJEITADOS)
 # ==============================================================================
 if rejeitados:
     arquivo_log = "historico_rejeitados.txt"
     data_hora = datetime.now().strftime("%d/%m/%Y %H:%M")
     
-    # 'a' = Append. Adiciona os erros novos sem apagar os erros dos dias anteriores.
+    # Modo 'a' = Append. Adiciona os erros novos sem apagar o histórico de dias anteriores.
     with open(arquivo_log, "a", encoding='utf-8') as f_log:
         f_log.write(f"\n[{data_hora}] ==================================================\n")
         f_log.write(f"PROFISSIONAL: {nome_profissional}\n")
         f_log.write(f"DATA ATEND. : {data_atend} | PROCEDIMENTO: {procedimento}\n")
-        f_log.write("----------------------------------------------------------------\n")
-        for r in rejeitados: 
+        f_log.write("-" * 80 + "\n")
+        for r in rejeitados:
             f_log.write(r + "\n")
             
-    print(f"⚠️ {len(rejeitados)} problemas encontrados. Veja o log acumulado em '{arquivo_log}'.")
-
+    print(f"⚠ {len(rejeitados)} problemas encontrados. Veja o log acumulado em '{arquivo_log}'.")
+    
 if not pacientes_validados:
     print("\n🛑 Nenhum paciente apto para digitação. O robô parou.")
     exit()
@@ -173,33 +172,38 @@ if not pacientes_validados:
 # ==============================================================================
 # FASE 4: AUTOMAÇÃO RPA (O ROBÔ EM AÇÃO)
 # ==============================================================================
-# Quebra a lista gigante em lotes de 99 para respeitar o limite da folha do BPA
+# List Comprehension avançada: Quebra a lista gigante em lotes exatos de 99 
+# pacientes para respeitar o limite máximo da "folha" dentro do sistema BPA.
 lotes = [pacientes_validados[i:i + 99] for i in range(0, len(pacientes_validados), 99)]
+
 print(f"✅ {len(pacientes_validados)} pacientes confirmados no DATASUS e prontos.")
 
 for i, lote in enumerate(lotes):
     print(f"\n📦 LOTE {i + 1}/{len(lotes)}")
     input("=> Vá ao BPA, abra a folha e aperte ENTER...")
-    time.sleep(5) # 5 segundos de tolerância para você clicar na tela do BPA
+    
+    time.sleep(5) # 5 segundos de tolerância para você clicar na tela do BPA e tirar a mão do mouse
     
     for p in lote:
-        pyautogui.write(p)      # Digita o Cartão SUS
-        pyautogui.press('f7')   # Comando do BPA para buscar
-        time.sleep(1.0)         # Tempo pro BPA pensar
+        pyautogui.write(p)       # Simula o teclado digitando o Cartão SUS
+        pyautogui.press('f7')    # Comando de atalho do BPA para executar a busca
+        time.sleep(1.0)          # Delay obrigatório para o BPA pensar e não travar
         
         pyautogui.write(data_atend)
         pyautogui.press('tab')
+        
         pyautogui.write(procedimento)
-        pyautogui.press('1')    # CBO/Quantidade
+        pyautogui.press('1')     # Quantidade
         time.sleep(0.5)
         
-        pyautogui.press(['tab', 'tab', 'tab'])
-        pyautogui.write('2')    # Idade/Finalizador
+        pyautogui.press(['tab', 'tab', 'tab']) # Pula campos irrelevantes
+        pyautogui.write('2')     # Finalizador
         time.sleep(0.3)
         
         pyautogui.press(['tab', 'tab'])
-        pyautogui.press('enter') # Confirma e salva a linha
+        pyautogui.press('enter') # Confirma e salva a linha preenchida
+        
         print(f"✅ Digitado: {p}")
-        time.sleep(1.2) # Respiro pro BPA não engasgar
+        time.sleep(1.2)          # Respiro para o sistema salvar antes de reiniciar o loop
 
 print("\n🎯 MISSÃO CUMPRIDA!")

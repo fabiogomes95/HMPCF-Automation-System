@@ -1,14 +1,26 @@
-import sqlite3
-import os
+# ==============================================================================
+# FERRAMENTA DE MANUTENÇÃO - ATUALIZAÇÃO EM MASSA (UPDATE)
+# ==============================================================================
+# OBJETIVO:
+# Este script varre o banco de dados e corrige um erro comum na recepção:
+# O esquecimento do preenchimento do sexo. Ele atualiza automaticamente
+# registros nulos ou inválidos para 'I' (Indefinido), garantindo que
+# o sistema do Governo (BPA) não rejeite a ficha no faturamento.
+# ==============================================================================
+
+import sqlite3  # Para interagir com o banco de dados SQL.
+import os       # Para navegar pelas pastas do sistema.
 
 print("==================================================")
-print("🛠️ SANEAMENTO DE BANCO: ATUALIZAÇÃO DE SEXO PARA 'I'")
+print("🛠 SANEAMENTO DE BANCO: ATUALIZAÇÃO DE SEXO PARA 'I'")
 print("==================================================\n")
 
-# Caminho apontando para o seu banco de dados
+# ==============================================================================
+# 1. LOCALIZAÇÃO DINÂMICA DO BANCO DE DADOS
+# ==============================================================================
+# Primeiro tenta achar o banco na mesma pasta. Se não achar, volta uma pasta ('..')
 caminho_db = os.path.join(os.path.dirname(__file__), 'hospital.db')
 
-# Tenta achar o banco um nível acima caso o script esteja na pasta de automação
 if not os.path.exists(caminho_db):
     caminho_db = os.path.join(os.path.dirname(__file__), '..', 'hospital.db')
 
@@ -17,25 +29,34 @@ if not os.path.exists(caminho_db):
     exit()
 
 try:
+    # ==========================================================================
+    # 2. CONEXÃO E EXECUÇÃO DA QUERY (SQL CIRÚRGICO)
+    # ==========================================================================
     conn = sqlite3.connect(caminho_db)
     cursor = conn.cursor()
-
+    
     print("🔍 Buscando registros sem sexo definido ou diferente de M/F...")
     
-    # Atualiza para 'I' qualquer registro que seja nulo, vazio ou diferente de M, F e I
+    # A lógica SQL: O comando TRIM remove espaços vazios acidentais e o UPPER
+    # transforma tudo em maiúsculo. Se o resultado não for M, F ou I, ou se
+    # for vazio (NULL), ele força a letra 'I'.
     cursor.execute("""
         UPDATE pacientes 
         SET sexo = 'I' 
         WHERE sexo IS NULL 
-           OR TRIM(UPPER(sexo)) NOT IN ('M', 'F', 'I')
+           OR TRIM(UPPER(sexo)) NOT IN ('M', 'F', 'I') 
            OR TRIM(sexo) = ''
     """)
     
-    linhas_afetadas = cursor.rowcount
-    conn.commit()
+    # rowcount nos diz exatamente quantas linhas foram alteradas por esse UPDATE
+    linhas_afetadas = cursor.rowcount 
+    
+    # O commit é quem realmente salva a alteração física no arquivo hospital.db
+    conn.commit() 
     
     print(f"✅ SUCESSO: {linhas_afetadas} pacientes atualizados para 'I' (Indefinido).")
-    
     conn.close()
+
 except sqlite3.Error as e:
+    # Tratamento de erro elegante para o banco não travar o sistema
     print(f"❌ ERRO NO BANCO DE DADOS: {e}")
