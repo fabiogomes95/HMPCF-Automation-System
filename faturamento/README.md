@@ -1,39 +1,34 @@
-# ⚙️ Módulo BPA - Inteligência e Exportação de Dados
+# 💰 Módulo de Faturamento e Integração BPA
 
-Este módulo é o centro de processamento de dados do **Hospital M. Pres. Café Filho**, responsável por garantir que as informações dos pacientes estejam limpas, validadas e prontas para o faturamento do SUS.
+Este diretório contém os scripts responsáveis pela etapa final do Ecossistema H.M.P.C.F: a comunicação com o Ministério da Saúde. 
 
-## 📂 Estrutura da Pasta
+Eles pegam todos os atendimentos salvos, aplicam rigorosas regras de validação (para evitar rejeição e perda de receita) e geram lotes, planilhas e arquivos posicionais prontos para envio ao Governo.
 
-A pasta foi simplificada para conter apenas os dois scripts essenciais para a operação diária e o fechamento mensal:
+## ⚙️ Scripts e Funcionalidades
 
-### 1. `conciliar_manual_bpa.py` (O Faxineiro e Auditor)
-Este é o script de **Sincronização e Auditoria**. Ele deve ser usado sempre que houver novas planilhas manuais vindas da recepção.
-* **O que faz:** Lê planilhas em formato CSV e sincroniza os dados com o banco de dados `hospital.db`.
-* **Inteligência:** Identifica automaticamente o nome, CPF e SUS, ignorando pontos, traços e espaços para evitar duplicidade.
-* **Segurança:** Utiliza a lógica `INSERT OR REPLACE`, garantindo que CPFs repetidos não travem o sistema e que a informação mais recente seja preservada.
-* **Relatórios:** Gera dois arquivos de log: `PROCESSADOS_...txt` (sucessos) e `ERROS_SINCRONIZACAO_...txt` (pacientes com dados inválidos que precisam de correção).
+### 1. `gerador_arquivo_bpa.py` (O Motor de Exportação)
+* **Objetivo:** Puxar os cadastros do banco local e transformá-los no exato arquivo `TXT` que o software governamental do BPA exige.
+* **Como funciona:** Varre o banco de dados (por mês ou geral) e formata os dados em um **Layout Posicional** rigoroso (ex: o Nome sempre tem 30 caracteres preenchidos com espaços; o Sexo sempre na mesma posição).
+* **Prevenção de Glosa:** Durante a exportação, aplica a trava de validação do Cartão SUS. Se o SUS for falso, o paciente não entra no arquivo final e o sistema gera um `log_erros.txt` para aviso à gestão.
 
-### 2. `exportar_bpa.py` (O Gerador de Faturamento)
-Este é o motor de **Exportação Definitiva**. Ele é utilizado para gerar o arquivo que será enviado ao sistema do Ministério da Saúde.
-* **O que faz:** Extrai os dados validados diretamente do banco de dados SQLite e os converte para o formato `.txt` posicional.
-* **Validação:** Executa um algoritmo de Módulo 11 para testar o CNS de cada paciente antes da exportação.
-* **Engenharia Posicional:** Monta as linhas de texto seguindo o layout exato exigido pelo sistema BPA (campos com tamanhos fixos).
+### 2. `importador_recepcao.py` (O Importador Inteligente em Lote)
+* **Objetivo:** Processar e centralizar lotes de arquivos `.csv` gerados diariamente pela recepção.
+* **Smart Update (Atualização Cirúrgica):** Ele não apenas insere pacientes novos. Se o paciente já existir no banco, ele lê campo a campo. Se o banco estiver sem CPF, mas a recepção conseguiu o CPF hoje, o script atualiza apenas esse campo, enriquecendo o banco de dados sem apagar o histórico.
+
+### 3. `sincronizar_contingencia.py` (O Salva-Vidas de Planilhas Manuais)
+* **Objetivo:** Sincronizar dados quando a recepção trabalha offline ou anota em planilhas secundárias.
+* **Como funciona:** Utiliza *Expressões Regulares (Regex)* como "caçadores de dados". O script procura onde está o nome, o CPF e o SUS independentemente da coluna em que a recepcionista digitou, limpando toda a sujeira de formatação.
+* **Auditoria:** Gera dois relatórios físicos no final: `PROCESSADOS` (quem deu certo) e `ERROS` (quem ficou de fora e o motivo exato).
+
+## 🛠️ Tecnologias Utilizadas
+* **Tkinter:** Criação de janelas flutuantes e exploradores de arquivos para uso simplificado pela equipe administrativa.
+* **SQLite3:** Leitura em massa dos dados utilizando a cláusula `JOIN` para unir os atendimentos ao cadastro.
+* **Regex (re):** Algoritmos de caça a padrões para identificar CPFs e Cartões SUS perdidos no meio de textos sujos.
+
+## 🚀 Como Utilizar
+1. Execute o script desejado com dois cliques ou pelo terminal.
+2. Interaja com a janela suspensa (Pop-up) para escolher o mês desejado ou a planilha de entrada.
+3. Aguarde o processamento. Os arquivos de saída e os relatórios de erros serão salvos automaticamente na mesma pasta de origem.
 
 ---
-
-## 🔄 Fluxo de Trabalho Sugerido
-
-1.  **Sincronização:** Assim que receber a planilha da recepção, execute o `conciliar_manual_bpa.py`.
-2.  **Auditoria:** Abra o arquivo de erros gerado. Se houver pacientes lá, corrija-os na planilha original e rode o sincronizador novamente.
-3.  **Fechamento:** Com o banco de dados atualizado e sem erros pendentes, execute o `exportar_bpa.py` para gerar o arquivo final de faturamento.
-
----
-
-## 🚀 Como Executar
-
-```bash
-# Para sincronizar e auditar planilhas:
-python conciliar_manual_bpa.py
-
-# Para gerar o arquivo .txt de faturamento:
-python exportar_bpa.py
+*Desenvolvido por **Fábio Gomes da Silva** em parceria com a IA (NotebookLM / Gemini) para o Hospital Municipal Presidente Café Filho.*

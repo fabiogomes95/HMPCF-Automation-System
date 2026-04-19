@@ -1,66 +1,47 @@
-<<<<<<< HEAD
-# Ambientes virtuais (Arquivos pesados e desnecessários)
-venv/
-.venv/
-env/
-
-# BANCO DE DADOS (CRÍTICO: Nunca subir o hospital.db)
-=======
-# ==================================================
+# ==============================================================================
 # SEGURANÇA E CREDENCIAIS (EXTREMAMENTE CRÍTICO)
-# ==================================================
+# ==============================================================================
+# Impede que senhas, tokens e a chave do Google Cloud subam para o GitHub
 credentials.json
 .env
 *.pem
 *.key
 
-# ==================================================
+# ==============================================================================
 # BANCO DE DADOS (DADOS LOCAIS DO HOSPITAL)
-# ==================================================
->>>>>>> master
+# ==============================================================================
+# CRÍTICO: Nunca subir o banco local pois contém o histórico real dos pacientes
 hospital.db
 *.db
 *.sqlite3
-*.txt
 
-<<<<<<< HEAD
-# Pastas de Backup e Dados Originais
-migracao_backup/
-dados.csv
-dados.py
-
-# Arquivos gerados pelo BPA (Contêm nomes de pacientes)
-bpa/*.txt
-dados_bpa*.csv
-bpa/LOG_*.txt
-
-# Imagens de Dashboard (Para manter o repositório leve)
-*.png
-dashboard_*.png
-
-# Arquivos de sistema e cache
-__pycache__/
-*.py[cod]
-.DS_Store
-
-# Relatórios Excel gerados pelo script de análise
-*.xlsx
-Relatorio_Producao_*.xlsx
-=======
-# ==================================================
-# ARQUIVOS DE DADOS (PROTEÇÃO DE PRIVACIDADE/LGPD)
-# Não subir nomes de pacientes ou planilhas de faturamento
-# ==================================================
+# ==============================================================================
+# ARQUIVOS DE DADOS E RELATÓRIOS (PROTEÇÃO LGPD)
+# ==============================================================================
+# Impede o upload de lotes do BPA, planilhas da recepção e listas de erros
 *.csv
 *.xlsx
 *.xls
+*.txt
+!requirements.txt   # Exceção: O requirements.txt DEVE subir para o GitHub
 /automacao/*.txt
 /bpa/*.txt
 /bpa/LOG_*.txt
+Relatorio_Producao_*.xlsx
 
-# ==================================================
+# ==============================================================================
+# BACKUPS, LOGS E DASHBOARDS GERADOS
+# ==============================================================================
+# Mantém o repositório leve ignorando gráficos e backups temporários
+migracao_backup/
+dados.py
+*.log
+dashboard_*.png
+
+# ==============================================================================
 # AMBIENTES VIRTUAIS E DEPENDÊNCIAS
-# ==================================================
+# ==============================================================================
+# Ignora as pastas pesadas de instalação do Python
 venv/
 .venv/
 env/
@@ -68,20 +49,11 @@ lib/
 bin/
 Include/
 
-# ==================================================
+# ==============================================================================
 # CACHE E ARQUIVOS DO SISTEMA (LIXO ELETRÔNICO)
-# ==================================================
+# ==============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
 .DS_Store
 Thumbs.db
-
-# ==================================================
-# BACKUPS E LOGS DE DESENVOLVIMENTO
-# ==================================================
-migracao_backup/
-dados.py
-*.log
-*logo.png
->>>>>>> master
