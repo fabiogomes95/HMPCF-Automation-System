@@ -133,7 +133,7 @@ class AssistenteBPA:
     # ----------------------------------------------------------------------
     def iniciar_sessao(self, event=None):
         """
-        Valida os dados e cria/abre o arquivo único do dia.
+        Valida os dados e cria/abre o arquivo único do dia na mesma pasta do script.
         Insere o cabeçalho do médico atual no final do arquivo (Append).
         """
         self.medico_atual = self.entry_medico.get().strip().upper()
@@ -143,26 +143,36 @@ class AssistenteBPA:
             messagebox.showwarning("Aviso", "Preencha o profissional e a data!")
             return
             
-        # O nome do arquivo é fixo pela DATA (Um arquivo agrupa todos os médicos do dia)
-        self.ficheiro_dia = f"PRODUCAO_{self.data_atual}.txt"
+        # 🎯 CORREÇÃO: Força o arquivo a ser criado na mesma pasta do script para evitar Erro 13
+        pasta_do_script = os.path.dirname(os.path.abspath(__file__))
+        nome_do_arquivo = f"PRODUCAO_{self.data_atual}.txt"
+        self.ficheiro_dia = os.path.join(pasta_do_script, nome_do_arquivo)
         
         # Formata a data para exibir bonito no cabeçalho interno
         d = self.data_atual
         data_fmt = f"{d[0:2]}/{d[2:4]}/{d[4:8]}"
         
-        # Abre o arquivo no modo 'a' (Append). Se não existir, cria. Se existir, anexa no final.
-        with open(self.ficheiro_dia, 'a', encoding='utf-8') as f:
-            # Se o arquivo já tiver conteúdo, pula duas linhas para separar os profissionais
-            if os.path.exists(self.ficheiro_dia) and os.path.getsize(self.ficheiro_dia) > 0:
-                f.write("\n\n")
-            # Escreve o cabeçalho separador do profissional atual
-            f.write("==================================================\n")
-            f.write(f"PROFISSIONAL: {self.medico_atual}\n")
-            f.write(f"DATA: {data_fmt}\n")
-            f.write("==================================================\n")
+        try:
+            # Abre o arquivo no modo 'a' (Append).
+            with open(self.ficheiro_dia, 'a', encoding='utf-8') as f:
+                # Se o arquivo já tiver conteúdo, pula duas linhas para separar os profissionais
+                if os.path.exists(self.ficheiro_dia) and os.path.getsize(self.ficheiro_dia) > 0:
+                    f.write("\n\n")
+                # Escreve o cabeçalho separador do profissional atual
+                f.write("==================================================\n")
+                f.write(f"PROFISSIONAL: {self.medico_atual}\n")
+                f.write(f"DATA: {data_fmt}\n")
+                f.write("==================================================\n")
+                
+        except PermissionError:
+            messagebox.showerror(
+                "Arquivo Bloqueado", 
+                f"O Windows bloqueou a criação/acesso ao arquivo:\n{self.ficheiro_dia}\n\nFeche se estiver aberto em outro programa."
+            )
+            return
             
         # Atualiza a interface: Esconde a configuração e mostra a pesquisa
-        self.lbl_info.config(text=f"ARQUIVO: {self.ficheiro_dia}\nPROFISSIONAL: {self.medico_atual}")
+        self.lbl_info.config(text=f"ARQUIVO: {nome_do_arquivo}\nPROFISSIONAL: {self.medico_atual}")
         self.frame_config.pack_forget()
         self.frame_pesquisa.pack(fill=tk.BOTH, expand=True)
         self.entry_busca.focus_set() # Foca no campo de busca para começar a digitar
@@ -183,8 +193,8 @@ class AssistenteBPA:
             self.atualizar_lista(self.base_pacientes[:50])
             return
             
-        # List Comprehension: Filtra por Nome[1], SUS ou CPF[2]
-        res = [p for p in self.base_pacientes if termo in p[1] or termo in p or termo in p[2]][:50]
+        # 🎯 CORREÇÃO: Busca por Nome[1], SUS[0] ou CPF[3]
+        res = [p for p in self.base_pacientes if termo in p[1] or termo in p[0] or termo in p[3]][:50]
         self.atualizar_lista(res)
 
     def atualizar_lista(self, resultados):
@@ -206,7 +216,8 @@ class AssistenteBPA:
         """Permite usar a tecla TAB para descer a seleção na lista."""
         selecao = self.lista_resultados.curselection()
         if selecao:
-            indice_atual = selecao
+            # 🎯 CORREÇÃO: Extrai o inteiro da tupla (ex: (0,) -> 0)
+            indice_atual = selecao[0]
             prox_indice = indice_atual + 1
             # Se ainda houver itens abaixo, desce a seleção
             if prox_indice < self.lista_resultados.size():
@@ -223,8 +234,8 @@ class AssistenteBPA:
         selecao = self.lista_resultados.curselection()
         if not selecao: return
         
-        # Pega o texto da linha selecionada
-        item = self.lista_resultados.get(selecao)
+        # 🎯 CORREÇÃO: Extrai o inteiro da tupla para não dar TypeError
+        item = self.lista_resultados.get(selecao[0])
         sus = item[:15] # Os primeiros 15 caracteres são sempre o SUS
         nome_paciente = item[28:].strip() # Pega o nome para o feedback
         
@@ -240,6 +251,9 @@ class AssistenteBPA:
             self.entry_busca.delete(0, tk.END)
             self.atualizar_lista(self.base_pacientes[:50])
             self.entry_busca.focus_set()
+            
+        except PermissionError:
+            messagebox.showerror("Erro", f"Feche o arquivo '{self.ficheiro_dia}' no Bloco de Notas para continuar.")
         except Exception as e:
             messagebox.showerror("Erro de Gravação", f"Não foi possível salvar no arquivo: {e}")
 

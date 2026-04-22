@@ -15,15 +15,24 @@ import re           # Módulo de Expressões Regulares (Regex) para achar padrõ
 from datetime import datetime # Módulo para pegar o ano atual e gerar o log.
 
 # ==============================================================================
-# 1. CONFIGURAÇÃO E DEPENDÊNCIAS
+# 1. CONFIGURAÇÃO E DEPENDÊNCIAS (BLINDAGEM DE ROTAS)
 # ==============================================================================
-# Adiciona a pasta superior para podermos usar as ferramentas de validação do utils.py
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# 🎯 CORREÇÃO: Descobre o caminho ABSOLUTO e exato de onde este script está salvo no HD.
+pasta_atual = os.path.dirname(os.path.abspath(__file__))
+# Descobre o caminho da pasta "pai" (um nível acima)
+pasta_pai = os.path.abspath(os.path.join(pasta_atual, '..'))
+
+# Injeta as duas pastas no "radar" de busca de módulos do Python
+if pasta_atual not in sys.path: sys.path.append(pasta_atual)
+if pasta_pai not in sys.path: sys.path.append(pasta_pai)
 
 try:
+    # Agora o Python consegue achar o utils.py independente de onde você rodar o comando
     from utils import valida_cns, apenas_numeros
-except ImportError:
-    print("❌ ERRO CRÍTICO: Não achei o 'utils.py'.")
+except ImportError as e:
+    # Se falhar, avisa exatamente onde ele tentou procurar para facilitar sua auditoria
+    print(f"❌ ERRO CRÍTICO: Não achei o 'utils.py'.")
+    print(f"🔍 O sistema procurou nestas pastas:\n 1. {pasta_atual}\n 2. {pasta_pai}")
     exit()
 
 print("==================================================")
@@ -34,7 +43,7 @@ print("==================================================\n")
 data_atend = input("👉 1. Digite a DATA do atendimento (Ex: 15042026): ").strip()
 print("\n👉 2. Escolha o PROCEDIMENTO:")
 print("   [1] Médico     (0301060029)")
-print("   [3] Enfermeiro (0301010048)")
+print("   [2] Enfermeiro (0301010048)")
 opcao_proc = input("=> Digite a opção (1 ou 2): ").strip()
 
 if opcao_proc == '1':
@@ -50,17 +59,18 @@ if not nome_profissional:
     nome_profissional = "NÃO INFORMADO"
 
 # --- LOCALIZAÇÃO DOS ARQUIVOS ---
+# 🎯 CORREÇÃO: Usamos a variável 'pasta_atual' para garantir que ele ache o CSV e o TXT
 # arq_diario: A planilha que as meninas geram hoje com quem foi atendido
-arq_diario = os.path.join(os.path.dirname(__file__), "pacientes.csv")
+arq_diario = os.path.join(pasta_atual, "pacientes.csv")
 # arq_datasus: O arquivo oficial exportado do BPA com a base de pacientes
-arq_datasus = os.path.join(os.path.dirname(__file__), "ExpPaciente.txt")
+arq_datasus = os.path.join(pasta_atual, "ExpPaciente.txt")
 
 if not os.path.exists(arq_diario):
-    print(f"\n❌ ERRO: O arquivo da recepção '{arq_diario}' não foi encontrado.")
+    print(f"\n❌ ERRO: O arquivo da recepção não foi encontrado em:\n{arq_diario}")
     exit()
 
 if not os.path.exists(arq_datasus):
-    print(f"\n❌ ERRO: A base do SUS '{arq_datasus}' não foi encontrada.")
+    print(f"\n❌ ERRO: A base do SUS não foi encontrada em:\n{arq_datasus}")
     exit()
 
 # Listas de separação para o relatório de erros
@@ -151,7 +161,8 @@ with open(arq_diario, 'r', encoding='utf-8', errors='ignore') as f_diario:
 # FASE 3: RELATÓRIO DE AUDITORIA (LOG DE REJEITADOS)
 # ==============================================================================
 if rejeitados:
-    arquivo_log = "historico_rejeitados.txt"
+    # 🎯 CORREÇÃO: Garante que o log de erros salve na pasta exata do script
+    arquivo_log = os.path.join(pasta_atual, "historico_rejeitados.txt")
     data_hora = datetime.now().strftime("%d/%m/%Y %H:%M")
     
     # Modo 'a' = Append. Adiciona os erros novos sem apagar o histórico de dias anteriores.
@@ -163,7 +174,7 @@ if rejeitados:
         for r in rejeitados:
             f_log.write(r + "\n")
             
-    print(f"⚠ {len(rejeitados)} problemas encontrados. Veja o log acumulado em '{arquivo_log}'.")
+    print(f"⚠️ {len(rejeitados)} problemas encontrados. Veja o log acumulado em 'historico_rejeitados.txt'.")
     
 if not pacientes_validados:
     print("\n🛑 Nenhum paciente apto para digitação. O robô parou.")
