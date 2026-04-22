@@ -207,42 +207,55 @@ def enviar_para_planilha(dados):
         return False
 
 # =========================================================================
-# 🧹 FUNÇÃO 3: O GARI DA NUVEM (FILA DE SINCRONIZAÇÃO EM SEGUNDO PLANO)
+# 🧹 FUNÇÃO 3: O GARI DA NUVEM (COM TRAVA ANTI-FANTASMA ATÔMICA)
 # =========================================================================
 def gari_da_nuvem():
     # while True faz essa função rodar para sempre num loop infinito
     while True:
-        # O try/except aqui garante que se o Gari tropeçar em algum erro, o programa não desliga.
         try:
-            # Conecta no banco de dados local
-            conn = sqlite3.connect(DB_NAME); 
-            conn.row_factory = sqlite3.Row; # Faz as linhas retornarem como dicionários, facilitando a leitura
+            conn = sqlite3.connect(DB_NAME)
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
-            # Pede ao banco: "Me traga todos os atendimentos (junto com os dados do paciente) onde 'enviado_nuvem' é igual a 0, em ordem de chegada"
-            cursor.execute('''SELECT a.id as id_atend, a.registro, a.data_atendimento, a.hora_atendimento, a.procedencia, p.* FROM atendimentos a JOIN pacientes p ON a.cpf = p.cpf WHERE a.enviado_nuvem = 0 ORDER BY a.id ASC''')
-            # Guarda todos os resultados encontrados na variável 'pendentes'
-            pendentes = cursor.fetchall()
+            # 1. Pega apenas os IDs dos atendimentos que estão pendentes (0)
+            cursor.execute("SELECT id FROM atendimentos WHERE enviado_nuvem = 0 ORDER BY id ASC")
+            pendentes_ids = cursor.fetchall()
             
-            # Para cada paciente pendente encontrado...
-            for p in pendentes:
-                # Chama a Função 2 (enviar_para_planilha). 
-                # Se ela retornar True (sucesso)...
-                if enviar_para_planilha(dict(p)):
-                    # Atualiza o status desse atendimento no banco local para 1 (Já enviado).
-                    cursor.execute("UPDATE atendimentos SET enviado_nuvem = 1 WHERE id = ?", (p['id_atend'],))
-                    # Salva a atualização no banco
+            for pid in pendentes_ids:
+                id_atend = pid['id']
+                
+                # 🛡️ TRAVA ATÔMICA (Anti-Corrida):
+                # Tenta "trancar" este atendimento mudando para 2 (Em processamento).
+                # O 'AND enviado_nuvem = 0' garante que, se um Gari Fantasma já mudou pra 2 
+                # um milissegundo antes, este comando vai falhar silenciosamente.
+                cursor.execute("UPDATE atendimentos SET enviado_nuvem = 2 WHERE id = ? AND enviado_nuvem = 0", (id_atend,))
+                conn.commit()
+                
+                # 3. Verifica se ESTE Gari conseguiu trancar (se a linha foi afetada)
+                if cursor.rowcount == 1:
+                    # Agora sim, como a porta está trancada, pegamos os dados completos
+                    cursor.execute('''SELECT a.id as id_atend, a.registro, a.data_atendimento, 
+                                      a.hora_atendimento, a.procedencia, p.* FROM atendimentos a JOIN pacientes p ON a.cpf = p.cpf 
+                                      WHERE a.id = ?''', (id_atend,))
+                    p = cursor.fetchone()
+                    
+                    # Chama a Função 2 para enviar para o Google Sheets
+                    if p and enviar_para_planilha(dict(p)):
+                        # Sucesso: Muda definitivamente para 1 (Concluído)
+                        cursor.execute("UPDATE atendimentos SET enviado_nuvem = 1 WHERE id = ?", (id_atend,))
+                    else:
+                        # Falha (Ex: Sem internet): Devolve o status para 0 para tentar de novo depois
+                        cursor.execute("UPDATE atendimentos SET enviado_nuvem = 0 WHERE id = ?", (id_atend,))
+                        
                     conn.commit()
-            # Fecha a conexão com o banco para não sobrecarregar
+            
             conn.close()
-        except: 
-            # Se der qualquer erro no processo do Gari, ele simplesmente ignora (pass) e tenta no próximo ciclo
+        except Exception as e:
+            # Se der erro no banco, apenas ignora e tenta no próximo ciclo
             pass
             
-        # O Gari dorme por 2 segundos antes de recomeçar o loop infinito. 
-        # Isso impede que o computador use 100% do processador à toa.
+        # O Gari dorme por 2 segundos antes de buscar novos pacientes
         time.sleep(2)
-
 
 # =========================================================================
 # 🌐 ROTAS FLASK (A COMUNICAÇÃO ENTRE O SITE E O PYTHON)
