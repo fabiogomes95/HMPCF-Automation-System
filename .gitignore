@@ -23,6 +23,9 @@ hospital.db
 *.xlsx
 *.xls
 *.txt
+*.pdf
+
+
 !requirements.txt   # Exceção: O requirements.txt DEVE subir para o GitHub
 /automacao/*.txt
 /bpa/*.txt
