@@ -19,7 +19,7 @@ app = Flask(__name__)
 DB_NAME = 'hospital.db'
 
 # =========================================================================
-# ⚙️ INICIALIZAÇÃO DO BANCO DE DADOS (Mantido exatamente igual)
+# ⚙️ INICIALIZAÇÃO DO BANCO DE DADOS 
 # =========================================================================
 def init_db():
     conn = sqlite3.connect(DB_NAME)
