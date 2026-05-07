@@ -1,275 +1,206 @@
 # ==============================================================================
-# 🚀 ASSISTENTE BPA: ORGANIZAÇÃO DE LOTE ÚNICO
+# 🚀 ASSISTENTE BPA: VISUALIZAÇÃO FORMATADA (SUS & CPF)
 # ==============================================================================
-# ESTE SCRIPT TEM 3 OBJETIVOS PRINCIPAIS:
-# 1. RAPIDEZ: Carrega todos os pacientes na memória RAM para busca instantânea.
-# 2. ORGANIZAÇÃO: Agrupa vários profissionais em um único arquivo TXT por data.
-# 3. ERGONOMIA: Totalmente operável via teclado (Enter/Tab) para agilizar o fluxo.
+# Desenvolvido por: Fábio Gomes da Silva
+# Objetivo: Priorizar o CPF e exibir dados com máscaras para facilitar a leitura.
 # ==============================================================================
 
 import os
-import re
-import tkinter as tk               # Biblioteca nativa do Python para criar Interfaces Gráficas (Janelas).
-from tkinter import messagebox     # Módulo do Tkinter para exibir caixas de alerta e erro.
+import tkinter as tk
+from tkinter import messagebox
+import firebirdsql 
 
 # ==============================================================================
-# 1. CARREGAMENTO DA BASE DE DADOS (EXPACIENTE.TXT)
+# 1. CARREGAMENTO DA BASE DE DADOS (FIREBIRD)
 # ==============================================================================
 def carregar_base():
-    """
-    Função que lê o arquivo bruto do DATASUS e organiza os dados em memória.
-    Em Análise de Sistemas, isso é chamado de 'Data Mapping' (Mapeamento de Dados).
-    """
-    caminho_datasus = os.path.join(os.path.dirname(__file__), "ExpPaciente.txt")
+    """Conecta ao BPAMAG.GDB e carrega os pacientes para a memória RAM."""
+    caminho_gdb = r'C:/BPA/BPAMAG.GDB'
     pacientes = []
-    
-    # Verifica se o arquivo existe para evitar que o programa feche com erro (Crash)
-    if not os.path.exists(caminho_datasus):
-        messagebox.showerror("Erro Crítico", f"Arquivo '{caminho_datasus}' não encontrado.")
+    try:
+        con = firebirdsql.connect(
+            host='localhost', database=caminho_gdb,
+            user='SYSDBA', password='masterkey', charset='WIN1252'
+        )
+        cur = con.cursor()
+        cur.execute("SELECT CNS, NOME, DTNASC, NUM_CPF FROM CADCNS")
+        rows = cur.fetchall()
+        for r in rows:
+            sus = str(r[0] or "").strip()
+            nome = str(r[1] or "").strip().upper()
+            dn_raw = str(r[2] or "").strip()
+            cpf = str(r[3] or "").strip()
+            
+            # Formata data para visualização: AAAAMMDD -> DD/MM/AAAA
+            dn = f"{dn_raw[6:8]}/{dn_raw[4:6]}/{dn_raw[0:4]}" if len(dn_raw) == 8 else "  /  /    "
+            pacientes.append((sus, nome, dn, cpf))
+        con.close()
         return pacientes
-        
-    # 'latin-1' é a codificação usada pelos sistemas legados do Governo (BPA/DATASUS)
-    with open(caminho_datasus, 'r', encoding='latin-1', errors='ignore') as f:
-        for linha in f:
-            # Filtro de segurança: Linhas menores que 53 caracteres estão incompletas no layout
-            if len(linha) >= 53:
-                # O Slicing [x:y] extrai caracteres em posições fixas (Layout Posicional)
-                sus = linha[0:15].strip()
-                nome = linha[15:45].strip()
-                dn_bruta = linha[45:53].strip() # Posição oficial da Data de Nascimento
-                
-                # Formatação de Data: Inverte AAAAMMDD para o padrão brasileiro DD/MM/AAAA
-                dn = f"{dn_bruta[6:8]}/{dn_bruta[4:6]}/{dn_bruta[0:4]}" if len(dn_bruta) == 8 else "00/00/0000"
-                
-                # REGEX: 're.search' busca 11 números seguidos (padrão de CPF) em qualquer parte da linha
-                match_cpf = re.search(r'\d{11}', linha)
-                cpf = match_cpf.group(0) if match_cpf else ""
-                
-                # Apenas pacientes com SUS válido (15 dígitos) entram na nossa lista de busca
-                if len(sus) == 15:
-                    pacientes.append((sus, nome, dn, cpf))
-                    
-    return pacientes
+    except Exception as e:
+        messagebox.showerror("Erro de Conexão", f"Não foi possível acessar o banco BPA:\n{e}")
+        return []
 
 # ==============================================================================
-# 2. CLASSE DA INTERFACE GRÁFICA (LÓGICA DA GUI)
+# 2. INTERFACE GRÁFICA (GUI)
 # ==============================================================================
 class AssistenteBPA:
     def __init__(self, root, base_pacientes):
-        """Inicializa a interface e define as variáveis de controle do lote."""
         self.root = root
         self.base_pacientes = base_pacientes
         self.ficheiro_dia = ""
-        self.medico_atual = ""
-        self.data_atual = ""
         
-        # Título e dimensões da janela principal
-        self.root.title("⚡ Assistente BPA - Gestão de Produção")
-        self.root.geometry("700x650")
+        self.root.title("⚡ Assistente BPA - HMPCF - Visualização Formatada")
+        self.root.geometry("1000x650") # Largura aumentada para as máscaras de texto
         self.root.config(padx=20, pady=20)
         
-        # ----------------------------------------------------------------------
-        # TELA 1: CONFIGURAÇÃO (LOGIN DO PROFISSIONAL)
-        # ----------------------------------------------------------------------
+        # TELA 1: CONFIGURAÇÃO DO LOTE
         self.frame_config = tk.Frame(self.root)
         self.frame_config.pack(fill=tk.BOTH, expand=True)
         
-        tk.Label(self.frame_config, text="Nome do Médico ou Enfermeiro:", font=("Arial", 11)).pack(pady=5)
-        self.entry_medico = tk.Entry(self.frame_config, font=("Arial", 14), width=30)
+        tk.Label(self.frame_config, text="Nome do Profissional:", font=("Arial", 12)).pack(pady=5)
+        self.entry_medico = tk.Entry(self.frame_config, font=("Arial", 16), width=35)
         self.entry_medico.pack(pady=5)
-        self.entry_medico.focus_set() # Inicia o cursor aqui para você não precisar clicar
+        self.entry_medico.focus_set()
         
-        tk.Label(self.frame_config, text="Data do Atendimento (Ex: 30012026):", font=("Arial", 11)).pack(pady=5)
-        self.entry_data = tk.Entry(self.frame_config, font=("Arial", 14), width=30)
+        tk.Label(self.frame_config, text="Data do Lote (DDMMYYYY):", font=("Arial", 12)).pack(pady=5)
+        self.entry_data = tk.Entry(self.frame_config, font=("Arial", 16), width=35)
         self.entry_data.pack(pady=5)
-        
-        # ATALHOS DE TECLADO TELA 1:
-        # 'Return' (Enter) na data aciona a função de iniciar a digitação
         self.entry_data.bind("<Return>", self.iniciar_sessao)
-        # 'Tab' no campo médico pula para o campo data (Comportamento nativo do Windows)
         
-        self.btn_iniciar = tk.Button(self.frame_config, text="Iniciar Produção (ENTER)", 
-                                     command=self.iniciar_sessao, bg="#4CAF50", fg="white", 
-                                     font=("Arial", 12, "bold"))
-        self.btn_iniciar.pack(pady=20)
+        tk.Button(self.frame_config, text="INICIAR PRODUÇÃO", command=self.iniciar_sessao, 
+                  bg="#2E7D32", fg="white", font=("Arial", 12, "bold"), height=2).pack(pady=30)
         
-        # ----------------------------------------------------------------------
-        # TELA 2: ÁREA DE PESQUISA (MODO DIGITAÇÃO)
-        # ----------------------------------------------------------------------
+        # TELA 2: MODO OPERACIONAL (DIGITAÇÃO)
         self.frame_pesquisa = tk.Frame(self.root)
+        self.lbl_info = tk.Label(self.frame_pesquisa, text="", font=("Arial", 11, "bold"), fg="#1565C0")
+        self.lbl_info.pack(pady=5)
         
-        # Cabeçalho informativo sobre o arquivo e profissional ativo
-        self.lbl_info = tk.Label(self.frame_pesquisa, text="", font=("Arial", 10, "bold"), fg="darkblue")
-        self.lbl_info.pack(pady=2)
-        
-        self.lbl_status = tk.Label(self.frame_pesquisa, text="Aguardando busca...", font=("Arial", 9))
+        self.lbl_status = tk.Label(self.frame_pesquisa, text="Pesquise por Nome, CPF ou SUS...", font=("Arial", 10))
         self.lbl_status.pack()
         
-        # Campo principal de pesquisa (Nome/CPF/SUS)
-        self.entry_busca = tk.Entry(self.frame_pesquisa, font=("Arial", 16), width=40)
-        self.entry_busca.pack(pady=5, fill=tk.X)
+        self.entry_busca = tk.Entry(self.frame_pesquisa, font=("Arial", 22), bg="#FFFDE7")
+        self.entry_busca.pack(pady=10, fill=tk.X)
         
-        # EVENTOS DE TECLADO TELA 2:
-        self.entry_busca.bind("<KeyRelease>", self.filtrar_resultados) # Filtra a cada tecla pressionada
-        self.entry_busca.bind("<Tab>", self.focar_lista)               # TAB pula para a lista
-        self.entry_busca.bind("<Down>", self.focar_lista)              # Seta baixo pula para a lista
+        self.entry_busca.bind("<KeyRelease>", self.filtrar_resultados)
+        self.entry_busca.bind("<Tab>", self.focar_lista)
+        self.entry_busca.bind("<Down>", self.focar_lista)
         
-        # Lista visual de resultados (Listbox)
-        self.lista_resultados = tk.Listbox(self.frame_pesquisa, font=("Consolas", 11), height=15, exportselection=False)
+        self.lista_resultados = tk.Listbox(
+            self.frame_pesquisa, font=("Consolas", 14), height=15, 
+            selectbackground="#1976D2", bg="#F5F5F5", exportselection=False
+        )
         self.lista_resultados.pack(fill=tk.BOTH, expand=True, pady=10)
         
-        # ENTER ou Duplo Clique na lista executa o salvamento
         self.lista_resultados.bind("<Return>", self.salvar_e_limpar)
-        self.lista_resultados.bind("<Double-Button-1>", self.salvar_e_limpar)
-        # TAB dentro da lista faz a seleção descer
         self.lista_resultados.bind("<Tab>", self.navegar_com_tab)
         
-        # Botão para trocar de profissional sem fechar o programa
-        tk.Button(self.frame_pesquisa, text="↩ Trocar Profissional", command=self.voltar_config, 
-                  bg="#f44336", fg="white").pack(pady=5)
+        tk.Button(self.frame_pesquisa, text="↩ Mudar Profissional", command=self.voltar_config, 
+                  bg="#C62828", fg="white").pack(pady=5, side=tk.RIGHT)
 
-    # ----------------------------------------------------------------------
-    # 3. LÓGICA DE GESTÃO DE ARQUIVOS (SESSÃO)
-    # ----------------------------------------------------------------------
     def iniciar_sessao(self, event=None):
-        """
-        Valida os dados e cria/abre o arquivo único do dia na mesma pasta do script.
-        Insere o cabeçalho do médico atual no final do arquivo (Append).
-        """
-        self.medico_atual = self.entry_medico.get().strip().upper()
-        self.data_atual = self.entry_data.get().strip()
+        medico = self.entry_medico.get().strip().upper()
+        data = self.entry_data.get().strip()
+        if not medico or not data: return
         
-        if not self.medico_atual or not self.data_atual:
-            messagebox.showwarning("Aviso", "Preencha o profissional e a data!")
-            return
+        pasta = os.path.dirname(os.path.abspath(__file__))
+        self.ficheiro_dia = os.path.join(pasta, f"PRODUCAO_{data}.txt")
+        
+        with open(self.ficheiro_dia, 'a', encoding='utf-8') as f:
+            f.write(f"\n{'-'*50}\nPROFISSIONAL: {medico} | DATA: {data}\n{'-'*50}\n")
             
-        # 🎯 CORREÇÃO: Força o arquivo a ser criado na mesma pasta do script para evitar Erro 13
-        pasta_do_script = os.path.dirname(os.path.abspath(__file__))
-        nome_do_arquivo = f"PRODUCAO_{self.data_atual}.txt"
-        self.ficheiro_dia = os.path.join(pasta_do_script, nome_do_arquivo)
-        
-        # Formata a data para exibir bonito no cabeçalho interno
-        d = self.data_atual
-        data_fmt = f"{d[0:2]}/{d[2:4]}/{d[4:8]}"
-        
-        try:
-            # Abre o arquivo no modo 'a' (Append).
-            with open(self.ficheiro_dia, 'a', encoding='utf-8') as f:
-                # Se o arquivo já tiver conteúdo, pula duas linhas para separar os profissionais
-                if os.path.exists(self.ficheiro_dia) and os.path.getsize(self.ficheiro_dia) > 0:
-                    f.write("\n\n")
-                # Escreve o cabeçalho separador do profissional atual
-                f.write("==================================================\n")
-                f.write(f"PROFISSIONAL: {self.medico_atual}\n")
-                f.write(f"DATA: {data_fmt}\n")
-                f.write("==================================================\n")
-                
-        except PermissionError:
-            messagebox.showerror(
-                "Arquivo Bloqueado", 
-                f"O Windows bloqueou a criação/acesso ao arquivo:\n{self.ficheiro_dia}\n\nFeche se estiver aberto em outro programa."
-            )
-            return
-            
-        # Atualiza a interface: Esconde a configuração e mostra a pesquisa
-        self.lbl_info.config(text=f"ARQUIVO: {nome_do_arquivo}\nPROFISSIONAL: {self.medico_atual}")
+        self.lbl_info.config(text=f"👨‍⚕️ {medico} | 📅 {data}")
         self.frame_config.pack_forget()
         self.frame_pesquisa.pack(fill=tk.BOTH, expand=True)
-        self.entry_busca.focus_set() # Foca no campo de busca para começar a digitar
+        self.entry_busca.focus_set()
         self.atualizar_lista(self.base_pacientes[:50])
 
-    # ----------------------------------------------------------------------
-    # 4. LÓGICA DE PESQUISA E SALVAMENTO (OPERACIONAL)
-    # ----------------------------------------------------------------------
     def filtrar_resultados(self, event):
-        """Realiza a filtragem dinâmica baseada no que o usuário digita."""
-        # Teclas de controle não devem disparar a pesquisa novamente
         if event.keysym in ('Tab', 'Down', 'Up', 'Return'): return
-        
         termo = self.entry_busca.get().strip().upper()
-        
-        # Se o campo estiver vazio, mostra os primeiros 50 da base
         if not termo:
             self.atualizar_lista(self.base_pacientes[:50])
             return
-            
-        # 🎯 CORREÇÃO: Busca por Nome[1], SUS[0] ou CPF[3]
         res = [p for p in self.base_pacientes if termo in p[1] or termo in p[0] or termo in p[3]][:50]
         self.atualizar_lista(res)
 
+    # ----------------------------------------------------------------------
+    # 🎯 ATUALIZAÇÃO VISUAL: MÁSCARAS DE SUS E CPF
+    # ----------------------------------------------------------------------
     def atualizar_lista(self, resultados):
-        """Limpa a Listbox e insere os novos resultados encontrados."""
+        """Aplica máscaras visuais e garante alinhamento das colunas."""
         self.lista_resultados.delete(0, tk.END)
         for sus, nome, dn, cpf in resultados:
-            # Exibe os dados formatados para conferência visual rápida
-            self.lista_resultados.insert(tk.END, f"{sus} | {dn} | {nome}")
+            # Máscara SUS: 000 0000 0000 0000
+            sus_fmt = f"{sus[0:3]} {sus[3:7]} {sus[7:11]} {sus[11:15]}" if len(sus) == 15 else sus
+            
+            # Máscara CPF: 000.000.000-00
+            cpf_fmt = f"{cpf[0:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:11]}" if len(cpf) == 11 else cpf
+
+            c_nome = f"{nome[:30]:<30}"
+            c_dn   = f"{dn:<12}"
+            c_sus  = f"{sus_fmt:<20}" # Aumentado para acomodar os espaços
+            c_cpf  = f"CPF: {cpf_fmt if cpf_fmt else '              '}"
+            
+            self.lista_resultados.insert(tk.END, f"{c_nome} | {c_dn} | {c_sus} | {c_cpf}")
 
     def focar_lista(self, event):
-        """Move o foco do teclado para a lista, permitindo usar setas ou TAB."""
         if self.lista_resultados.size() > 0:
             self.lista_resultados.focus_set()
-            self.lista_resultados.selection_set(0) # Seleciona o primeiro
+            self.lista_resultados.selection_set(0)
             self.lista_resultados.activate(0)
-        return "break" # Impede que o 'Tab' faça o foco sair do programa
+        return "break"
 
     def navegar_com_tab(self, event):
-        """Permite usar a tecla TAB para descer a seleção na lista."""
         selecao = self.lista_resultados.curselection()
         if selecao:
-            # 🎯 CORREÇÃO: Extrai o inteiro da tupla (ex: (0,) -> 0)
-            indice_atual = selecao[0]
-            prox_indice = indice_atual + 1
-            # Se ainda houver itens abaixo, desce a seleção
-            if prox_indice < self.lista_resultados.size():
-                self.lista_resultados.selection_clear(indice_atual)
-                self.lista_resultados.selection_set(prox_indice)
-                self.lista_resultados.activate(prox_indice)
-        return "break" # Evita que o comportamento nativo tire o foco
+            prox = selecao[0] + 1
+            if prox < self.lista_resultados.size():
+                self.lista_resultados.selection_clear(selecao[0])
+                self.lista_resultados.selection_set(prox)
+                self.lista_resultados.activate(prox)
+        return "break"
 
     def salvar_e_limpar(self, event):
-        """
-        Função acionada pelo ENTER na lista.
-        Extrai o SUS, salva no arquivo diário e reseta o campo para a próxima busca.
-        """
+        """Salva o CPF (prioridade) ou SUS limpos no arquivo TXT."""
         selecao = self.lista_resultados.curselection()
         if not selecao: return
         
-        # 🎯 CORREÇÃO: Extrai o inteiro da tupla para não dar TypeError
         item = self.lista_resultados.get(selecao[0])
-        sus = item[:15] # Os primeiros 15 caracteres são sempre o SUS
-        nome_paciente = item[28:].strip() # Pega o nome para o feedback
+        partes = item.split(" | ")
         
+        nome_paciente = partes[0].strip()
+        # Limpa espaços da máscara do SUS
+        sus_paciente = partes[2].replace(" ", "").strip()
+        # Limpa pontos e traço da máscara do CPF
+        cpf_paciente = partes[3].replace("CPF:", "").replace(".", "").replace("-", "").strip()
+        
+        # Prioridade CPF
+        documento_final = cpf_paciente if cpf_paciente else sus_paciente
+        
+        if not documento_final:
+            messagebox.showwarning("Aviso", f"Paciente {nome_paciente} sem documento!")
+            return
+
         try:
-            # Salva apenas o número do SUS, um por linha, para o robô RPA
             with open(self.ficheiro_dia, 'a', encoding='utf-8') as f:
-                f.write(sus + "\n")
+                f.write(documento_final + "\n")
                 
-            # Feedback visual de que o dado foi gravado com sucesso
-            self.lbl_status.config(text=f"✅ SALVO NO LOTE: {nome_paciente}", fg="green")
-            
-            # Reseta o campo de busca e volta o cursor para lá automaticamente
+            self.lbl_status.config(text=f"✅ GRAVADO: {nome_paciente}", fg="#2E7D32")
             self.entry_busca.delete(0, tk.END)
-            self.atualizar_lista(self.base_pacientes[:50])
             self.entry_busca.focus_set()
+            self.atualizar_lista(self.base_pacientes[:50])
             
-        except PermissionError:
-            messagebox.showerror("Erro", f"Feche o arquivo '{self.ficheiro_dia}' no Bloco de Notas para continuar.")
         except Exception as e:
-            messagebox.showerror("Erro de Gravação", f"Não foi possível salvar no arquivo: {e}")
+            messagebox.showerror("Erro", f"Não foi possível salvar: {e}")
 
     def voltar_config(self):
-        """Volta para a tela inicial para trocar de médico sem fechar o arquivo."""
         self.frame_pesquisa.pack_forget()
         self.frame_config.pack(fill=tk.BOTH, expand=True)
         self.entry_medico.focus_set()
 
-# ==============================================================================
-# INICIALIZAÇÃO DO SISTEMA
-# ==============================================================================
 if __name__ == "__main__":
-    # Carrega a base antes de abrir a janela para garantir que os dados já estejam prontos
     base = carregar_base()
     if base:
         root = tk.Tk()
         app = AssistenteBPA(root, base)
-        root.mainloop() # Mantém a janela aberta escutando os eventos de teclado
+        root.mainloop()
