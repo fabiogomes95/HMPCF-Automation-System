@@ -1,8 +1,5 @@
 # ==============================================================================
-# 🚀 ASSISTENTE BPA: VISUALIZAÇÃO FORMATADA (SUS & CPF)
-# ==============================================================================
-# Desenvolvido por: Fábio Gomes da Silva
-# Objetivo: Priorizar o CPF e exibir dados com máscaras para facilitar a leitura.
+# 🚀 ASSISTENTE BPA: VISUALIZAÇÃO FORMATADA COM PRIORIDADE SUS
 # ==============================================================================
 
 import os
@@ -49,8 +46,8 @@ class AssistenteBPA:
         self.base_pacientes = base_pacientes
         self.ficheiro_dia = ""
         
-        self.root.title("⚡ Assistente BPA - HMPCF - Visualização Formatada")
-        self.root.geometry("1000x650") # Largura aumentada para as máscaras de texto
+        self.root.title("⚡ Assistente BPA - HMPCF - Prioridade SUS")
+        self.root.geometry("1200x750") 
         self.root.config(padx=20, pady=20)
         
         # TELA 1: CONFIGURAÇÃO DO LOTE
@@ -123,9 +120,6 @@ class AssistenteBPA:
         res = [p for p in self.base_pacientes if termo in p[1] or termo in p[0] or termo in p[3]][:50]
         self.atualizar_lista(res)
 
-    # ----------------------------------------------------------------------
-    # 🎯 ATUALIZAÇÃO VISUAL: MÁSCARAS DE SUS E CPF
-    # ----------------------------------------------------------------------
     def atualizar_lista(self, resultados):
         """Aplica máscaras visuais e garante alinhamento das colunas."""
         self.lista_resultados.delete(0, tk.END)
@@ -138,7 +132,7 @@ class AssistenteBPA:
 
             c_nome = f"{nome[:30]:<30}"
             c_dn   = f"{dn:<12}"
-            c_sus  = f"{sus_fmt:<20}" # Aumentado para acomodar os espaços
+            c_sus  = f"{sus_fmt:<20}" 
             c_cpf  = f"CPF: {cpf_fmt if cpf_fmt else '              '}"
             
             self.lista_resultados.insert(tk.END, f"{c_nome} | {c_dn} | {c_sus} | {c_cpf}")
@@ -160,8 +154,10 @@ class AssistenteBPA:
                 self.lista_resultados.activate(prox)
         return "break"
 
+    # ----------------------------------------------------------------------
+    # 🎯 SALVAMENTO: PRIORIDADE SUS RESTAURADA
+    # ----------------------------------------------------------------------
     def salvar_e_limpar(self, event):
-        """Salva o CPF (prioridade) ou SUS limpos no arquivo TXT."""
         selecao = self.lista_resultados.curselection()
         if not selecao: return
         
@@ -169,13 +165,11 @@ class AssistenteBPA:
         partes = item.split(" | ")
         
         nome_paciente = partes[0].strip()
-        # Limpa espaços da máscara do SUS
         sus_paciente = partes[2].replace(" ", "").strip()
-        # Limpa pontos e traço da máscara do CPF
         cpf_paciente = partes[3].replace("CPF:", "").replace(".", "").replace("-", "").strip()
         
-        # Prioridade CPF
-        documento_final = cpf_paciente if cpf_paciente else sus_paciente
+        # Volta a usar a lógica original: Tenta o SUS primeiro, se não tiver, vai o CPF
+        documento_final = sus_paciente if sus_paciente else cpf_paciente
         
         if not documento_final:
             messagebox.showwarning("Aviso", f"Paciente {nome_paciente} sem documento!")
