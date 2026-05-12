@@ -24,7 +24,7 @@ if pasta_atual not in sys.path: sys.path.append(pasta_atual)
 if pasta_pai not in sys.path: sys.path.append(pasta_pai)
 
 try:
-    from utils import valida_cns, apenas_numeros
+    from utils import valida_cns, apenas_numeros, valida_cpf
 except ImportError as e:
     print(f"❌ ERRO CRÍTICO: Não achei o 'utils.py'.")
     exit()
@@ -126,6 +126,10 @@ while True:
             if len(doc_limpo) == 15:
                 if not valida_cns(doc_limpo):
                     rejeitados.append(f"Linha {num_linha:03d} | SUS: {doc_limpo} -> CNS INVÁLIDO")
+                    continue
+            elif len(doc_limpo) == 11:
+                if not valida_cpf(doc_limpo):
+                    rejeitados.append(f"Linha {num_linha:03d} | CPF: {doc_limpo} -> CPF INVÁLIDO")
                     continue
                 
             # --- TRAVA 2: CRUZAMENTO COM O BANCO ---
