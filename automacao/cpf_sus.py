@@ -24,7 +24,7 @@ def valida_cpf(cpf):
 # ==============================================================================
 def processar_lista():
     try:
-        # Lê o seu arquivo original
+        # Lê o seu arquivo original (que o painel web salva quando você aperta o botão)
         with open('cpf_sus.txt', 'r', encoding='utf-8') as f:
             linhas = f.readlines()
     except FileNotFoundError:
@@ -56,14 +56,14 @@ def processar_lista():
         elif cpf_valido:
             limpos.append(cpf_valido)
 
-    # Cria o arquivo final limpo para o robô
-    with open('pacientes_limpos.txt', 'w', encoding='utf-8') as f_out:
+    # 🎯 ALTERAÇÃO PARA A V3: Salva direto no formato do robô!
+    with open('pacientes.csv', 'w', encoding='utf-8') as f_out:
         for doc in limpos:
             f_out.write(f"{doc}\n")
 
     print(f"✅ Limpeza concluída!")
     print(f"📄 Dos {len(linhas)} registros originais, {len(limpos)} documentos válidos foram salvos.")
-    print(f"👉 Arquivo gerado: 'pacientes_limpos.txt'. Use este no seu robô!")
+    print(f"👉 Arquivo gerado: 'pacientes.csv'. O painel web já vai ler isso automaticamente!")
 
 if __name__ == "__main__":
     processar_lista()
