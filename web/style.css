@@ -1,0 +1,263 @@
+/* ==========================================================================
+   TEMA HOSPITALAR - HMPCF EXTREMOZ (ARQUIVO ÚNICO COMPLETO)
+   Cores baseadas na bandeira e logotipo oficial
+   ========================================================================== */
+
+:root {
+    --primary-blue: #0A3A70;     /* Azul profundo (Logo/Bandeira) */
+    --secondary-blue: #1A5B9C;   /* Azul intermediário para hovers */
+    --hmpcf-red: #D92332;        /* Vermelho urgência (Cruz do Logo) */
+    --extremoz-yellow: #F2C230;  /* Amarelo vibrante (Sol da Bandeira) */
+    
+    --bg-color: #F0F4F8;         /* Fundo cinza bem claro/gelo */
+    --card-bg: #FFFFFF;          /* Fundo branco para os painéis */
+    --text-main: #2C3E50;        /* Texto escuro padrão */
+    --text-muted: #6c757d;       /* Texto secundário */
+    --border-color: #E1E8ED;     /* Bordas suaves */
+    
+    --terminal-bg: #1E293B;      /* Fundo escuro elegante para as caixas de texto */
+    --terminal-text: #F8FAFC;    /* Texto claro no terminal */
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+}
+
+/* ==========================================================================
+   CABEÇALHO CENTRALIZADO (TOPBAR)
+   ========================================================================== */
+.topbar {
+    background: linear-gradient(135deg, var(--primary-blue) 0%, #052244 100%);
+    padding: 15px 30px;
+    border-bottom: 4px solid var(--extremoz-yellow);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    color: white;
+    display: flex;
+    justify-content: center; /* Centraliza o h4 */
+    align-items: center;
+    position: relative; /* Permite que o status fique à direita */
+}
+
+.topbar h4 {
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.6rem;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+}
+
+#alerta-status {
+    position: absolute;
+    right: 30px; /* Ancora à direita */
+    color: white;
+    font-size: 0.9rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* ==========================================================================
+   DASHBOARD PRINCIPAL (TELA INICIAL)
+   ========================================================================== */
+.dashboard-header {
+    margin-bottom: 40px;
+}
+
+.dashboard-header h2 {
+    font-weight: 800;
+    color: var(--primary-blue);
+}
+
+.dashboard-header p {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+}
+
+/* Grid de Módulos */
+.module-card {
+    background-color: var(--card-bg);
+    border-radius: 16px;
+    padding: 30px 20px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
+    color: var(--text-main);
+}
+
+.module-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    border-bottom: 4px solid var(--primary-blue);
+    text-decoration: none;
+    color: var(--text-main);
+}
+
+.module-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    display: inline-block;
+    padding: 20px;
+    background-color: var(--bg-color);
+    border-radius: 50%;
+    color: var(--primary-blue);
+    transition: all 0.3s ease;
+}
+
+.module-card:hover .module-icon {
+    background-color: var(--primary-blue);
+    color: white;
+}
+
+.module-card h4 {
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.module-card p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* Status / Terminal na Tela Inicial */
+.terminal-card {
+    background-color: var(--terminal-bg);
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 40px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    border-left: 5px solid var(--extremoz-yellow);
+}
+
+.terminal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    margin-bottom: 15px;
+    font-family: 'Consolas', monospace;
+    font-size: 0.9rem;
+}
+
+.terminal-body {
+    background-color: #0F172A;
+    color: #10B981; /* Verde terminal */
+    font-family: 'Consolas', 'Monaco', monospace;
+    padding: 15px;
+    border-radius: 8px;
+    height: 200px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.terminal-body .log-time {
+    color: #64748B;
+    margin-right: 10px;
+}
+.terminal-body .log-error {
+    color: #EF4444;
+}
+.terminal-body .log-info {
+    color: #3B82F6;
+}
+
+/* ==========================================================================
+   ELEMENTOS DA TELA DE AUTOMAÇÃO (MANTIDOS PARA automacao.html)
+   ========================================================================== */
+.toolbar {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 15px 25px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border-left: 5px solid var(--hmpcf-red);
+}
+
+.toolbar select {
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    font-weight: 500;
+    border-radius: 8px;
+    padding: 6px 12px;
+}
+
+.btn-custom {
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 10px 20px;
+    border: none;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-custom:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-amarelo { background-color: var(--extremoz-yellow); color: #5C4A00; }
+.btn-azul { background-color: var(--primary-blue); color: white; }
+.btn-azul:hover { background-color: var(--secondary-blue); color: white; }
+.btn-verde { background-color: #10B981; color: white; }
+.btn-verde:hover { background-color: #059669; color: white; }
+
+.editor-container {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    height: 100%;
+}
+
+.editor-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.editor-title.origem { color: var(--hmpcf-red); }
+.editor-title.destino { color: var(--primary-blue); }
+
+textarea.form-control { 
+    background-color: var(--terminal-bg) !important; 
+    color: var(--terminal-text) !important; 
+    border: 1px solid var(--border-color); 
+    border-radius: 8px;
+    font-family: 'Consolas', 'Monaco', monospace; 
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    padding: 15px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+textarea.form-control:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 0.25rem rgba(10, 58, 112, 0.25);
+}
+
+/* Modal */
+.modal-content { border-radius: 16px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+.modal-header { background-color: var(--primary-blue); color: white; border-radius: 16px 16px 0 0; border-bottom: 4px solid var(--extremoz-yellow); }
+.modal-title { font-weight: 800; letter-spacing: 0.5px; }
+.modal-body { background-color: var(--card-bg); color: var(--text-main); padding: 25px; }
+.modal-body select { border-radius: 8px; border: 2px solid var(--border-color); padding: 10px; font-weight: 500; }
+.passo-a-passo { background-color: var(--bg-color); border-left: 4px solid var(--hmpcf-red); padding: 15px; border-radius: 0 8px 8px 0; margin-top: 20px; font-size: 0.9rem; color: var(--text-muted); }
+.modal-footer { border-top: 1px solid var(--border-color); background-color: var(--bg-color); border-radius: 0 0 16px 16px; }
