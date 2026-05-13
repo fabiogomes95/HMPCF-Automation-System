@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Execução Robô - HMPCF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+    <a href="automacao.html" style="position: absolute; left: 30px; color: white; text-decoration: none; font-weight: 600;">⬅️ Voltar</a>
+    <h4>🏥 HMPCF - EXECUÇÃO BPA (ROBÔ)</h4>
+    <span id="alerta-status" style="position: absolute; right: 30px; color: white; font-weight: bold;">🟢 Módulo Automação</span>
+</div>
+
+<div class="container-fluid py-4 px-4">
+    <div class="toolbar d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <span class="fw-bold" style="color: var(--primary-blue);">📂 Lote de Produção:</span>
+            <select id="combo_producao" class="form-select w-auto" onchange="carregarProducaoSelecionada()"></select>
+            <button class="btn-custom btn-verde" onclick="iniciarFluxoRobo()">▶️ Iniciar Automação BPA</button>
+        </div>
+    </div>
+
+    <div class="editor-container" style="max-width: 800px; margin: 0 auto;">
+        <span class="editor-title destino fw-bold">📄 Conteúdo do Lote Selecionado</span>
+        <textarea id="texto_lote" class="form-control" rows="20" spellcheck="false" readonly placeholder="O conteúdo do lote aparecerá aqui para conferência..."></textarea>
+    </div>
+</div>
+
+<div class="modal fade" id="modalRobo" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+          <h5 class="modal-title" id="roboTitle">📦 Processando Lote</h5>
+      </div>
+      <div class="modal-body">
+        <div id="areaEscolha">
+            <p>👨‍⚕️ <b style="color: var(--primary-blue);">Profissional:</b> <span id="roboMedico" class="fw-bold"></span></p>
+            <p>📅 <b style="color: var(--primary-blue);">Data:</b> <span id="roboData" class="fw-bold"></span></p>
+            <p>👥 <b style="color: var(--primary-blue);">Pacientes Válidos:</b> <span id="roboQtd" class="badge bg-success fs-6"></span></p>
+            <hr>
+            <label class="form-label fw-bold text-dark">Selecione o Procedimento no BPA:</label>
+            <select id="roboCargo" class="form-select mb-3">
+                <option value="">Escolha uma opção...</option>
+                <option value="0301060029">🩺 Médico (0301060029)</option>
+                <option value="0301010048">👩‍⚕️ Enfermeiro (0301010048)</option>
+            </select>
+            <div class="passo-a-passo">
+                <strong style="color: var(--hmpcf-red);">ATENÇÃO:</strong><br>
+                1. Deixe o programa do BPA aberto e visível.<br>
+                2. Ao clicar em INICIAR, você terá <b>5 segundos</b> para clicar no campo correto do BPA.<br>
+                3. Solte o mouse e deixe o robô trabalhar sozinho.
+            </div>
+        </div>
+        
+        <div id="areaStatus" class="d-none text-center py-4">
+            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+            <h5 id="statusRobo" style="color: var(--primary-blue); font-weight: bold;">Aguardando...</h5>
+        </div>
+      </div>
+      <div class="modal-footer" id="areaBotoes">
+        <button class="btn btn-outline-secondary fw-bold" onclick="cancelarRobo()">Cancelar</button>
+        <button class="btn btn-warning text-dark fw-bold" onclick="pularLote()">Pular Lote</button>
+        <button class="btn btn-success fw-bold px-4" onclick="executarDigitarLote()">▶️ INICIAR DIGITAÇÃO</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    eel.expose(atualizar_progresso_web);
+    function atualizar_progresso_web(msg) { document.getElementById('statusRobo').innerHTML = msg; }
+
+    window.onload = async () => { await carregarListaArquivos(); };
+
+    async function carregarListaArquivos() {
+        let arqs = await eel.listar_producoes()();
+        let combo = document.getElementById('combo_producao');
+        combo.innerHTML = "";
+        arqs.forEach(a => { 
+            let opt = document.createElement('option'); 
+            opt.value = opt.innerText = a; 
+            combo.appendChild(opt); 
+        });
+        carregarProducaoSelecionada();
+    }
+
+    async function carregarProducaoSelecionada() {
+        let combo = document.getElementById('combo_producao');
+        if(!combo.value) return;
+        let texto = await eel.ler_producao(combo.value)();
+        document.getElementById('texto_lote').value = texto;
+    }
+
+    let lotesGlobais = [], loteAtualIndex = 0, modalRoboInstance = null;
+
+    async function iniciarFluxoRobo() {
+        let nome_arquivo = document.getElementById('combo_producao').value;
+        if (!nome_arquivo) return alert("Selecione um lote primeiro!");
+        
+        document.getElementById('alerta-status').innerText = "⏳ Validando dados no Banco...";
+        let res = await eel.preparar_rpa(nome_arquivo)();
+        document.getElementById('alerta-status').innerText = "🟢 Módulo Automação";
+        
+        if (res.erro) return alert(res.erro);
+        
+        lotesGlobais = res.lotes;
+        loteAtualIndex = 0;
+
+        if (lotesGlobais.length === 0) {
+            return alert("❌ Lote vazio ou sem o cabeçalho correto de MEDICO e DATA.");
+        }
+
+        if(!modalRoboInstance) modalRoboInstance = new bootstrap.Modal(document.getElementById('modalRobo'));
+        exibirLoteNoModal();
+    }
+
+    function exibirLoteNoModal() {
+        if (loteAtualIndex >= lotesGlobais.length) { 
+            modalRoboInstance.hide(); 
+            return alert("🎯 Sucesso! Todos os lotes foram digitados."); 
+        }
+        let lote = lotesGlobais[loteAtualIndex];
+        
+        document.getElementById('roboMedico').innerText = lote.medico;
+        document.getElementById('roboData').innerText = lote.data;
+        document.getElementById('roboQtd').innerText = lote.validados.length;
+        
+        document.getElementById('areaEscolha').classList.remove('d-none');
+        document.getElementById('areaBotoes').classList.remove('d-none');
+        document.getElementById('areaStatus').classList.add('d-none');
+        modalRoboInstance.show();
+    }
+
+    async function executarDigitarLote() {
+        let cargo = document.getElementById('roboCargo').value;
+        if (!cargo) return alert("⚠️ Selecione o procedimento!");
+
+        document.getElementById('areaEscolha').classList.add('d-none');
+        document.getElementById('areaBotoes').classList.add('d-none');
+        document.getElementById('areaStatus').classList.remove('d-none');
+
+        for(let i=5; i>0; i--) {
+            document.getElementById('statusRobo').innerText = `⏳ CLIQUE NO BPA! Começando em ${i}s...`;
+            await new Promise(r => setTimeout(r, 1000));
+        }
+
+        let lote = lotesGlobais[loteAtualIndex];
+        await eel.digitar_lote_rpa(lote.medico, lote.data, cargo, lote.validados)();
+        loteAtualIndex++;
+        exibirLoteNoModal();
+    }
+
+    function pularLote() { loteAtualIndex++; exibirLoteNoModal(); }
+    function cancelarRobo() { modalRoboInstance.hide(); lotesGlobais = []; }
+</script>
+</body>
+</html>

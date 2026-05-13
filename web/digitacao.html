@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Assistente de Digitação - HMPCF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .search-container { background: white; border-radius: 12px; padding: 20px; border: 1px solid var(--border-color); }
+        .result-item {
+            background: #fff; border-left: 5px solid var(--primary-blue);
+            padding: 12px; margin-bottom: 8px; border-radius: 6px;
+            cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between;
+        }
+        .result-item:hover { transform: translateX(5px); border-left-color: var(--extremoz-yellow); background: #f0f4f8; }
+        .doc-tag { font-size: 0.8rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; background: #e9ecef; }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <a href="automacao.html" style="position: absolute; left: 30px; color: white; text-decoration: none; font-weight: 600;">⬅️ Voltar</a>
+    <h4>🏥 HMPCF - ASSISTENTE DE DIGITAÇÃO</h4>
+</div>
+
+<div class="container py-4">
+    <div class="card p-3 mb-4 shadow-sm" style="border-top: 4px solid var(--hmpcf-red); border-radius: 12px;">
+        <div class="row g-3 justify-content-center">
+            <div class="col-md-3">
+                <label class="form-label fw-bold">📅 Data Atendimento:</label>
+                <input type="text" id="data_atual" class="form-control" placeholder="DD/MM/AAAA" oninput="mascaraData(this)" maxlength="10">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold">👨‍⚕️ Médico Atual:</label>
+                <input type="text" id="med_atual" class="form-control" placeholder="NOME DO PROFISSIONAL">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-primary fw-bold w-100" onclick="confirmarCabecalho()">✅ Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-container shadow-sm">
+        <div class="input-group input-group-lg mb-3">
+            <input type="text" id="input_busca" class="form-control" placeholder="🔍 Pesquisar Paciente por Nome, CPF ou SUS..." oninput="pesquisarPaciente()">
+        </div>
+        
+        <div id="status_msg" class="text-center fw-bold text-success mb-2"></div>
+
+        <div id="lista_resultados" style="max-height: 400px; overflow-y: auto;">
+            <div class="text-center text-muted p-5">Aguardando pesquisa no banco BPA...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let cabecalhoConfirmado = false;
+    let arquivoAutoGerado = "";
+
+    // MÁSCARA AUTOMÁTICA DE DATA (DD/MM/AAAA)
+    function mascaraData(campo) {
+        let v = campo.value.replace(/\D/g, ''); // Remove tudo que não for número
+        if (v.length > 8) v = v.substring(0, 8); // Limita a 8 dígitos reais
+        
+        if (v.length >= 5) {
+            campo.value = v.substring(0, 2) + '/' + v.substring(2, 4) + '/' + v.substring(4, 8);
+        } else if (v.length >= 3) {
+            campo.value = v.substring(0, 2) + '/' + v.substring(2, v.length);
+        } else {
+            campo.value = v;
+        }
+    }
+
+    // 1. Grava o cabeçalho no arquivo quando você define ou troca de médico
+    async function confirmarCabecalho() {
+        let med = document.getElementById('med_atual').value.trim();
+        let data = document.getElementById('data_atual').value.trim();
+
+        if(!med || !data) return alert("Preencha o Médico e a Data!");
+        if(data.length < 10) return alert("Digite a data completa (DD/MM/AAAA)!");
+
+        // Transforma '16/04/2026' em '16-04-2026.txt'
+        arquivoAutoGerado = data.replace(/\//g, "-") + ".txt";
+
+        await eel.registrar_cabecalho_digitacao(arquivoAutoGerado, med, data)();
+        cabecalhoConfirmado = true;
+        document.getElementById('status_msg').innerText = `📌 Gravando em: ${arquivoAutoGerado} | Médico: ${med.toUpperCase()}`;
+        
+        setTimeout(() => { document.getElementById('status_msg').innerText = ""; }, 4000);
+        document.getElementById('input_busca').focus();
+    }
+
+    // 2. Busca em tempo real no Firebird
+    async function pesquisarPaciente() {
+        let termo = document.getElementById('input_busca').value;
+        if(termo.length < 3) return;
+
+        let resultados = await eel.buscar_pacientes_fb(termo)();
+        let div = document.getElementById('lista_resultados');
+        div.innerHTML = "";
+
+        resultados.forEach(p => {
+            let item = document.createElement('div');
+            item.className = 'result-item shadow-sm';
+            
+            // Lógica SUS > CPF
+            let docFinal = p.sus ? p.sus : p.cpf;
+
+            item.innerHTML = `
+                <div>
+                    <span class="fw-bold text-primary">${p.nome}</span><br>
+                    <small class="text-muted">DN: ${p.dtnasc} | SUS: <span class="doc-tag">${p.sus || '---'}</span> | CPF: <span class="doc-tag">${p.cpf || '---'}</span></small>
+                </div>
+                <div class="align-self-center"><span class="badge bg-primary">GRAVAR</span></div>
+            `;
+            item.onclick = () => gravarPacienteNoLote(p.nome, docFinal);
+            div.appendChild(item);
+        });
+    }
+
+    // 3. Grava o número do paciente no arquivo gerado
+    async function gravarPacienteNoLote(nome, documento) {
+        if(!cabecalhoConfirmado) return alert("Clique no botão 'Confirmar' primeiro para registrar o Médico e a Data!");
+        if(!documento) return alert("Paciente sem documento válido!");
+
+        let ok = await eel.adicionar_paciente_txt(arquivoAutoGerado, documento)();
+        if(ok) {
+            document.getElementById('status_msg').innerText = `✅ GRAVADO: ${nome}`;
+            document.getElementById('input_busca').value = "";
+            document.getElementById('lista_resultados').innerHTML = "";
+            document.getElementById('input_busca').focus();
+            setTimeout(() => { document.getElementById('status_msg').innerText = ""; }, 2000);
+        } else {
+             alert("Erro ao gravar. Verifique se tem permissões de escrita na pasta.");
+        }
+    }
+</script>
+</body>
+</html>

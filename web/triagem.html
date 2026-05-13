@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Triagem Enfermeiros - HMPCF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+    <a href="automacao.html" style="position: absolute; left: 30px; color: white; text-decoration: none; font-weight: 600;">⬅️ Voltar</a>
+    <h4>🏥 HMPCF - TRIAGEM ENFERMEIROS (LOTES DE 99)</h4>
+    <span id="alerta-status" style="position: absolute; right: 30px; color: white; font-weight: bold; font-size: 0.9rem;"></span>
+</div>
+
+<div class="container-fluid py-4 px-4">
+
+    <div class="card p-3 mb-4 shadow-sm" style="border-top: 4px solid var(--extremoz-yellow); border-radius: 12px;">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-bold text-primary">📅 Data Atendimento:</label>
+                <input type="text" id="data_lote" class="form-control" placeholder="DD/MM/AAAA" oninput="mascaraData(this)" maxlength="10">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold text-primary">👩‍⚕️ Enfermeiros (separe por vírgula):</label>
+                <input type="text" id="lista_enfs" class="form-control" placeholder="Ex: MARIA ALVES, JOAO SILVA, ANA SOUZA">
+            </div>
+            <div class="col-md-3">
+                <button class="btn-custom btn-amarelo w-100 justify-content-center" onclick="chamarLimpador()">🧹 Reordenar e Dividir Lotes</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end mb-3">
+        <button class="btn-custom btn-azul" onclick="salvarTudo()">💾 Salvar Edição Manual</button>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="editor-container">
+                <span class="editor-title origem fw-bold">📄 Rascunho da Triagem (Cole tudo aqui)</span>
+                <textarea id="texto_sujo" class="form-control" rows="18" spellcheck="false" placeholder="Cole os 200/400 dados sujos do sistema aqui..."></textarea>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="editor-container">
+                <span class="editor-title destino fw-bold">🤖 prod_enfermeiros.txt (Final Formatado)</span>
+                <textarea id="texto_csv" class="form-control" rows="18" spellcheck="false" placeholder="O resultado fatiado de 99 em 99 aparecerá aqui..."></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.onload = async () => { 
+        document.getElementById('texto_csv').value = await eel.ler_txt_pacientes()();
+    };
+
+    function mascaraData(campo) {
+        let v = campo.value.replace(/\D/g, '');
+        if (v.length > 8) v = v.substring(0, 8);
+        if (v.length >= 5) campo.value = v.substring(0, 2) + '/' + v.substring(2, 4) + '/' + v.substring(4, 8);
+        else if (v.length >= 3) campo.value = v.substring(0, 2) + '/' + v.substring(2, v.length);
+        else campo.value = v;
+    }
+
+    async function salvarTudo() {
+        await eel.salvar_texto_sujo(document.getElementById('texto_sujo').value)();
+        await eel.salvar_txt_pacientes(document.getElementById('texto_csv').value)();
+        
+        document.getElementById('alerta-status').innerText = "✅ Salvo com sucesso!";
+        setTimeout(() => { document.getElementById('alerta-status').innerText = ""; }, 3000);
+    }
+
+    async function chamarLimpador() {
+        let data = document.getElementById('data_lote').value;
+        let enfs = document.getElementById('lista_enfs').value;
+
+        if(!data || !enfs) return alert("⚠️ Preencha a Data e os nomes dos Enfermeiros primeiro!");
+
+        await eel.salvar_texto_sujo(document.getElementById('texto_sujo').value)();
+        document.getElementById('texto_csv').value = "Processando e fatiando lotes... Aguarde.";
+        
+        // Agora mandamos a data e os enfermeiros para o Python!
+        let novoTxt = await eel.rodar_limpador(data, enfs)();
+        document.getElementById('texto_csv').value = novoTxt;
+        
+        document.getElementById('alerta-status').innerText = "✅ Lotes fatiados!";
+        setTimeout(() => { document.getElementById('alerta-status').innerText = ""; }, 3000);
+    }
+</script>
+</body>
+</html>

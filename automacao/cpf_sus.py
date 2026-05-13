@@ -1,18 +1,24 @@
 import re
 
 # ==============================================================================
-# FUNÇÕES DE VALIDAÇÃO (Embutidas para não depender de outros arquivos)
+# FUNÇÕES DE VALIDAÇÃO (Regras oficiais do DATASUS e Receita Federal)
 # ==============================================================================
+
 def apenas_numeros(valor):
+    """Remove pontos, traços e espaços, mantendo apenas os dígitos."""
     return re.sub(r'\D', '', str(valor))
 
 def valida_cns(cns):
-    if not cns or len(cns) != 15 or cns[0] not in '12789': return False
+    """Valida o Cartão Nacional de Saúde (SUS) usando o Módulo 11."""
+    if not cns or len(cns) != 15 or cns[0] not in '12789': 
+        return False
     soma = sum(int(cns[i]) * (15 - i) for i in range(15))
     return soma % 11 == 0
 
 def valida_cpf(cpf):
-    if not cpf or len(cpf) != 11 or len(set(cpf)) == 1: return False
+    """Valida o CPF através dos dígitos verificadores."""
+    if not cpf or len(cpf) != 11 or len(set(cpf)) == 1: 
+        return False
     soma_1 = sum(int(cpf[i]) * (10 - i) for i in range(9))
     digito_1 = (soma_1 * 10 % 11) % 10
     soma_2 = sum(int(cpf[i]) * (11 - i) for i in range(10))
@@ -20,50 +26,49 @@ def valida_cpf(cpf):
     return str(digito_1) == cpf[9] and str(digito_2) == cpf[10]
 
 # ==============================================================================
-# PROCESSAMENTO DO ARQUIVO
+# PROCESSAMENTO DO ARQUIVO (LÓGICA DE PRIORIDADE: SUS > CPF)
 # ==============================================================================
+
 def processar_lista():
+    """Lê o rascunho cpf_sus.txt e salva APENAS UM documento por linha no pacientes.txt."""
     try:
-        # Lê o seu arquivo original (que o painel web salva quando você aperta o botão)
-        with open('cpf_sus.txt', 'r', encoding='utf-8') as f:
+        with open("cpf_sus.txt", "r", encoding="utf-8") as f:
             linhas = f.readlines()
     except FileNotFoundError:
-        print("❌ Arquivo 'cpf_sus.txt' não encontrado na pasta.")
+        print("Erro: O arquivo cpf_sus.txt não foi encontrado.")
         return
 
-    limpos = []
+    resultado_limpo = []
 
     for linha in linhas:
+        if not linha.strip(): continue
+        
         partes = linha.split()
-        sus_valido = ""
-        cpf_valido = ""
+        sus_encontrado = ""
+        cpf_encontrado = ""
 
-        # Analisa os pedaços separados por espaço/tab
         for p in partes:
             num = apenas_numeros(p)
             
-            # Testa se é um SUS perfeito
             if len(num) == 15 and valida_cns(num):
-                sus_valido = num
-            # Testa se é um CPF perfeito
+                sus_encontrado = num
             elif len(num) == 11 and valida_cpf(num):
-                cpf_valido = num
+                cpf_encontrado = num
 
-        # A PRIORIDADE É O SUS
-        if sus_valido:
-            limpos.append(sus_valido)
-        # SE NÃO TIVER SUS VÁLIDO, USA O CPF
-        elif cpf_valido:
-            limpos.append(cpf_valido)
+        # --- A REGRA DE OURO ---
+        if sus_encontrado:
+            resultado_limpo.append(sus_encontrado)
+        elif cpf_encontrado:
+            resultado_limpo.append(cpf_encontrado)
 
-    # 🎯 ALTERAÇÃO PARA A V3: Salva direto no formato do robô!
-    with open('pacientes.csv', 'w', encoding='utf-8') as f_out:
-        for doc in limpos:
-            f_out.write(f"{doc}\n")
-
-    print(f"✅ Limpeza concluída!")
-    print(f"📄 Dos {len(linhas)} registros originais, {len(limpos)} documentos válidos foram salvos.")
-    print(f"👉 Arquivo gerado: 'pacientes.csv'. O painel web já vai ler isso automaticamente!")
+    # Salva no TXT
+    try:
+        with open("pacientes.txt", "w", encoding="utf-8") as f_out:
+            for doc in resultado_limpo:
+                f_out.write(f"{doc}\n")
+        print(f"✅ Concluído! {len(resultado_limpo)} documentos limpos.")
+    except Exception as e:
+        print(f"Erro ao salvar: {e}")
 
 if __name__ == "__main__":
     processar_lista()
