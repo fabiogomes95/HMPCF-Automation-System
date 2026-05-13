@@ -6,6 +6,7 @@
 import os
 import sqlite3
 import threading
+import webbrowser # ➜ NOVO: Módulo nativo do Python para controlar o navegador do computador
 from flask import Flask, render_template, request, jsonify
 from utils import apenas_numeros # Importa do seu utils.py original
 
@@ -96,6 +97,12 @@ if __name__ == '__main__':
     # 2. Lança o "Gari da Nuvem" (importado do novo arquivo)
     threading.Thread(target=gari_da_nuvem, daemon=True).start()
     
-    # 3. Inicia o Flask
+    # 3. NOVO: Abre o navegador automaticamente
+    # Cria um Timer (cronómetro) numa Thread paralela. Ele vai esperar 2 segundos 
+    # e depois disparar o comando de abrir a página. Isso garante que o Flask 
+    # tenha tempo suficiente para iniciar o servidor na porta 5000 antes do Chrome abrir.
+    threading.Timer(2.0, lambda: webbrowser.open("http://127.0.0.1:5000")).start()
+    
+    # 4. Inicia o Flask
     # As travas de produção (debug=False, use_reloader=False) já estavam perfeitamente configuradas por você.
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)

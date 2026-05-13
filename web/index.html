@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestão BPA Digital 3.0</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+    <style>
+        body { background-color: #1e1e2e; color: #cdd6f4; font-family: 'Segoe UI', sans-serif; }
+        .topbar { background-color: #11111b; padding: 15px 25px; border-bottom: 1px solid #313244; }
+        .toolbar { background-color: #313244; border-radius: 8px; padding: 12px 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .editor-container { background-color: #181825; border-radius: 8px; padding: 15px; border: 1px solid #313244; }
+        /* Estilo de Terminal solicitado na imagem */
+        textarea.form-control { 
+            background-color: #11111b !important; 
+            color: #a6e3a1 !important; /* Verde terminal */
+            border: 1px solid #313244; 
+            font-family: 'Consolas', 'Monaco', monospace; 
+            font-size: 13px;
+            resize: none;
+        }
+        .btn-custom { font-weight: 600; border-radius: 6px; padding: 8px 16px; border: none; }
+    </style>
+</head>
+<body>
+
+<div class="topbar d-flex justify-content-between align-items-center">
+    <h4 style="color: #89b4fa; font-weight: 800; margin:0;">🏥 GESTÃO BPA DIGITAL</h4>
+    <span id="alerta-status" style="color: #f9e2af; font-size: 0.9rem; font-weight: bold;"></span>
+</div>
+
+<div class="container-fluid py-4 px-4">
+    <div class="toolbar d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <span class="fw-bold">📂 Produção:</span>
+            <select id="combo_producao" class="form-select w-auto" style="background-color: #181825; color: #cdd6f4; border: 1px solid #45475a;" onchange="carregarProducaoSelecionada()"></select>
+            <button class="btn-custom" style="background-color: #f9e2af; color: #11111b;" onclick="chamarLimpador()">🧹 Limpar Lista</button>
+            <button class="btn-custom" style="background-color: #a6e3a1; color: #11111b;" onclick="iniciarFluxoRobo()">▶️ Rodar Robô BPA</button>
+        </div>
+        <button class="btn-custom" style="background-color: #89b4fa; color: #11111b;" onclick="salvarTudo()">💾 Salvar Tudo (Ctrl+S)</button>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="editor-container">
+                <span class="fw-bold text-danger d-block mb-2">📄 CONTEÚDO DA PRODUÇÃO (ORIGEM)</span>
+                <textarea id="texto_sujo" class="form-control" rows="22" spellcheck="false"></textarea>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="editor-container">
+                <span class="fw-bold text-success d-block mb-2">🤖 PACIENTES FILTRADOS (CSV)</span>
+                <textarea id="texto_csv" class="form-control" rows="22" spellcheck="false"></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalRobo" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background-color: #181825; color: #cdd6f4; border: 1px solid #313244;">
+      <div class="modal-header">
+          <h5 class="modal-title" id="roboTitle" style="color: #89b4fa; font-weight: bold;">📦 Lote 1 de 1</h5>
+      </div>
+      <div class="modal-body">
+        <div id="areaEscolha">
+            <p>👨‍⚕️ <b>Profissional:</b> <span id="roboMedico" class="text-white"></span></p>
+            <p>📅 <b>Data:</b> <span id="roboData" class="text-white"></span></p>
+            <p>👥 <b>Pacientes Válidos:</b> <span id="roboQtd" class="badge bg-success"></span></p>
+            <hr style="border-color: #313244;">
+            <label class="form-label fw-bold">Selecione o Procedimento:</label>
+            <select id="roboCargo" class="form-select mb-3" style="background-color: #11111b; color: white; border: 1px solid #45475a;">
+                <option value="">Escolha...</option>
+                <option value="0301060029">🩺 Médico (0301060029)</option>
+                <option value="0301010048">👩‍⚕️ Enfermeiro (0301010048)</option>
+            </select>
+            <div class="p-2 rounded" style="background-color: #11111b; font-size: 0.85rem; border: 1px dashed #45475a;">
+                <b>PASSO A PASSO:</b><br>
+                1. Deixe o BPA aberto na tela de digitação.<br>
+                2. Ao clicar em INICIAR, você terá <b>5 segundos</b> para clicar no campo do BPA.<br>
+                3. O robô assumirá o controle. Não mexa no mouse!
+            </div>
+        </div>
+        <div id="areaStatus" class="d-none text-center py-4">
+            <div class="spinner-border text-success mb-3"></div>
+            <h5 id="statusRobo" class="text-white">Aguardando...</h5>
+        </div>
+      </div>
+      <div class="modal-footer" id="areaBotoes">
+        <button class="btn btn-secondary" onclick="cancelarRobo()">Sair</button>
+        <button class="btn btn-warning text-dark fw-bold" onclick="pularLote()">Pular Lote</button>
+        <button class="btn btn-success text-dark fw-bold" onclick="executarDigitarLote()">▶️ INICIAR</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    eel.expose(atualizar_progresso_web);
+    function atualizar_progresso_web(msg) { document.getElementById('statusRobo').innerText = msg; }
+
+    window.onload = async () => { await carregarListaArquivos(); await carregarCSV(); };
+
+    async function carregarListaArquivos() {
+        let arqs = await eel.listar_producoes()();
+        let combo = document.getElementById('combo_producao');
+        combo.innerHTML = "";
+        arqs.forEach(a => { let opt = document.createElement('option'); opt.value = opt.innerText = a; combo.appendChild(opt); });
+        carregarProducaoSelecionada();
+    }
+
+    async function carregarProducaoSelecionada() {
+        let texto = await eel.ler_producao(document.getElementById('combo_producao').value)();
+        document.getElementById('texto_sujo').value = texto;
+    }
+
+    async function carregarCSV() { document.getElementById('texto_csv').value = await eel.ler_csv()(); }
+
+    async function salvarTudo() {
+        await eel.salvar_texto_sujo(document.getElementById('texto_sujo').value)();
+        await eel.salvar_csv(document.getElementById('texto_csv').value)();
+        document.getElementById('alerta-status').innerText = "✅ TUDO SALVO COM SUCESSO!";
+        setTimeout(() => { document.getElementById('alerta-status').innerText = ""; }, 3000);
+    }
+
+    async function chamarLimpador() {
+        await eel.salvar_texto_sujo(document.getElementById('texto_sujo').value)();
+        document.getElementById('texto_csv').value = "Limpando... aguarde.";
+        let novoCsv = await eel.rodar_limpador()();
+        document.getElementById('texto_csv').value = novoCsv;
+    }
+
+    let lotesGlobais = [], loteAtualIndex = 0, modalRoboInstance = null;
+
+    async function iniciarFluxoRobo() {
+        let caminho = await eel.escolher_arquivo()();
+        if (!caminho) return;
+        document.getElementById('alerta-status').innerText = "⏳ Validando dados no GDB...";
+        let res = await eel.preparar_rpa(caminho)();
+        document.getElementById('alerta-status').innerText = "";
+        
+        if (res.erro) return alert(res.erro);
+        lotesGlobais = res.lotes;
+        loteAtualIndex = 0;
+        if(!modalRoboInstance) modalRoboInstance = new bootstrap.Modal(document.getElementById('modalRobo'));
+        exibirLoteNoModal();
+    }
+
+    function exibirLoteNoModal() {
+        if (loteAtualIndex >= lotesGlobais.length) { modalRoboInstance.hide(); return alert("🎯 Todos os lotes foram processados!"); }
+        let lote = lotesGlobais[loteAtualIndex];
+        document.getElementById('roboTitle').innerText = `📦 Lote ${loteAtualIndex + 1} de ${lotesGlobais.length}`;
+        document.getElementById('roboMedico').innerText = lote.medico;
+        document.getElementById('roboData').innerText = lote.data;
+        document.getElementById('roboQtd').innerText = lote.validados.length;
+        
+        document.getElementById('areaEscolha').classList.remove('d-none');
+        document.getElementById('areaBotoes').classList.remove('d-none');
+        document.getElementById('areaStatus').classList.add('d-none');
+        modalRoboInstance.show();
+    }
+
+    async function executarDigitarLote() {
+        let cargo = document.getElementById('roboCargo').value;
+        if (!cargo) return alert("⚠️ Selecione o procedimento!");
+        
+        document.getElementById('areaEscolha').classList.add('d-none');
+        document.getElementById('areaBotoes').classList.add('d-none');
+        document.getElementById('areaStatus').classList.remove('d-none');
+
+        // RECONTAGEM REGRESSIVA DE 5 SEGUNDOS
+        for(let i=5; i>0; i--) {
+            document.getElementById('statusRobo').innerText = `⏳ CLIQUE NO BPA! Começando em ${i}s...`;
+            await new Promise(r => setTimeout(r, 1000));
+        }
+
+        let lote = lotesGlobais[loteAtualIndex];
+        await eel.digitar_lote_rpa(lote.medico, lote.data, cargo, lote.validados)();
+        loteAtualIndex++;
+        exibirLoteNoModal();
+    }
+
+    function pularLote() { loteAtualIndex++; exibirLoteNoModal(); }
+    function cancelarRobo() { modalRoboInstance.hide(); lotesGlobais = []; }
+</script>
+</body>
+</html>
