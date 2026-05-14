@@ -38,6 +38,20 @@ function iniciarRelogio() {
     relogioPausado = false; 
     atualizarDataHora(); // Roda 1 vez na hora pra não nascer em branco.
     intervaloRelogio = setInterval(atualizarDataHora, 60000);
+
+    // 🛡️ MÁGICA: Conserta o seu HTML e adiciona o gatilho automático!
+    const campoData = document.getElementById('db_dn');
+    if (campoData) {
+        // Transforma o campo em texto restrito a 10 espaços e tira a "agenda" do navegador
+        campoData.setAttribute('type', 'text');
+        campoData.setAttribute('maxlength', '10');
+        campoData.setAttribute('placeholder', 'DD/MM/AAAA');
+        
+        // 🚀 O GATILHO QUE FALTAVA: A cada número que você digita, ele chama a máscara automaticamente!
+        campoData.addEventListener('input', function() {
+            mascaraData(this);
+        });
+    }
 }
 
 // Impede que a hora mude enquanto o usuário preenche dados retroativos.
@@ -49,84 +63,145 @@ function pausarRelogio() {
 window.onload = iniciarRelogio;
 
 // =========================================================================
-// 3. CÁLCULO INTELIGENTE DE IDADE (Lógica de Pediatria)
+// 3. CÁLCULO INTELIGENTE DE IDADE E MÁSCARA DE DATA COM PULO AUTOMÁTICO
 // =========================================================================
+function mascaraData(c) {
+    // 1. Pega apenas os números puros
+    let v = c.value.replace(/\D/g, ""); 
+    
+    // 2. Trava Absoluta: Não permite passar de 8 números puros (DDMMAAAA)
+    if (v.length > 8) {
+        v = v.substring(0, 8); 
+    }
+
+    // 3. Formatação Progressiva (A regex que coloca as barras)
+    if (v.length > 4) {
+        v = v.replace(/(\d{2})(\d{2})(\d{1,4})/, "$1/$2/$3");
+    } else if (v.length > 2) {
+        v = v.replace(/(\d{2})(\d{1,2})/, "$1/$2");
+    }
+    
+    // 4. Devolve o texto perfeitamente mascarado (As barras aparecem sozinhas)
+    c.value = v;
+
+    // 5. O PULO AUTOMÁTICO: Chegou a 10 caracteres (Ex: 14/12/1995)? 
+    if (c.value.length === 10) {
+        calcularIdade(); // Calcula a idade imediatamente
+        
+        // Pula para a caixa de Idade de forma suave em milissegundos
+        setTimeout(() => {
+            const campoIdade = document.getElementById('db_idade');
+            if (campoIdade) campoIdade.focus();
+        }, 10);
+    }
+}
+
 function calcularIdade() {
     const d = document.getElementById('db_dn').value;
-    if (!d) return; // Se a data estiver vazia, cancela a ação.
+    if (!d || d.length !== 10) return; // Só calcula se a data estiver completamente digitada (DD/MM/AAAA)
     
-    const nasc = new Date(d);
+    const partes = d.split('/');
+    if (partes.length !== 3) return;
+    
+    const dataAmericana = `${partes[2]}-${partes[1]}-${partes[0]}`;
+    const nasc = new Date(dataAmericana);
     const hoje = new Date();
     
-    // Calcula a idade base em anos.
     let idade = hoje.getFullYear() - nasc.getFullYear();
-    
-    // Regra do Aniversário: Se o mês ou dia ainda não chegou neste ano, tira 1 ano.
     if (hoje.getMonth() < nasc.getMonth() || (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate())) {
         idade--;
     }
     
     let resultadoFinal;
-    
     if (idade > 0) {
-        // CORREÇÃO DO PLURAL
         resultadoFinal = idade === 1 ? "1 Ano" : idade + " Anos";
     } else {
-        // LÓGICA DE BEBÊS (Menos de 1 ano de idade)
         let meses = (hoje.getFullYear() - nasc.getFullYear()) * 12 + (hoje.getMonth() - nasc.getMonth());
-        
-        // Se o dia do "mêsversário" ainda não chegou neste mês, subtrai 1 mês.
         if (hoje.getDate() < nasc.getDate()) meses--;
         
         if (meses > 0) {
             resultadoFinal = meses === 1 ? "1 Mês" : meses + " Meses";
         } else {
-            // RECÉM-NASCIDOS: Calculamos em dias matemáticos (milissegundos)
             const diferencaMilissegundos = hoje.getTime() - nasc.getTime();
             const dias = Math.floor(diferencaMilissegundos / (1000 * 60 * 60 * 24));
             resultadoFinal = dias === 1 ? "1 Dia" : dias + " Dias";
         }
     }
-    
-    // Injeta o prato pronto na caixa HTML de Idade.
     document.getElementById('db_idade').value = resultadoFinal;
 }
 
+function validarDataReal(dataStr) {
+    if (!dataStr) return true; 
+
+    let dia, mes, ano;
+
+    // Se o formato veio travado em AAAA-MM-DD
+    if (dataStr.includes('-')) {
+        const partes = dataStr.split('-');
+        if (partes.length !== 3) return false;
+        ano = parseInt(partes[0]);
+        mes = parseInt(partes[1]);
+        dia = parseInt(partes[2]);
+    } 
+    // Se o formato for o nosso do Brasil DD/MM/AAAA
+    else if (dataStr.includes('/')) {
+        const partes = dataStr.split('/');
+        if (partes.length !== 3) return false;
+        dia = parseInt(partes[0]);
+        mes = parseInt(partes[1]);
+        ano = parseInt(partes[2]);
+    } else {
+        return false;
+    }
+
+    // A TRAVA DE SÉCULO: Não salva se o ano for maluco (Maior que 2100 ou menor que 1900)
+    if (ano > 2100 || ano < 1900) return false;
+    if (mes < 1 || mes > 12) return false;
+    if (dia < 1 || dia > 31) return false;
+
+    return true;
+}
+
 // =========================================================================
-// 4. MÁSCARA DINÂMICA DO CPF E SUS (Com Gatilho de Busca)
+// 4. MÁSCARA DINÂMICA DO CPF E SUS (COM GATILHO INSTANTÂNEO DE BUSCA)
 // =========================================================================
 function executarCpf(c) {
-    // Pega o que foi digitado, acha tudo que NÃO é número (\D) e apaga.
-    let v = c.value.replace(/\D/g, "");
+    let numLimpo = c.value.replace(/\D/g, "");
+    if (numLimpo.length > 11) numLimpo = numLimpo.substring(0, 11);
     
-    // Trava de Tamanho.
-    if (v.length > 11) v = v.substring(0, 11);
-    
-    // Máscara Progressiva: Injeta os pontos e traço.
+    let v = numLimpo;
     v = v.replace(/(\d{3})(\d)/, "$1.$2")
          .replace(/(\d{3})(\d)/, "$1.$2")
          .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
          
     c.value = v;
     
-    // Gatilho do Banco: Se bateu 11 dígitos, aciona o radar no Python!
-    if (v.replace(/\D/g, "").length === 11) {
+    if (numLimpo.length === 11) {
         pausarRelogio();
-        buscarNoBanco(v);
+        buscarNoBanco(numLimpo);
     }
 }
 
 function soNumerosSus(c) {
-    let v = c.value.replace(/\D/g, "").substring(0, 15);
+    let numLimpo = c.value.replace(/\D/g, "").substring(0, 15);
+    
+    let v = numLimpo;
+    if (v.length > 0) {
+        v = v.replace(/^(\d{3})(\d)/, "$1 $2")
+             .replace(/^(\d{3})\s(\d{4})(\d)/, "$1 $2 $3")
+             .replace(/^(\d{3})\s(\d{4})\s(\d{4})(\d)/, "$1 $2 $3 $4");
+    }
+    
     c.value = v;
-    if (v.length === 15) {
+    
+    if (numLimpo.length === 15) {
         pausarRelogio();
-        buscarNoBanco(v);
+        buscarNoBanco(numLimpo);
     }
 }
 
 // =========================================================================
-// 5. VALIDAÇÃO MATEMÁTICA DO CPF E SUS (Módulo 11)
+// 5. VALIDAÇÃO MATEMÁTICA DO CPF E SUS 
 // =========================================================================
 function validarCpfFinal(c) {
     let cpf = c.value.replace(/\D/g, "");
@@ -135,15 +210,13 @@ function validarCpfFinal(c) {
         return true;
     }
     
-    // A LISTA NEGRA: Sequências que enganam a matemática.
     const invalidos = ["00000000000", "11111111111", "22222222222", "33333333333", "44444444444", "55555555555", "66666666666", "77777777777", "88888888888", "99999999999"];
     
     if (cpf.length !== 11 || invalidos.includes(cpf)) {
-        c.classList.add("invalid-input"); // Pinta de vermelho no CSS
+        c.classList.add("invalid-input"); 
         return false;
     }
     
-    // Matemática da Receita Federal
     let soma = 0, resto;
     for (let i = 1; i <= 9; i++) soma += parseInt(cpf.substring(i-1, i)) * (11 - i);
     resto = (soma * 10) % 11;
@@ -156,7 +229,6 @@ function validarCpfFinal(c) {
     if ((resto === 10) || (resto === 11)) resto = 0;
     if (resto !== parseInt(cpf.substring(10, 11))) { c.classList.add("invalid-input"); return false; }
     
-    // ABSOLVIÇÃO: Se passou, tira o vermelho e autoriza.
     c.classList.remove("invalid-input");
     return true;
 }
@@ -174,15 +246,11 @@ function validarSusFinal(c) {
     }
     
     let valido = false;
-    
-    // MATEMÁTICA 1: Cartões Definitivos (7, 8 ou 9)
     if (['7', '8', '9'].includes(sus.charAt(0))) {
         let soma = 0;
         for (let i = 0; i < 15; i++) soma += parseInt(sus.charAt(i)) * (15 - i);
         valido = (soma % 11 === 0);
-    } 
-    // MATEMÁTICA 2: Cartões Provisórios (1 ou 2)
-    else {
+    } else {
         let pis = sus.substring(0, 11);
         let soma = 0;
         for (let i = 0; i < 11; i++) soma += parseInt(pis.charAt(i)) * (15 - i);
@@ -212,11 +280,11 @@ function mascaraTel(c) {
     if (v.length > 11) v = v.substring(0, 11);
     
     if (v.length > 10) {
-        v = v.replace(/^(\d{2})(\d{5})(\d{4})/, "($1) $2-$3"); // Celular
+        v = v.replace(/^(\d{2})(\d{5})(\d{4})/, "($1) $2-$3"); 
     } else if (v.length > 5) {
-        v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3"); // Fixo
+        v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3"); 
     } else if (v.length > 2) {
-        v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2"); // Só DDD
+        v = v.replace(/^(\d{2})(\d{0,5})/, "($1) $2"); 
     }
     c.value = v;
 }
@@ -254,31 +322,43 @@ function validarFormulario() {
 }
 
 // =========================================================================
-// 8. INTEGRAÇÃO COM O BANCO DE DADOS (API Assíncrona via Fetch)
+// 8. INTEGRAÇÃO COM O BANCO DE DADOS E AUTO-PREENCHIMENTO INSTANTÂNEO
 // =========================================================================
 function formatarCPFExibicao(v) {
-    v = v.replace(/\D/g, "");
+    v = String(v).replace(/\D/g, ""); 
     if (v.length !== 11) return v;
     return v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
 function formatarSUSExibicao(v) {
-    v = v.replace(/\D/g, "");
+    v = String(v).replace(/\D/g, ""); 
     if (v.length !== 15) return v;
     return v.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, "$1 $2 $3 $4");
 }
 
 function buscarNoBanco(id) {
-    // O 'fetch' faz uma requisição silenciosa para a rota '/buscar/' do servidor Python.
-    eel.buscar_paciente(id)().then(paciente => {
-            if (paciente.erro) return; // Paciente novo, mantem a tela vazia
+    if (!id) return;
+
+    async function executaBusca() {
+        try {
+            console.log(`Buscando dados instantaneamente para o ID: ${id}`);
+            let paciente = await eel.buscar_paciente(id)();
             
-            // Injeta os dados mágicamente nas caixas de texto
+            if (paciente.erro === "banco_travado") {
+                alert("⚠️ O sistema está ocupado no momento. Por favor, apague o último dígito do CPF/SUS e digite novamente.");
+                return;
+            }
+
+            if (paciente.erro === "nulo" || paciente.erro) {
+                console.log("Paciente é novo, não existe no banco de dados.");
+                return; 
+            }
+            
             document.getElementById('db_nome').value = paciente.nome || "";
             document.getElementById('db_nome_social').value = paciente.nomeSocial || "";
             document.getElementById('db_dn').value = paciente.dn || "";
-            document.getElementById('db_idade').value = paciente.idade || "";
-            calcularIdade(); // Recalcula idade com base no ano atual
+            
+            calcularIdade(); 
             
             document.getElementById('db_mae').value = paciente.mae || "";
             document.getElementById('db_responsavel').value = paciente.responsavel || "";
@@ -293,7 +373,6 @@ function buscarNoBanco(id) {
             if (paciente.cpf) document.getElementById('db_cpf').value = formatarCPFExibicao(paciente.cpf);
             if (paciente.sus) document.getElementById('db_sus').value = formatarSUSExibicao(paciente.sus);
             
-            // Marca automaticamente os botões Radio
             if (paciente.sexo) {
                 const r = document.getElementById(paciente.sexo === "M" ? 'db_sexo_m' : 'db_sexo_f');
                 if (r) r.checked = true;
@@ -307,22 +386,34 @@ function buscarNoBanco(id) {
                 if (r) r.checked = true;
             }
             
-            // Remove bordas vermelhas caso o CPF/SUS venha do banco
             document.getElementById('db_cpf').classList.remove("invalid-input");
             document.getElementById('db_sus').classList.remove("invalid-input");
-        })
-        .catch(erro => console.log("Erro na rede ou paciente inexistente.", erro));
+            
+            pausarRelogio();
+            console.log("Paciente carregado com sucesso!");
+            
+        } catch (erro) {
+            console.error("Erro ao puxar dados do Python:", erro);
+        }
+    }
+    executaBusca();
 }
 
 // =========================================================================
-// 9. SALVAR PACIENTE (O Botão de Envio Anti-Colisão)
+// 9. SALVAR PACIENTE NO BANCO DE DADOS (Botão de Envio Anti-Colisão)
 // =========================================================================
 function salvarPaciente() {
+    const dataNasc = document.getElementById('db_dn').value;
+    if (!validarDataReal(dataNasc)) {
+        alert("❌ DATA INVÁLIDA! Verifique se digitou o dia, mês e ano corretamente (Ex: 10/05/2007).");
+        document.getElementById('db_dn').focus();
+        return;
+    }
+
     if (!validarFormulario()) return;
     
-    // MUTAÇÃO VISUAL E TRAVA ANTI-METRALHADORA
     const botaoSalvar = document.querySelector('.btn-save');
-    botaoSalvar.disabled = true; // Impede duplo clique e "Efeito Cartesiano"
+    botaoSalvar.disabled = true; 
     botaoSalvar.style.backgroundColor = "#ffc107";
     botaoSalvar.style.color = "#000";
     botaoSalvar.innerHTML = "⏳ Salvando no Banco...";
@@ -330,11 +421,10 @@ function salvarPaciente() {
     const procElement = document.querySelector('input[name="procedencia"]:checked');
     const procedenciaValor = procElement ? procElement.value : "";
     
-    // Empacotamento JSON (Objeto chave-valor) que o Python vai ler
     const pacoteDados = {
         data_atendimento: document.getElementById('data_atendimento').value,
         hora_atendimento: document.getElementById('hora_atendimento').value,
-        cpf: document.getElementById('db_cpf').value.replace(/\D/g, ""), // Manda limpo para o banco
+        cpf: document.getElementById('db_cpf').value.replace(/\D/g, ""), 
         sus: document.getElementById('db_sus').value.replace(/\D/g, ""),
         registro: document.getElementById('db_registro').value,
         nome: document.getElementById('db_nome').value.toUpperCase(),
@@ -361,27 +451,23 @@ function salvarPaciente() {
         try {
             let data = await eel.salvar(pacoteDados)();
             if(data.status === "sucesso") {
-                // Mantém o número na tela pra recepcionista ver
                 if(data.registro_gerado) {
                     document.getElementById('db_registro').value = data.registro_gerado;
                 }
-                
-                // Sucesso Visual (Fica Azul)
                 botaoSalvar.style.backgroundColor = "#0056b3";
                 botaoSalvar.style.color = "#fff";
                 botaoSalvar.innerHTML = "✅ SALVO COM SUCESSO!";
-                
                 alert(`✅ Salvo com sucesso! Ficha número [ ${data.registro_gerado} ] registrada no sistema. Já pode Imprimir!`);
             } else {
                 alert("❌ Erro ao salvar no banco de dados: " + data.mensagem);
-                botaoSalvar.disabled = false; // Destrava pra poder tentar corrigir o erro
+                botaoSalvar.disabled = false; 
                 botaoSalvar.style.backgroundColor = "";
                 botaoSalvar.style.color = "";
                 botaoSalvar.innerHTML = "💾 Salvar (F2)";
             }
         } catch (erro) {
             console.error('Erro do sistema Eel:', erro);
-            alert("⚠ Ocorreu um erro ao comunicar com o servidor do sistema.");         
+            alert("⚠ Ocorreu um erro ao comunicar com o servidor. O arquivo de banco de dados pode estar trancado.");         
             botaoSalvar.disabled = false;
             botaoSalvar.style.backgroundColor = "";
             botaoSalvar.style.color = "";
@@ -406,18 +492,18 @@ function limparTudo() {
         if (caixa) caixa.value = '';
     });
     
-    // Preserva padrões
     if (document.getElementById('db_cidade')) document.getElementById('db_cidade').value = "EXTREMOZ";
     if (document.getElementById('db_estado')) document.getElementById('db_estado').value = "RN";
     
-    // Desmarca Radios
     const todasBolinhas = document.querySelectorAll('input[type="radio"]:not([name="procedencia"])');
     todasBolinhas.forEach(bolinha => bolinha.checked = false);
     
     const radioNormal = document.getElementById('radioNormal');
     if (radioNormal) radioNormal.checked = true;
     
-    // Restaura o botão de salvar
+    document.getElementById('db_cpf').classList.remove("invalid-input");
+    document.getElementById('db_sus').classList.remove("invalid-input");
+    
     const botaoSalvar = document.querySelector('.btn-save');
     if(botaoSalvar) {
         botaoSalvar.disabled = false;
@@ -426,23 +512,20 @@ function limparTudo() {
         botaoSalvar.innerHTML = "💾 Salvar (F2)";
     }
     
-    // Despausa e roda o relógio para a hora exata
     atualizarDataHora();
     if (intervaloRelogio) clearInterval(intervaloRelogio);
     iniciarRelogio();
     
-    document.getElementById('db_cpf').focus(); // Foco ergonômico no CPF
+    document.getElementById('db_cpf').focus(); 
 }
 
 // =========================================================================
-// 11. ATALHOS DO TECLADO (F2)
+// 11. ATALHOS DO TECLADO (Ação do F2)
 // =========================================================================
 document.addEventListener('keydown', function(event) {
     if (event.key === 'F2') {
-        event.preventDefault(); // Corta o padrão do navegador
+        event.preventDefault(); 
         const botaoSalvar = document.querySelector('.btn-save');
-        
-        // A Catraca Final: Só deixa rodar a função se o botão não estiver congelado pelo milissegundo inicial.
         if (botaoSalvar && !botaoSalvar.disabled) {
             salvarPaciente();
         }
