@@ -1,5 +1,12 @@
-# --- Interface Web ---
-Flask
+# --- Interface Web (Substituiu o Flask) ---
+Eel
+
+# --- Automação e RPA ---
+pyautogui
+keyboard
+
+# --- Banco de Dados (BPA HMPCF) ---
+firebirdsql
 
 # --- Processamento e Análise de Dados (BI) ---
 pandas
@@ -9,9 +16,6 @@ openpyxl
 # --- Integração Google (Nuvem) ---
 gspread
 google-auth
-
-# --- Automação e RPA ---
-pyautogui
 
 # --- Gestão de Ambiente ---
 python-dotenv
