@@ -1,20 +1,30 @@
 @echo off
+:: 1. Entra na pasta onde o arquivo .bat está (Pasta do Projeto)
 cd /d "%~dp0"
 
-:: 1. MATAR PROCESSOS: Encerra qualquer Python que ficou travado escondido
-taskkill /f /im python.exe /t >nul 2>&1
-taskkill /f /im pythonw.exe /t >nul 2>&1
+:: 2. VERIFICAÇÃO: A porta 8001 já está ativa? 
+:: (Tudo na mesma linha para não dar erro)
+netstat -ano | findstr :8001 >nul
 
-:: 2. LIMPAR PORTA: Mata especificamente quem estiver usando a porta 8001 (Eel)
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8001') do taskkill /f /pid %%a >nul 2>&1
+:: Se o erro for 0 (porta encontrada), o servidor já está ligado
+if %errorlevel% equ 0 (
+    echo [OK] Servidor HMPCF ja esta rodando. Abrindo interface...
+    start msedge http://localhost:8001
+    exit
+)
 
-:: 3. ESPERA 1 SEGUNDO: Para o Windows liberar a porta de verdade
-timeout /t 1 /nobreak >nul
-
-:: 4. ACHAR O PYTHON: Pergunta ao sistema onde ele está
+:: 3. SE NÃO ESTIVER RODANDO: Procura o caminho do Python neste PC
+echo [!] Servidor desligado. Localizando Python...
 for /f "delims=" %%i in ('python -c "import sys; print(sys.executable)"') do set "PY_PATH=%%i"
 set "PYW_PATH=%PY_PATH:python.exe=pythonw.exe%"
 
-:: 5. ABRIR: Inicia o painel sem janela preta
+:: 4. INICIA O SERVIDOR: Usa o pythonw para não abrir janela preta
+echo [!] Iniciando novo servidor HMPCF...
 start "" "%PYW_PATH%" app_painel.py
+
+:: 5. ESPERA O MOTOR ACORDAR E ABRE O NAVEGADOR
+:: Aguarda 2 segundos para dar tempo do banco de dados carregar na RAM
+timeout /t 2 /nobreak >nul
+start msedge http://localhost:8001
+
 exit
