@@ -149,7 +149,22 @@ def salvar_txt_pacientes(conteudo):
 # ==============================================================================
 # 🚀 LIGAÇÃO DO APLICATIVO
 # ==============================================================================
+# No final do seu app_painel.py
+# ==============================================================================
+# 🚀 LIGAÇÃO DO APLICATIVO
+# ==============================================================================
 if __name__ == '__main__':
-    carregar_base() # Joga tudo pra RAM antes de ligar a tela
-    print("🚀 Sistema HMPCF - Painel de Automação Iniciado")
-    eel.start('index.html', mode='msedge', size=(), port=8001)
+    print("🚀 Servidor HMPCF Iniciado e Persistente na porta 8001")
+    carregar_base()
+    
+    eel.init('web_painel')
+    
+    # 1. Crie esta função minúscula para anular a "autodestruição" do Eel
+    def manter_vivo(rota, websockets):
+        pass 
+
+    # 2. Adicione o 'close_callback=manter_vivo' no seu eel.start
+    eel.start('index.html', mode=None, host='localhost', port=8001, block=False, close_callback=manter_vivo)
+
+    while True:
+        eel.sleep(1.0)
