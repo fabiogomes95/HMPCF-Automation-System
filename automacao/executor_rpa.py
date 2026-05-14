@@ -88,7 +88,7 @@ def executar_pyautogui(medico, data_atend, procedimento, pacientes, callback=Non
             pyautogui.press(['tab', 'tab'])
             pyautogui.press('enter') 
             
-            time.sleep(1.2)
+            time.sleep(0.7)
             # ==============================================================================
             
         except Exception as e:
