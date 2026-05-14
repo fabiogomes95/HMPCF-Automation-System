@@ -27,118 +27,138 @@
 </div>
 
 <div class="container py-4">
-    <div class="card p-3 mb-4 shadow-sm border-0">
-        <div class="row g-3">
-            <div class="col-md-5">
-                <label class="form-label fw-bold">Profissional / Sala</label>
-                <input type="text" id="med_atual" class="form-control" placeholder="EX: ENF JANAINA" style="text-transform: uppercase;">
-            </div>
+    <div class="card p-3 mb-4 shadow-sm" style="border-top: 4px solid var(--hmpcf-red); border-radius: 12px;">
+        <div class="row g-3 justify-content-center">
             <div class="col-md-3">
-                <label class="form-label fw-bold">Data do Lote</label>
-                <input type="text" id="data_atual" class="form-control" placeholder="DDMMYYYY" maxlength="8">
+                <label class="form-label fw-bold">📅 Data Atendimento:</label>
+                <input type="text" id="data_atual" class="form-control" placeholder="DD/MM/AAAA" oninput="mascaraData(this)" maxlength="10">
             </div>
-            <div class="col-md-4 d-flex align-items-end">
-                <button class="btn btn-primary w-100 fw-bold" onclick="iniciarSessao()">INICIAR PRODUÇÃO</button>
+            <div class="col-md-6">
+                <label class="form-label fw-bold">👨‍⚕️ Médico Atual:</label>
+                <input type="text" id="med_atual" class="form-control" placeholder="NOME DO PROFISSIONAL" style="text-transform: uppercase;">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-primary fw-bold w-100" onclick="confirmarCabecalho()">✅ Confirmar</button>
             </div>
         </div>
     </div>
 
-    <div id="area_busca" class="d-none">
-        <div class="alert alert-info py-2 mb-3 fw-bold" id="status_sessao"></div>
-        <div class="search-container mb-3">
-            <input type="text" id="input_busca" class="form-control form-control-lg" placeholder="🔍 Digite o Nome, SUS ou CPF do paciente...">
+    <div class="search-container shadow-sm">
+        <div class="input-group input-group-lg mb-3">
+            <input type="text" id="input_busca" class="form-control" placeholder="🔍 Pesquisar Paciente por Nome, CPF ou SUS..." oninput="pesquisarPaciente()">
         </div>
-        <div id="lista_resultados" class="d-flex flex-column" tabindex="-1"></div>
+        
+        <div id="status_msg" class="text-center fw-bold text-success mb-2"></div>
+
+        <div id="lista_resultados" style="max-height: 400px; overflow-y: auto;">
+            <div class="text-center text-muted p-5">Aguardando pesquisa no banco BPA...</div>
+        </div>
     </div>
 </div>
 
 <script>
-    let arquivoProducao = "";
+    let cabecalhoConfirmado = false;
+    let arquivoAutoGerado = "";
 
-    async function iniciarSessao() {
-        let med = document.getElementById('med_atual').value.trim().toUpperCase();
-        let dt = document.getElementById('data_atual').value.trim();
-        if(!med || !dt) return alert("Preencha profissional e data!");
-
-        arquivoProducao = `PRODUCAO_${dt}.txt`;
-        let ok = await eel.registrar_cabecalho_digitacao(arquivoProducao, med, dt)();
-        if(ok) {
-            document.getElementById('status_sessao').innerText = `👨‍⚕️ ${med} | 📅 ${dt} (Gravando em: ${arquivoProducao})`;
-            document.getElementById('area_busca').classList.remove('d-none');
-            document.getElementById('input_busca').focus();
-            buscarPacientes(""); // Traz os primeiros 50
+    // MÁSCARA AUTOMÁTICA DE DATA (DD/MM/AAAA)
+    function mascaraData(campo) {
+        let v = campo.value.replace(/\D/g, ''); 
+        if (v.length > 8) v = v.substring(0, 8); 
+        
+        if (v.length >= 5) {
+            campo.value = v.substring(0, 2) + '/' + v.substring(2, 4) + '/' + v.substring(4, 8);
+        } else if (v.length >= 3) {
+            campo.value = v.substring(0, 2) + '/' + v.substring(2, v.length);
+        } else {
+            campo.value = v;
         }
     }
 
-    // =========================================================
-    // 🎭 MÁSCARA CAMALEÃO (Ao digitar CPF e SUS)
-    // =========================================================
-    document.getElementById('input_busca').addEventListener('input', function(e) {
-        let valor = this.value;
-        if (/[A-Za-zÀ-ÿ]/.test(valor)) {
-            buscarPacientes(valor);
-            return;
-        }
+    async function confirmarCabecalho() {
+        let med = document.getElementById('med_atual').value.trim().toUpperCase();
+        let data = document.getElementById('data_atual').value.trim();
 
-        let num = valor.replace(/\D/g, '').substring(0, 15);
-        let formatado = '';
+        if(!med || !data) return alert("Preencha o Médico e a Data!");
+        if(data.length < 10) return alert("Digite a data completa (DD/MM/AAAA)!");
 
-        if (num.length <= 11) {
-            formatado = num.replace(/(\d{3})(\d)/, '$1.$2')
-                           .replace(/(\d{3})(\d)/, '$1.$2')
-                           .replace(/(\d{3})(\d{1,2})/, '$1-$2');
-        } else {
-            formatado = num.replace(/(\d{3})(\d)/, '$1 $2')
-                           .replace(/(\d{4})(\d)/, '$1 $2')
-                           .replace(/(\d{4})(\d{1,4})/, '$1 $2');
-        }
-        this.value = formatado;
-        buscarPacientes(formatado); // Busca usando o número mascarado (o Python limpa por trás)
-    });
+        // Transforma '16/04/2026' em '16-04-2026.txt'
+        arquivoAutoGerado = data.replace(/\//g, "-") + ".txt";
 
-    async function buscarPacientes(termo) {
+        await eel.registrar_cabecalho_digitacao(arquivoAutoGerado, med, data)();
+        cabecalhoConfirmado = true;
+        document.getElementById('status_msg').innerText = `📌 Gravando em: ${arquivoAutoGerado} | Médico: ${med}`;
+        
+        setTimeout(() => { document.getElementById('status_msg').innerText = ""; }, 4000);
+        document.getElementById('input_busca').focus();
+    }
+
+    async function pesquisarPaciente() {
+        let termo = document.getElementById('input_busca').value;
+        if(termo.length < 3) return;
+
         let resultados = await eel.buscar_pacientes_fb(termo)();
         let div = document.getElementById('lista_resultados');
         div.innerHTML = "";
 
         resultados.forEach(p => {
             let item = document.createElement('div');
-            item.className = 'result-item';
-            // A prioridade oficial: Se não tem SUS, exibe e usa o CPF.
-            let doc_exibir = p.sus ? `<span class="doc-tag text-primary">💳 SUS: ${p.sus}</span>` 
-                                   : `<span class="doc-tag text-secondary">CPF: ${p.cpf}</span>`;
-            let doc_valor = p.sus || p.cpf;
+            item.className = 'result-item shadow-sm';
+            item.setAttribute("tabindex", "0");
 
-            item.tabIndex = 0; // Torna o item focável pelo teclado
-            item.innerHTML = `
-                <div><span class="fw-bold">${p.nome}</span> <small class="text-muted ms-2">🎂 ${p.dtnasc}</small></div>
-                <div>${doc_exibir}</div>
-            `;
+            // ==============================================================
+            // 🎨 MÁSCARA APENAS NA VISUALIZAÇÃO DOS RESULTADOS
+            // ==============================================================
+            let sus_fmt = p.sus;
+            if (sus_fmt && sus_fmt.length === 15) {
+                sus_fmt = sus_fmt.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, '$1 $2 $3 $4');
+            }
             
-            // Quando clica ou aperta ENTER:
-            item.onclick = async () => {
-                if(!doc_valor) return alert("Paciente sem documento válido!");
-                let ok = await eel.adicionar_paciente_txt(arquivoProducao, doc_valor)();
-                if(ok) {
-                    let input = document.getElementById('input_busca');
-                    input.value = ""; // Limpa a caixa pra próxima busca
-                    input.placeholder = `✅ ${p.nome} GRAVADO! Próximo...`;
-                    input.focus();
-                    buscarPacientes(""); // Reseta a lista
-                }
-            };
+            let cpf_fmt = p.cpf;
+            if (cpf_fmt && cpf_fmt.length === 11) {
+                cpf_fmt = cpf_fmt.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            }
+
+            let docFinal = p.sus ? p.sus : p.cpf; // Lógica SUS > CPF
+
+            // O seu layout perfeito mostrando o DN, SUS formatado e CPF formatado!
+            item.innerHTML = `
+                <div>
+                    <span class="fw-bold text-primary">${p.nome}</span><br>
+                    <small class="text-muted">DN: ${p.dtnasc} | SUS: <span class="doc-tag">${sus_fmt || '---'}</span> | CPF: <span class="doc-tag">${cpf_fmt || '---'}</span></small>
+                </div>
+                <div class="align-self-center"><span class="badge bg-primary">GRAVAR</span></div>
+            `;
+            item.onclick = () => gravarPacienteNoLote(p.nome, docFinal);
             div.appendChild(item);
         });
     }
 
-    // =========================================================
-    // ⌨️ NAVEGAÇÃO DE TECLADO (O SEGREDO DA VELOCIDADE)
-    // =========================================================
+    async function gravarPacienteNoLote(nome, documento) {
+        if(!cabecalhoConfirmado) return alert("Clique no botão 'Confirmar' primeiro para registrar o Médico e a Data!");
+        if(!documento) return alert("Paciente sem documento válido!");
+
+        let ok = await eel.adicionar_paciente_txt(arquivoAutoGerado, documento)();
+        if(ok) {
+            document.getElementById('status_msg').innerText = `✅ GRAVADO: ${nome}`;
+            document.getElementById('input_busca').value = "";
+            document.getElementById('lista_resultados').innerHTML = "";
+            document.getElementById('input_busca').focus();
+        } else {
+             alert("Erro ao gravar. Verifique se tem permissões de escrita na pasta.");
+        }
+    }
+    
+    // ==========================================================
+    // 💡 ATALHOS DE TECLADO: A MÁGICA DO TAB E ENTER
+    // ==========================================================
+    
     document.getElementById("input_busca").addEventListener("keydown", function(e) {
         if (e.key === "Tab" || e.key === "ArrowDown") {
             e.preventDefault(); 
             let primeiroPaciente = document.querySelector(".result-item");
-            if (primeiroPaciente) primeiroPaciente.focus(); 
+            if (primeiroPaciente) {
+                primeiroPaciente.focus(); 
+            }
         }
     });
 
