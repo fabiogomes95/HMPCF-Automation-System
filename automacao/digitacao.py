@@ -11,7 +11,7 @@ import firebirdsql
 # 1. CARREGAMENTO DA BASE DE DADOS (FIREBIRD)
 # ==============================================================================
 def carregar_base():
-    """Conecta ao BPAMAG.GDB e carrega os pacientes para a memória RAM."""
+    """Conecta ao BPAMAG.GDB e carrega os pacientes para a memória RAM para busca rápida."""
     caminho_gdb = r'C:/BPA/BPAMAG.GDB'
     pacientes = []
     try:
@@ -46,6 +46,7 @@ class AssistenteBPA:
         self.base_pacientes = base_pacientes
         self.ficheiro_dia = ""
         
+        # Configuração da janela principal
         self.root.title("⚡ Assistente BPA - HMPCF - Prioridade SUS")
         self.root.geometry("1200x750") 
         self.root.config(padx=20, pady=20)
@@ -95,6 +96,7 @@ class AssistenteBPA:
                   bg="#C62828", fg="white").pack(pady=5, side=tk.RIGHT)
 
     def iniciar_sessao(self, event=None):
+        """Grava o cabeçalho no arquivo TXT e muda para a tela de pesquisa."""
         medico = self.entry_medico.get().strip().upper()
         data = self.entry_data.get().strip()
         if not medico or not data: return
@@ -102,6 +104,7 @@ class AssistenteBPA:
         pasta = os.path.dirname(os.path.abspath(__file__))
         self.ficheiro_dia = os.path.join(pasta, f"PRODUCAO_{data}.txt")
         
+        # Escreve o cabeçalho formatado
         with open(self.ficheiro_dia, 'a', encoding='utf-8') as f:
             f.write(f"\n{'-'*50}\nPROFISSIONAL: {medico} | DATA: {data}\n{'-'*50}\n")
             
@@ -112,6 +115,7 @@ class AssistenteBPA:
         self.atualizar_lista(self.base_pacientes[:50])
 
     def filtrar_resultados(self, event):
+        """Filtra a base de dados local conforme o que é digitado."""
         if event.keysym in ('Tab', 'Down', 'Up', 'Return'): return
         termo = self.entry_busca.get().strip().upper()
         if not termo:
@@ -121,7 +125,7 @@ class AssistenteBPA:
         self.atualizar_lista(res)
 
     def atualizar_lista(self, resultados):
-        """Aplica máscaras visuais e garante alinhamento das colunas."""
+        """Aplica máscaras visuais (CPF e SUS) na Listbox e formata o espaçamento."""
         self.lista_resultados.delete(0, tk.END)
         for sus, nome, dn, cpf in resultados:
             # Máscara SUS: 000 0000 0000 0000
@@ -138,6 +142,7 @@ class AssistenteBPA:
             self.lista_resultados.insert(tk.END, f"{c_nome} | {c_dn} | {c_sus} | {c_cpf}")
 
     def focar_lista(self, event):
+        """Transfere o foco da barra de busca para a lista de resultados."""
         if self.lista_resultados.size() > 0:
             self.lista_resultados.focus_set()
             self.lista_resultados.selection_set(0)
@@ -145,6 +150,7 @@ class AssistenteBPA:
         return "break"
 
     def navegar_com_tab(self, event):
+        """Permite navegar para baixo na lista usando o Tab."""
         selecao = self.lista_resultados.curselection()
         if selecao:
             prox = selecao[0] + 1
@@ -158,6 +164,7 @@ class AssistenteBPA:
     # 🎯 SALVAMENTO: PRIORIDADE SUS RESTAURADA
     # ----------------------------------------------------------------------
     def salvar_e_limpar(self, event):
+        """Pega a seleção, limpa as máscaras e salva o documento no TXT."""
         selecao = self.lista_resultados.curselection()
         if not selecao: return
         
@@ -168,7 +175,7 @@ class AssistenteBPA:
         sus_paciente = partes[2].replace(" ", "").strip()
         cpf_paciente = partes[3].replace("CPF:", "").replace(".", "").replace("-", "").strip()
         
-        # Volta a usar a lógica original: Tenta o SUS primeiro, se não tiver, vai o CPF
+        # Lógica original: Tenta o SUS primeiro, se não tiver, vai o CPF
         documento_final = sus_paciente if sus_paciente else cpf_paciente
         
         if not documento_final:
@@ -188,6 +195,7 @@ class AssistenteBPA:
             messagebox.showerror("Erro", f"Não foi possível salvar: {e}")
 
     def voltar_config(self):
+        """Retorna para a tela de Médico e Data."""
         self.frame_pesquisa.pack_forget()
         self.frame_config.pack(fill=tk.BOTH, expand=True)
         self.entry_medico.focus_set()
