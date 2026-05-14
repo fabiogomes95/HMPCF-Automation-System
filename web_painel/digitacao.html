@@ -27,116 +27,142 @@
 </div>
 
 <div class="container py-4">
-    <div class="card p-3 mb-4 shadow-sm" style="border-top: 4px solid var(--hmpcf-red); border-radius: 12px;">
-        <div class="row g-3 justify-content-center">
+    <div class="card p-3 mb-4 shadow-sm border-0">
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label fw-bold">Profissional / Sala</label>
+                <input type="text" id="med_atual" class="form-control" placeholder="EX: ENF JANAINA" style="text-transform: uppercase;">
+            </div>
             <div class="col-md-3">
-                <label class="form-label fw-bold">📅 Data Atendimento:</label>
-                <input type="text" id="data_atual" class="form-control" placeholder="DD/MM/AAAA" oninput="mascaraData(this)" maxlength="10">
+                <label class="form-label fw-bold">Data do Lote</label>
+                <input type="text" id="data_atual" class="form-control" placeholder="DDMMYYYY" maxlength="8">
             </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold">👨‍⚕️ Médico Atual:</label>
-                <input type="text" id="med_atual" class="form-control" placeholder="NOME DO PROFISSIONAL">
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <button class="btn btn-primary fw-bold w-100" onclick="confirmarCabecalho()">✅ Confirmar</button>
+            <div class="col-md-4 d-flex align-items-end">
+                <button class="btn btn-primary w-100 fw-bold" onclick="iniciarSessao()">INICIAR PRODUÇÃO</button>
             </div>
         </div>
     </div>
 
-    <div class="search-container shadow-sm">
-        <div class="input-group input-group-lg mb-3">
-            <input type="text" id="input_busca" class="form-control" placeholder="🔍 Pesquisar Paciente por Nome, CPF ou SUS..." oninput="pesquisarPaciente()">
+    <div id="area_busca" class="d-none">
+        <div class="alert alert-info py-2 mb-3 fw-bold" id="status_sessao"></div>
+        <div class="search-container mb-3">
+            <input type="text" id="input_busca" class="form-control form-control-lg" placeholder="🔍 Digite o Nome, SUS ou CPF do paciente...">
         </div>
-        
-        <div id="status_msg" class="text-center fw-bold text-success mb-2"></div>
-
-        <div id="lista_resultados" style="max-height: 400px; overflow-y: auto;">
-            <div class="text-center text-muted p-5">Aguardando pesquisa no banco BPA...</div>
-        </div>
+        <div id="lista_resultados" class="d-flex flex-column" tabindex="-1"></div>
     </div>
 </div>
 
 <script>
-    let cabecalhoConfirmado = false;
-    let arquivoAutoGerado = "";
+    let arquivoProducao = "";
 
-    // MÁSCARA AUTOMÁTICA DE DATA (DD/MM/AAAA)
-    function mascaraData(campo) {
-        let v = campo.value.replace(/\D/g, ''); // Remove tudo que não for número
-        if (v.length > 8) v = v.substring(0, 8); // Limita a 8 dígitos reais
-        
-        if (v.length >= 5) {
-            campo.value = v.substring(0, 2) + '/' + v.substring(2, 4) + '/' + v.substring(4, 8);
-        } else if (v.length >= 3) {
-            campo.value = v.substring(0, 2) + '/' + v.substring(2, v.length);
-        } else {
-            campo.value = v;
+    async function iniciarSessao() {
+        let med = document.getElementById('med_atual').value.trim().toUpperCase();
+        let dt = document.getElementById('data_atual').value.trim();
+        if(!med || !dt) return alert("Preencha profissional e data!");
+
+        arquivoProducao = `PRODUCAO_${dt}.txt`;
+        let ok = await eel.registrar_cabecalho_digitacao(arquivoProducao, med, dt)();
+        if(ok) {
+            document.getElementById('status_sessao').innerText = `👨‍⚕️ ${med} | 📅 ${dt} (Gravando em: ${arquivoProducao})`;
+            document.getElementById('area_busca').classList.remove('d-none');
+            document.getElementById('input_busca').focus();
+            buscarPacientes(""); // Traz os primeiros 50
         }
     }
 
-    // 1. Grava o cabeçalho no arquivo quando você define ou troca de médico
-    async function confirmarCabecalho() {
-        let med = document.getElementById('med_atual').value.trim();
-        let data = document.getElementById('data_atual').value.trim();
+    // =========================================================
+    // 🎭 MÁSCARA CAMALEÃO (Ao digitar CPF e SUS)
+    // =========================================================
+    document.getElementById('input_busca').addEventListener('input', function(e) {
+        let valor = this.value;
+        if (/[A-Za-zÀ-ÿ]/.test(valor)) {
+            buscarPacientes(valor);
+            return;
+        }
 
-        if(!med || !data) return alert("Preencha o Médico e a Data!");
-        if(data.length < 10) return alert("Digite a data completa (DD/MM/AAAA)!");
+        let num = valor.replace(/\D/g, '').substring(0, 15);
+        let formatado = '';
 
-        // Transforma '16/04/2026' em '16-04-2026.txt'
-        arquivoAutoGerado = data.replace(/\//g, "-") + ".txt";
+        if (num.length <= 11) {
+            formatado = num.replace(/(\d{3})(\d)/, '$1.$2')
+                           .replace(/(\d{3})(\d)/, '$1.$2')
+                           .replace(/(\d{3})(\d{1,2})/, '$1-$2');
+        } else {
+            formatado = num.replace(/(\d{3})(\d)/, '$1 $2')
+                           .replace(/(\d{4})(\d)/, '$1 $2')
+                           .replace(/(\d{4})(\d{1,4})/, '$1 $2');
+        }
+        this.value = formatado;
+        buscarPacientes(formatado); // Busca usando o número mascarado (o Python limpa por trás)
+    });
 
-        await eel.registrar_cabecalho_digitacao(arquivoAutoGerado, med, data)();
-        cabecalhoConfirmado = true;
-        document.getElementById('status_msg').innerText = `📌 Gravando em: ${arquivoAutoGerado} | Médico: ${med.toUpperCase()}`;
-        
-        setTimeout(() => { document.getElementById('status_msg').innerText = ""; }, 4000);
-        document.getElementById('input_busca').focus();
-    }
-
-    // 2. Busca em tempo real no Firebird
-    async function pesquisarPaciente() {
-        let termo = document.getElementById('input_busca').value;
-        if(termo.length < 3) return;
-
+    async function buscarPacientes(termo) {
         let resultados = await eel.buscar_pacientes_fb(termo)();
         let div = document.getElementById('lista_resultados');
         div.innerHTML = "";
 
         resultados.forEach(p => {
             let item = document.createElement('div');
-            item.className = 'result-item shadow-sm';
-            
-            // Lógica SUS > CPF
-            let docFinal = p.sus ? p.sus : p.cpf;
+            item.className = 'result-item';
+            // A prioridade oficial: Se não tem SUS, exibe e usa o CPF.
+            let doc_exibir = p.sus ? `<span class="doc-tag text-primary">💳 SUS: ${p.sus}</span>` 
+                                   : `<span class="doc-tag text-secondary">CPF: ${p.cpf}</span>`;
+            let doc_valor = p.sus || p.cpf;
 
+            item.tabIndex = 0; // Torna o item focável pelo teclado
             item.innerHTML = `
-                <div>
-                    <span class="fw-bold text-primary">${p.nome}</span><br>
-                    <small class="text-muted">DN: ${p.dtnasc} | SUS: <span class="doc-tag">${p.sus || '---'}</span> | CPF: <span class="doc-tag">${p.cpf || '---'}</span></small>
-                </div>
-                <div class="align-self-center"><span class="badge bg-primary">GRAVAR</span></div>
+                <div><span class="fw-bold">${p.nome}</span> <small class="text-muted ms-2">🎂 ${p.dtnasc}</small></div>
+                <div>${doc_exibir}</div>
             `;
-            item.onclick = () => gravarPacienteNoLote(p.nome, docFinal);
+            
+            // Quando clica ou aperta ENTER:
+            item.onclick = async () => {
+                if(!doc_valor) return alert("Paciente sem documento válido!");
+                let ok = await eel.adicionar_paciente_txt(arquivoProducao, doc_valor)();
+                if(ok) {
+                    let input = document.getElementById('input_busca');
+                    input.value = ""; // Limpa a caixa pra próxima busca
+                    input.placeholder = `✅ ${p.nome} GRAVADO! Próximo...`;
+                    input.focus();
+                    buscarPacientes(""); // Reseta a lista
+                }
+            };
             div.appendChild(item);
         });
     }
 
-    // 3. Grava o número do paciente no arquivo gerado
-    async function gravarPacienteNoLote(nome, documento) {
-        if(!cabecalhoConfirmado) return alert("Clique no botão 'Confirmar' primeiro para registrar o Médico e a Data!");
-        if(!documento) return alert("Paciente sem documento válido!");
-
-        let ok = await eel.adicionar_paciente_txt(arquivoAutoGerado, documento)();
-        if(ok) {
-            document.getElementById('status_msg').innerText = `✅ GRAVADO: ${nome}`;
-            document.getElementById('input_busca').value = "";
-            document.getElementById('lista_resultados').innerHTML = "";
-            document.getElementById('input_busca').focus();
-            setTimeout(() => { document.getElementById('status_msg').innerText = ""; }, 2000);
-        } else {
-             alert("Erro ao gravar. Verifique se tem permissões de escrita na pasta.");
+    // =========================================================
+    // ⌨️ NAVEGAÇÃO DE TECLADO (O SEGREDO DA VELOCIDADE)
+    // =========================================================
+    document.getElementById("input_busca").addEventListener("keydown", function(e) {
+        if (e.key === "Tab" || e.key === "ArrowDown") {
+            e.preventDefault(); 
+            let primeiroPaciente = document.querySelector(".result-item");
+            if (primeiroPaciente) primeiroPaciente.focus(); 
         }
-    }
+    });
+
+    document.getElementById("lista_resultados").addEventListener("keydown", function(e) {
+        let selecionado = document.activeElement;
+        
+        if (selecionado && selecionado.classList.contains("result-item")) {
+            if (e.key === "Tab" || e.key === "ArrowDown") {
+                e.preventDefault();
+                let proximo = selecionado.nextElementSibling;
+                if (proximo) proximo.focus();
+            }
+            else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                let anterior = selecionado.previousElementSibling;
+                if (anterior) anterior.focus();
+                else document.getElementById("input_busca").focus();
+            }
+            else if (e.key === "Enter") {
+                e.preventDefault();
+                selecionado.click(); 
+            }
+        }
+    });
 </script>
 </body>
 </html>

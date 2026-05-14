@@ -1,43 +1,81 @@
 import os
 import glob
 import eel
+import firebirdsql
 
 # ==============================================================================
-# 📂 CONFIGURAÇÃO DE DIRETÓRIOS E AMBIENTE (FOCO EM WINDOWS)
+# 📂 CONFIGURAÇÃO DE DIRETÓRIOS E AMBIENTE
 # ==============================================================================
 PASTA_ATUAL = os.path.dirname(os.path.abspath(__file__))
 PASTA_AUTOMACAO = os.path.join(PASTA_ATUAL, "automacao")
 
 eel.init('web_painel')
 
-# 💡 AS IMPORTAÇÕES: Trazemos o robô e o limpador direto pra memória!
+# 💡 AS IMPORTAÇÕES: Trazendo nossos "trabalhadores" isolados
 from automacao import executor_rpa
 from automacao import cpf_sus 
+from automacao import digitacao 
 
 # ==============================================================================
-# 🩺 MÓDULO TRIAGEM E FATIAMENTO (ENFERMEIROS)
+# 🧠 MOTOR DE RAM: CARREGAMENTO DE BASE DO HOSPITAL
+# ==============================================================================
+BASE_PACIENTES = []
+
+def carregar_base():
+    """Carrega TODOS os pacientes para a memória RAM assim que o sistema abre."""
+    global BASE_PACIENTES
+    caminho_gdb = r'C:/BPA/BPAMAG.GDB'
+    try:
+        print("⏳ Carregando pacientes para a memória...")
+        con = firebirdsql.connect(host='localhost', database=caminho_gdb, user='SYSDBA', password='masterkey', charset='WIN1252')
+        cur = con.cursor()
+        cur.execute("SELECT CNS, NOME, DTNASC, NUM_CPF FROM CADCNS")
+        for r in cur.fetchall():
+            sus = str(r[0] or "").strip()
+            nome = str(r[1] or "").strip().upper()
+            dn_raw = str(r[2] or "").strip()
+            cpf = str(r[3] or "").strip()
+            
+            dtnasc = f"{dn_raw[6:8]}/{dn_raw[4:6]}/{dn_raw[0:4]}" if len(dn_raw) == 8 else "  /  /    "
+            
+            BASE_PACIENTES.append({
+                'sus': sus, 'nome': nome, 'dtnasc': dtnasc, 'cpf': cpf
+            })
+        con.close()
+        print(f"⚡ SUCESSO! {len(BASE_PACIENTES)} pacientes na RAM. Busca ultrarrápida ativada!")
+    except Exception as e:
+        print(f"❌ Erro Crítico ao carregar base: {e}")
+
+# ==============================================================================
+# 🔍 1. MÓDULO DIGITADOR MANUAL (Delega para o digitacao.py)
+# ==============================================================================
+
+@eel.expose
+def buscar_pacientes_fb(termo):
+    # Envia a pesquisa e a base de dados em RAM para o arquivo resolver
+    return digitacao.buscar_pacientes_memoria(termo, BASE_PACIENTES)
+
+@eel.expose
+def registrar_cabecalho_digitacao(arquivo, medico, data):
+    caminho = os.path.join(PASTA_AUTOMACAO, arquivo)
+    return digitacao.criar_cabecalho_producao(caminho, medico, data)
+
+@eel.expose
+def adicionar_paciente_txt(arquivo, documento):
+    caminho = os.path.join(PASTA_AUTOMACAO, arquivo)
+    return digitacao.adicionar_ficha_producao(caminho, documento)
+
+# ==============================================================================
+# 🧹 2. MÓDULO TRIAGEM E LIMPEZA (Delega para o cpf_sus.py)
 # ==============================================================================
 
 @eel.expose
 def rodar_limpador(data_lote, enfermeiros_str):
-    """
-    Função chamada pelo botão "Reordenar e Dividir Lotes" no painel web.
-    1. Executa a limpeza bruta puxando a função do cpf_sus.py.
-    2. Lê os dados filtrados diretamente da memória.
-    3. Quebra os pacientes em lotes de 99.
-    4. Adiciona cabeçalhos e cria apenas o prod_enfermeiros.txt.
-    """
-    
-    # Define onde está o rascunho sujo colado pelas meninas
     caminho_sujo = os.path.join(PASTA_AUTOMACAO, "cpf_sus.txt")
     
-    # 1. Manda o cpf_sus limpar e pegar os dados direto na memória (Adeus pacientes.txt!)
     docs = cpf_sus.processar_lista(caminho_sujo)
-    
-    if not docs: 
-        return "Erro: Nenhum paciente válido encontrado. Verifique se os dados estão corretos."
+    if not docs: return "Erro: Nenhum paciente válido encontrado."
         
-    # Prepara a lista de enfermeiros
     profs = [p.strip().upper() for p in enfermeiros_str.split(',') if p.strip()]
     if not profs: profs = ["PROFISSIONAL SEM NOME"]
     
@@ -45,30 +83,45 @@ def rodar_limpador(data_lote, enfermeiros_str):
     chunk_size = 99
     idx_p = 0
     
-    # 2. Fatiamento em blocos de 99 e criação dos cabeçalhos pro Robô
     for i in range(0, len(docs), chunk_size):
         chunk = docs[i:i+chunk_size]
-        prof_atual = profs[idx_p % len(profs)] # Roda o plantão dos enfermeiros
+        prof_atual = profs[idx_p % len(profs)] 
         idx_p += 1
-        
-        # O cabeçalho sagrado que o seu robô exige:
         resultado_final.append(f"PROFISSIONAL: {prof_atual} | DATA: {data_lote}")
         resultado_final.extend(chunk)
-        resultado_final.append("") # Linha vazia entre lotes
+        resultado_final.append("") 
         
-    # 3. Salva TUDO direto no prod_enfermeiros.txt
     conteudo_str = "\n".join(resultado_final)
     caminho_prod = os.path.join(PASTA_AUTOMACAO, "prod_enfermeiros.txt")
     
     with open(caminho_prod, 'w', encoding='utf-8') as f:
         f.write(conteudo_str)
-    
-    # Retorna o texto formatado para mostrar na tela do painel
     return conteudo_str
 
+@eel.expose
+def salvar_texto_sujo(conteudo):
+    caminho = os.path.join(PASTA_AUTOMACAO, "cpf_sus.txt")
+    with open(caminho, 'w', encoding='utf-8') as f: 
+        f.write(conteudo)
+
 # ==============================================================================
-# 🤖 FUNÇÕES GERAIS DE COMUNICAÇÃO WEB <-> PYTHON
+# 🤖 3. MÓDULO ROBÔ RPA E ARQUIVOS (Delega para o executor_rpa.py)
 # ==============================================================================
+
+@eel.expose
+def preparar_rpa(nome_arquivo):
+    caminho_completo = os.path.join(PASTA_AUTOMACAO, nome_arquivo)
+    if os.path.exists(caminho_completo):
+        # ⚠️ AQUI ESTÁ A CORREÇÃO: Enviamos a memória RAM inteira pro Robô não travar!
+        lotes, erro = executor_rpa.preparar_lotes(caminho_completo, BASE_PACIENTES)
+        return {"lotes": lotes, "erro": erro}
+    return {"lotes": [], "erro": "Ficheiro não encontrado."}
+
+@eel.expose
+def digitar_lote_rpa(medico, data, cargo, pacientes):
+    def callback(msg): eel.atualizar_progresso_web(msg)()
+    executor_rpa.executar_pyautogui(medico, data, cargo, pacientes, callback)
+    return "OK"
 
 @eel.expose
 def listar_producoes():
@@ -81,90 +134,22 @@ def listar_producoes():
 def ler_producao(nome_arquivo):
     caminho = os.path.join(PASTA_AUTOMACAO, nome_arquivo)
     if not os.path.exists(caminho): return ""
-    with open(caminho, 'r', encoding='utf-8') as f: 
-        return f.read()
-
-@eel.expose
-def preparar_rpa(nome_arquivo):
-    caminho_completo = os.path.join(PASTA_AUTOMACAO, nome_arquivo)
-    if os.path.exists(caminho_completo):
-        lotes, erro = executor_rpa.preparar_lotes(caminho_completo)
-        return {"lotes": lotes, "erro": erro}
-    return {"lotes": [], "erro": "Ficheiro não encontrado."}
-
-@eel.expose
-def digitar_lote_rpa(medico, data, cargo, pacientes):
-    def callback(msg): 
-        eel.atualizar_progresso_web(msg)()
-    executor_rpa.executar_pyautogui(medico, data, cargo, pacientes, callback)
-    return "OK"
+    with open(caminho, 'r', encoding='utf-8') as f: return f.read()
 
 @eel.expose
 def ler_txt_pacientes():
-    caminho = os.path.join(PASTA_AUTOMACAO, "prod_enfermeiros.txt")
-    if not os.path.exists(caminho): return ""
-    with open(caminho, 'r', encoding='utf-8') as f: 
-        return f.read()
+    return ler_producao("prod_enfermeiros.txt")
 
 @eel.expose
 def salvar_txt_pacientes(conteudo):
     caminho = os.path.join(PASTA_AUTOMACAO, "prod_enfermeiros.txt")
-    with open(caminho, 'w', encoding='utf-8') as f: 
-        f.write(conteudo)
+    with open(caminho, 'w', encoding='utf-8') as f: f.write(conteudo)
     return "✅ Salvo!"
 
-@eel.expose
-def salvar_texto_sujo(conteudo):
-    caminho = os.path.join(PASTA_AUTOMACAO, "cpf_sus.txt")
-    with open(caminho, 'w', encoding='utf-8') as f: 
-        f.write(conteudo)
-
-@eel.expose
-def registrar_cabecalho_digitacao(arquivo, medico, data):
-    caminho = os.path.join(PASTA_AUTOMACAO, arquivo)
-    with open(caminho, 'a', encoding='utf-8') as f:
-        f.write(f"PROFISSIONAL: {medico.upper()} | DATA: {data}\n")
-    return True
-
-@eel.expose
-def adicionar_paciente_txt(arquivo, documento):
-    caminho = os.path.join(PASTA_AUTOMACAO, arquivo)
-    try:
-        with open(caminho, 'a', encoding='utf-8') as f: 
-            f.write(f"{documento}\n")
-        return True
-    except: 
-        return False
-
-@eel.expose
-def buscar_pacientes_fb(termo):
-    if not termo: return []
-    termo = termo.upper().strip()
-    caminho_gdb = r'C:/BPA/BPAMAG.GDB'
-    try:
-        import firebirdsql
-        con = firebirdsql.connect(host='localhost', database=caminho_gdb, user='SYSDBA', password='masterkey', charset='WIN1252')
-        cur = con.cursor()
-        sql = "SELECT CNS, NOME, DTNASC, NUM_CPF FROM CADCNS WHERE NOME LIKE ? OR NUM_CPF LIKE ? OR CNS LIKE ?"
-        cur.execute(sql, (f"%{termo}%", f"%{termo}%", f"%{termo}%"))
-        res = []
-        for r in cur.fetchall():
-            dn_raw = str(r[2] or "").strip()
-            res.append({
-                'sus': str(r[0] or "").strip(), 
-                'nome': str(r[1] or "").strip().upper(),
-                'dtnasc': f"{dn_raw[6:8]}/{dn_raw[4:6]}/{dn_raw[0:4]}" if len(dn_raw) == 8 else "  /  /    ",
-                'cpf': str(r[3] or "").strip()
-            })
-        con.close()
-        return sorted(res, key=lambda x: x['nome'])[:50]
-    except Exception as e:
-        print(f"Erro na busca do banco: {e}")
-        return []
-
 # ==============================================================================
-# 🚀 INICIALIZAÇÃO DO APLICATIVO
+# 🚀 LIGAÇÃO DO APLICATIVO
 # ==============================================================================
 if __name__ == '__main__':
-    print("🚀 Sistema HMPCF - Painel de Automação Iniciado (Sem arquivos lixo!)")
+    carregar_base() # Joga tudo pra RAM antes de ligar a tela
+    print("🚀 Sistema HMPCF - Painel de Automação Iniciado")
     eel.start('index.html', mode='msedge', size=(), port=8001)
