@@ -270,9 +270,7 @@ function formatarSUSExibicao(v) {
 
 function buscarNoBanco(id) {
     // O 'fetch' faz uma requisição silenciosa para a rota '/buscar/' do servidor Python.
-    fetch('/buscar/' + id)
-        .then(resposta => resposta.json())
-        .then(paciente => {
+    eel.buscar_paciente(id)().then(paciente => {
             if (paciente.erro) return; // Paciente novo, mantem a tela vazia
             
             // Injeta os dados mágicamente nas caixas de texto
@@ -359,41 +357,38 @@ function salvarPaciente() {
         procedencia: procedenciaValor
     };
     
-    fetch('/salvar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(pacoteDados)
-    })
-    .then(resposta => resposta.json())
-    .then(data => {
-        if(data.status === "sucesso") {
-            // Mantém o número na tela pra recepcionista ver
-            if(data.registro_gerado) {
-                document.getElementById('db_registro').value = data.registro_gerado;
+    async function executaSalvar() {
+        try {
+            let data = await eel.salvar(pacoteDados)();
+            if(data.status === "sucesso") {
+                // Mantém o número na tela pra recepcionista ver
+                if(data.registro_gerado) {
+                    document.getElementById('db_registro').value = data.registro_gerado;
+                }
+                
+                // Sucesso Visual (Fica Azul)
+                botaoSalvar.style.backgroundColor = "#0056b3";
+                botaoSalvar.style.color = "#fff";
+                botaoSalvar.innerHTML = "✅ SALVO COM SUCESSO!";
+                
+                alert(`✅ Salvo com sucesso! Ficha número [ ${data.registro_gerado} ] registrada no sistema. Já pode Imprimir!`);
+            } else {
+                alert("❌ Erro ao salvar no banco de dados: " + data.mensagem);
+                botaoSalvar.disabled = false; // Destrava pra poder tentar corrigir o erro
+                botaoSalvar.style.backgroundColor = "";
+                botaoSalvar.style.color = "";
+                botaoSalvar.innerHTML = "💾 Salvar (F2)";
             }
-            
-            // Sucesso Visual (Fica Azul)
-            botaoSalvar.style.backgroundColor = "#0056b3";
-            botaoSalvar.style.color = "#fff";
-            botaoSalvar.innerHTML = "✅ SALVO COM SUCESSO!";
-            
-            alert(`✅ Salvo com sucesso! Ficha número [ ${data.registro_gerado} ] registrada no sistema. Já pode Imprimir!`);
-        } else {
-            alert("❌ Erro ao salvar no banco de dados: " + data.mensagem);
-            botaoSalvar.disabled = false; // Destrava pra poder tentar corrigir o erro
+        } catch (erro) {
+            console.error('Erro do sistema Eel:', erro);
+            alert("⚠ Ocorreu um erro ao comunicar com o servidor do sistema.");         
+            botaoSalvar.disabled = false;
             botaoSalvar.style.backgroundColor = "";
             botaoSalvar.style.color = "";
             botaoSalvar.innerHTML = "💾 Salvar (F2)";
         }
-    })
-    .catch(erro => {
-        console.error('Erro na rede:', erro);
-        alert("⚠ O Servidor do Hospital parece estar fora do ar.");         
-        botaoSalvar.disabled = false;
-        botaoSalvar.style.backgroundColor = "";
-        botaoSalvar.style.color = "";
-        botaoSalvar.innerHTML = "💾 Salvar (F2)";
-    });
+    }
+    executaSalvar();
 }
 
 // =========================================================================

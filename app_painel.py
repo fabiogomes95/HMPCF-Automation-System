@@ -12,7 +12,7 @@ PASTA_AUTOMACAO = os.path.join(PASTA_ATUAL, "automacao")
 sys.path.append(PASTA_AUTOMACAO)
 
 # Inicializa o motor Eel apontando para a pasta 'web'
-eel.init('web')
+eel.init('web_painel')
 
 # Importa as dependências gráficas e do robô.
 import executor_rpa
