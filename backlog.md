@@ -19,4 +19,4 @@
 - [x] **Logging** — `print()` substituído por `logging_setup.logger` em 27 arquivos
 - [x] **Remover `requests`** das dependências (não era usado)
 - [x] **Renomear `archive/`** para `scripts/` (concluído)
-- ~~Connection pool~~ — **Cancelado.** Não agrega valor (uso do Firebird é esporádico, RAM cache já resolve)
+- [] **Verificar o  `/registro/`** readme.md e nosso changelog.md! ficou faltando salvar algumas coisas que foram efetuadas pq o pc desligou. O meu web_recepção index.html agora tem um botao pra mudo escuro so que ele ficou em cima da informção que diz: "online"
