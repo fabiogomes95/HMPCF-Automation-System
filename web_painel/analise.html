@@ -11,7 +11,7 @@
 <body>
 
 <div class="topbar">
-    <a href="index.html" style="position: absolute; left: 30px; color: white; text-decoration: none; font-weight: 600;">⬅️ Início</a>
+    <a href="index.html" class="top-back-link">⬅️ Início</a>
     <h4>📊 MÓDULO DE ANÁLISE / BI</h4>
 </div>
 
@@ -19,65 +19,65 @@
 
     <div class="row g-4 mb-4 justify-content-center">
         <div class="col-md-4">
-            <a href="consulta.html" class="module-card" style="padding: 20px; text-decoration: none; color: var(--text-main);">
-                <div class="module-icon" style="font-size: 2rem;">📋</div>
+            <a href="consulta.html" class="module-card module-card--pad">
+                <div class="module-icon module-icon--lg">📋</div>
                 <h5>Consulta Atendimentos</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Filtrar por período, gráficos, estatísticas e tabela</p>
+                <p class="text-muted-small">Filtrar por período, gráficos, estatísticas e tabela</p>
             </a>
         </div>
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('dashboard')">
-                <div class="module-icon" style="font-size: 2rem;">📈</div>
+            <div class="module-card module-card--pad" onclick="abrirModal('dashboard')">
+                <div class="module-icon module-icon--lg">📈</div>
                 <h5>Dashboard Visual</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Gera PNG com 4 gráficos + relatório Top 20</p>
+                <p class="text-muted-small">Gera PNG com 4 gráficos + relatório Top 20</p>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('relatorio_mes')">
-                <div class="module-icon" style="font-size: 2rem;">📋</div>
+            <div class="module-card module-card--pad" onclick="abrirModal('relatorio_mes')">
+                <div class="module-icon module-icon--lg">📋</div>
                 <h5>Planilha de Produção</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Gera Excel com divisão DIURNO/NOTURNO</p>
+                <p class="text-muted-small">Gera Excel com divisão DIURNO/NOTURNO</p>
             </div>
         </div>
     </div>
 
     <div class="row g-4 mb-4 justify-content-center">
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('auditoria')">
-                <div class="module-icon" style="font-size: 2rem;">🔍</div>
+            <div class="module-card module-card--pad" onclick="abrirModal('auditoria')">
+                <div class="module-icon module-icon--lg">🔍</div>
                 <h5>Auditoria Periódica</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">PDF do Top 20 pacientes (mensal/trimestral/semestral)</p>
+                <p class="text-muted-small">PDF do Top 20 pacientes (mensal/trimestral/semestral)</p>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('csv_analise')">
-                <div class="module-icon" style="font-size: 2rem;">📄</div>
+            <div class="module-card module-card--pad" onclick="abrirModal('csv_analise')">
+                <div class="module-icon module-icon--lg">📄</div>
                 <h5>Analisar CSVs Antigos</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Gera PDF com Top 20 a partir de CSVs</p>
+                <p class="text-muted-small">Gera PDF com Top 20 a partir de CSVs</p>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('historico')">
-                <div class="module-icon" style="font-size: 2rem;">👤</div>
+            <div class="module-card module-card--pad" onclick="abrirModal('historico')">
+                <div class="module-icon module-icon--lg">👤</div>
                 <h5>Histórico do Paciente</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Busca completa por nome, CPF ou SUS</p>
+                <p class="text-muted-small">Busca completa por nome, CPF ou SUS</p>
             </div>
         </div>
     </div>
 
     <div class="row g-4 mb-4 justify-content-center">
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; background: linear-gradient(135deg, var(--primary-blue), #052244); color: white; cursor: pointer;" onclick="abrirModal('exportacao')">
-                <div class="module-icon" style="background: rgba(255,255,255,0.15); color: white; font-size: 2rem;">📦</div>
-                <h5 style="color: white;">Exportação Consolidada</h5>
-                <p style="font-size: 0.8rem; opacity: 0.85;">Gera todos os relatórios + ZIP único</p>
+            <div class="module-card module-card--pad module-card--accent" onclick="abrirModal('exportacao')">
+                <div class="module-icon">📦</div>
+                <h5 class="text-white">Exportação Consolidada</h5>
+                <p class="accent-desc">Gera todos os relatórios + ZIP único</p>
             </div>
         </div>
     </div>
 
-    <div class="editor-container shadow-sm" style="max-width: 900px; margin: 0 auto;">
+    <div class="editor-container shadow-sm editor-container--wide">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="fw-bold" style="color: var(--primary-blue);">📋 Terminal de Saída:</span>
+            <span class="fw-bold badge-primary">📋 Terminal de Saída:</span>
             <button class="btn btn-sm btn-outline-secondary" onclick="limparLog()">Limpar</button>
         </div>
         <textarea id="log_output" class="form-control" rows="12" readonly placeholder="Clique em uma ferramenta acima para executar..."></textarea>
@@ -86,8 +86,8 @@
 
 <div class="modal fade" id="paramModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-            <div class="modal-header" style="background: var(--primary-blue); color: white; border-radius: 16px 16px 0 0;">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title" id="paramModalLabel">Parâmetros</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -95,7 +95,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button class="btn" style="background: var(--primary-blue); color: white;" onclick="executarModal()">Executar</button>
+                <button class="btn btn-primary-custom" onclick="executarModal()">Executar</button>
             </div>
         </div>
     </div>

@@ -113,7 +113,7 @@
 <body>
 
 <div class="topbar">
-    <a href="analise.html" style="position: absolute; left: 30px; color: white; text-decoration: none; font-weight: 600;">⬅️ Análise</a>
+    <a href="analise.html" class="top-back-link">⬅️ Análise</a>
     <h4>📋 CONSULTA — ATENDIMENTOS</h4>
 </div>
 
@@ -129,53 +129,53 @@
             <input type="date" id="filtro_fim">
         </div>
         <div>
-            <button class="btn" style="background: var(--primary-blue); color: white; border-radius: 8px; padding: 8px 24px; font-weight: 600;" onclick="consultar()">🔍 Consultar</button>
+            <button class="btn btn-primary btn-pill" onclick="consultar()">🔍 Consultar</button>
         </div>
         <div>
-            <button class="btn btn-sm" style="background: var(--extremoz-yellow); color: #5C4A00; border-radius: 8px; padding: 8px 16px; font-weight: 600;" onclick="definirHoje()">📅 Hoje</button>
+            <button class="btn btn-sm btn-yellow" onclick="definirHoje()">📅 Hoje</button>
         </div>
         <div>
-            <button class="btn btn-sm" style="background: var(--extremoz-yellow); color: #5C4A00; border-radius: 8px; padding: 8px 16px; font-weight: 600;" onclick="definirSemana()">📅 Esta Semana</button>
+            <button class="btn btn-sm btn-yellow" onclick="definirSemana()">📅 Esta Semana</button>
         </div>
         <div>
-            <button class="btn btn-sm" style="background: var(--extremoz-yellow); color: #5C4A00; border-radius: 8px; padding: 8px 16px; font-weight: 600;" onclick="definirMes()">📅 Este Mês</button>
+            <button class="btn btn-sm btn-yellow" onclick="definirMes()">📅 Este Mês</button>
         </div>
         <div>
-            <button class="btn btn-sm" style="background: #10B981; color: white; border-radius: 8px; padding: 8px 16px; font-weight: 600;" onclick="recarregar()">🔄 Recarregar</button>
+            <button class="btn btn-sm btn-success" onclick="recarregar()">🔄 Recarregar</button>
         </div>
-        <div id="loadingSpinner" style="display:none;">
+        <div id="loadingSpinner" class="d-none">
             <span class="spinner-border spinner-border-sm text-primary" role="status"></span> Carregando...
         </div>
     </div>
-    <div id="cacheStatus" class="text-muted" style="font-size: 0.8rem; text-align: center; margin-bottom: 8px;"></div>
+    <div id="cacheStatus" class="text-muted small text-center mb-2"></div>
 
-    <div id="resultArea" style="display:none;">
+    <div id="resultArea" class="d-none">
 
         <div class="row g-3 mb-4" id="statsCards"></div>
 
         <div class="row g-3 mb-4">
             <div class="col-md-4">
                 <div class="graf-container">
-                    <h6 style="font-weight: 700; color: var(--primary-blue); margin-bottom: 12px;">📊 Por Procedência</h6>
+                    <h6 class="section-title">📊 Por Procedência</h6>
                     <div class="chart-wrapper"><canvas id="chartProcedencia"></canvas></div>
                 </div>
             </div>
             <div class="col-md-8">
                 <div class="graf-container">
-                    <h6 style="font-weight: 700; color: var(--primary-blue); margin-bottom: 12px;">📈 Atendimentos por Dia</h6>
+                    <h6 class="section-title">📈 Atendimentos por Dia</h6>
                     <div class="chart-wrapper"><canvas id="chartDias"></canvas></div>
                 </div>
             </div>
         </div>
 
-        <div class="editor-container shadow-sm">
+        <div class="editor-container shadow-sm editor-container--wide">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="fw-bold" style="color: var(--primary-blue);" id="tabelaTitulo">📋 Atendimentos</span>
-                <span id="tabelaCount" class="text-muted" style="font-size: 0.85rem;"></span>
+                <span class="fw-bold badge-primary" id="tabelaTitulo">📋 Atendimentos</span>
+                <span id="tabelaCount" class="text-muted small"></span>
             </div>
             <div class="tabela-container">
-                <table class="table table-hover table-sm" style="margin-bottom: 0;">
-                    <thead style="background: var(--primary-blue); color: white;">
+                <table class="table table-hover table-sm">
+                    <thead class="table-head-primary">
                         <tr>
                             <th>#</th>
                             <th>Data</th>
@@ -192,15 +192,15 @@
                 </table>
             </div>
             <div id="paginacaoNav" class="d-flex justify-content-center align-items-center py-2"></div>
-            <div id="semResultados" class="text-center text-muted py-4" style="display:none;">
+            <div id="semResultados" class="text-center text-muted py-4 d-none">
                 Nenhum atendimento encontrado no período.
             </div>
         </div>
 
     </div>
 
-    <div id="emptyState" class="text-center py-5" style="color: var(--text-muted);">
-        <div style="font-size: 3rem; margin-bottom: 10px;">📋</div>
+    <div id="emptyState" class="text-center py-5 center-empty">
+        <div class="emoji-large">📋</div>
         <h5>Selecione um período e clique em <strong>Consultar</strong></h5>
         <p class="text-muted">Os dados são carregados diretamente do hospital.db da recepção.</p>
     </div>

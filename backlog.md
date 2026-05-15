@@ -35,3 +35,4 @@
  - [x] Implementado timeout de sessão admin (`ADMIN_SESSION_MINUTES`), endpoint `logout_admin` e badge de status no painel.
  - [x] Painel de integração iniciado **fechado** por padrão com overlay de cadeado; botão `Desbloquear` exige autenticação admin.
  - [x] Senha padrão do painel definida como `8878` quando não configurada; agora é possível alterar a senha pelo próprio painel (menu `Alterar senha`).
+ - [x] Corrigido overlap do botão modo noturno com o indicador `Online` em `web_painel/index.html` e terminal de eventos agora exibe entradas reais do `auditoria.log`.

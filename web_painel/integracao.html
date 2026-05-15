@@ -11,37 +11,43 @@
 <body>
 
 <div class="topbar">
-    <a href="index.html" style="position: absolute; left: 30px; color: white; text-decoration: none; font-weight: 600;">⬅️ Início</a>
+    <a href="index.html" class="top-back-link">⬅️ Início</a>
     <h4>🔌 MÓDULO DE INTEGRAÇÃO SUS</h4>
-    <div style="position: absolute; right: 30px; top: 12px; display:flex; gap:8px; align-items:center;">
+    <div class="topbar-right">
         <span id="adminStatus" class="badge bg-secondary">Admin: off</span>
-        <button id="adminLogoutBtn" class="btn btn-sm btn-outline-light" style="display:none;" onclick="logoutAdmin()">Logout</button>
-        <button id="adminChangeBtn" class="btn btn-sm btn-outline-light" style="display:none;" onclick="abrirChangePassword()">Alterar senha</button>
+        <button id="adminLogoutBtn" class="btn btn-sm btn-outline-light d-none" onclick="logoutAdmin()">Logout</button>
+        <button id="adminChangeBtn" class="btn btn-sm btn-outline-light d-none" onclick="abrirChangePassword()">Alterar senha</button>
     </div>
+</div>
+
+<!-- Admin unlocked banner (visible while admin session active) -->
+<div id="adminBanner" class="alert alert-success admin-banner d-none" role="alert">
+    🔓 Painel desbloqueado — acesso administrativo ativo.
+    <button type="button" class="btn-close float-end" aria-label="Close" onclick="document.getElementById('adminBanner').style.display='none'"></button>
 </div>
 
 <div class="container py-4">
     <div id="integrationAreaWrapper">
     <div class="row g-4 mb-4 justify-content-center" id="integrationArea">
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('exportar_bpa')">
-                <div class="module-icon" style="font-size: 2rem;">📤</div>
+            <div class="module-card module-card--pad" onclick="abrirModal('exportar_bpa')">
+                <div class="module-icon module-icon--lg">📤</div>
                 <h5>Exportar SQLite → TXT BPA</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Gera arquivo posicional para o Datasus</p>
+                <p class="text-muted-small">Gera arquivo posicional para o Datasus</p>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('converter_csv')">
-                <div class="module-icon" style="font-size: 2rem;">📂</div>
+            <div class="module-card module-card--pad" onclick="abrirModal('converter_csv')">
+                <div class="module-icon module-icon--lg">📂</div>
                 <h5>Converter CSV Antigo → TXT</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Converte CSVs legados para layout BPA</p>
+                <p class="text-muted-small">Converte CSVs legados para layout BPA</p>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('importar_lote')">
-                <div class="module-icon" style="font-size: 2rem;">📥</div>
+            <div class="module-card module-card--pad" onclick="abrirModal('importar_lote')">
+                <div class="module-icon module-icon--lg">📥</div>
                 <h5>Importar CSV em Lote</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Importa CSVs com Smart Update</p>
+                <p class="text-muted-small">Importa CSVs com Smart Update</p>
             </div>
         </div>
     </div>
@@ -49,34 +55,34 @@
     </div>
     <div class="row g-4 mb-4 justify-content-center">
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('sincronizar_firebird')">
-                <div class="module-icon" style="font-size: 2rem;">🔄</div>
+            <div class="module-card module-card--pad" onclick="abrirModal('sincronizar_firebird')">
+                <div class="module-icon module-icon--lg">🔄</div>
                 <h5>Sincronizar SQLite → Firebird</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Integra hospital.db com BPAMAG.GDB</p>
+                <p class="text-muted-small">Integra hospital.db com BPAMAG.GDB</p>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('sincronizar_contingencia')">
-                <div class="module-icon" style="font-size: 2rem;">🆘</div>
+            <div class="module-card module-card--pad" onclick="abrirModal('sincronizar_contingencia')">
+                <div class="module-icon module-icon--lg">🆘</div>
                 <h5>Sincronizar Contingência</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Importa planilhas manuais offline</p>
+                <p class="text-muted-small">Importa planilhas manuais offline</p>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="pedirSenhaAdmin('aniquilar_nulls')">
-                <div class="module-icon" style="font-size: 2rem;">💣</div>
+            <div class="module-card module-card--pad" onclick="pedirSenhaAdmin('aniquilar_nulls')">
+                <div class="module-icon module-icon--lg">💣</div>
                     <h5>Aniquilar NULLs no Firebird</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Remove campos NULL do BPAMAG.GDB</p>
+                <p class="text-muted-small">Remove campos NULL do BPAMAG.GDB</p>
             </div>
         </div>
     </div>
     </div>
     <div class="row g-4 mb-5 justify-content-center">
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="pedirSenhaAdmin('limpar_duplicatas')">
-                <div class="module-icon" style="font-size: 2rem;">🧹</div>
+            <div class="module-card module-card--pad" onclick="pedirSenhaAdmin('limpar_duplicatas')">
+                <div class="module-icon module-icon--lg">🧹</div>
                 <h5>Limpar Duplicatas no Firebird</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Remove fichas duplicadas por pontuação</p>
+                <p class="text-muted-small">Remove fichas duplicadas por pontuação</p>
             </div>
         </div>
     </div>
@@ -92,8 +98,8 @@
 
 <div class="modal fade" id="paramModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-            <div class="modal-header" style="background: var(--primary-blue); color: white; border-radius: 16px 16px 0 0;">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title" id="paramModalLabel">Parâmetros</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -101,7 +107,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button class="btn" style="background: var(--primary-blue); color: white;" onclick="executarModal()">Executar</button>
+                <button class="btn btn-primary-custom" onclick="executarModal()">Executar</button>
             </div>
         </div>
     </div>
@@ -110,8 +116,8 @@
 <!-- Admin password modal -->
 <div class="modal fade" id="adminModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-            <div class="modal-header" style="background: #b02a37; color: white; border-radius: 16px 16px 0 0;">
+        <div class="modal-content">
+            <div class="modal-header modal-admin-header">
                 <h5 class="modal-title" id="adminModalLabel">Autenticação Administrativa</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -331,16 +337,19 @@
             const badge = document.getElementById('adminStatus');
             const logoutBtn = document.getElementById('adminLogoutBtn');
             const changeBtn = document.getElementById('adminChangeBtn');
+            const banner = document.getElementById('adminBanner');
             if (active) {
                 badge.textContent = 'Admin: on';
                 badge.className = 'badge bg-success';
                 logoutBtn.style.display = 'inline-block';
                 if (changeBtn) changeBtn.style.display = 'inline-block';
+                if (banner) banner.style.display = 'block';
             } else {
                 badge.textContent = 'Admin: off';
                 badge.className = 'badge bg-secondary';
                 logoutBtn.style.display = 'none';
                 if (changeBtn) changeBtn.style.display = 'none';
+                if (banner) banner.style.display = 'none';
             }
         } catch (e) {
             // ignore

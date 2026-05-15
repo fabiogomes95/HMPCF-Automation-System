@@ -100,6 +100,25 @@ body {
 /* Label ativo no terminal */
 .terminal-active { color: var(--extremoz-yellow); font-weight: 700; }
 
+/* Utility classes moved from inline usage */
+.top-back-link {
+    position: absolute;
+    left: 30px;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+}
+.module-card--pad { padding: 20px; }
+.module-icon--lg { font-size: 2rem; }
+.editor-container--wide { max-width: 900px; margin: 0 auto; }
+.btn-primary-custom { background: var(--primary-blue); color: white; border-radius: 8px; padding: 8px 24px; font-weight: 600; }
+.btn-yellow { background: var(--extremoz-yellow); color: #5C4A00; border-radius: 8px; padding: 8px 16px; font-weight: 600; }
+.terminal-card--compact { margin-top: 0; }
+.badge-primary { color: var(--primary-blue); }
+.text-muted-small { color: var(--text-muted); font-size: 0.9rem; }
+.center-empty { text-align: center; color: var(--text-muted); }
+.rounded-top-border { border-top: 4px solid var(--extremoz-yellow); border-radius: 12px; }
+
 #alerta-status {
     position: absolute;
     right: 30px; /* Ancora à direita */
@@ -309,3 +328,31 @@ textarea.form-control:focus {
 .modal-body select { border-radius: 8px; border: 2px solid var(--border-color); padding: 10px; font-weight: 500; }
 .passo-a-passo { background-color: var(--bg-color); border-left: 4px solid var(--hmpcf-red); padding: 15px; border-radius: 0 8px 8px 0; margin-top: 20px; font-size: 0.9rem; color: var(--text-muted); }
 .modal-footer { border-top: 1px solid var(--border-color); background-color: var(--bg-color); border-radius: 0 0 16px 16px; }
+
+/* Additional utility classes used during migration */
+.card--accent-top { border-top: 4px solid var(--extremoz-yellow); border-radius: 12px; }
+.rounded-lg { border-radius: 12px; }
+.text-uppercase { text-transform: uppercase; }
+.btn-pill { background: var(--primary-blue); color: white; border-radius: 8px; padding: 8px 24px; font-weight: 600; }
+.btn-yellow { background: var(--extremoz-yellow); color: #5C4A00; border-radius: 8px; padding: 8px 16px; font-weight: 600; }
+.table-head-primary { background: var(--primary-blue); color: white; }
+.topbar-status { position: absolute; right: 30px; color: white; font-weight: bold; }
+.text-center { text-align: center; }
+.small { font-size: 0.85rem; }
+
+/* Topbar right utilities */
+.topbar-right { position: absolute; right: 30px; top: 12px; display: flex; gap: 8px; align-items: center; }
+
+/* Admin unlocked banner */
+.admin-banner { position: fixed; right: 20px; top: 64px; z-index: 1200; box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+
+/* Modal header variants */
+.modal-admin-header { background: #b02a37; color: white; border-radius: 16px 16px 0 0; border-bottom: 4px solid var(--extremoz-yellow); }
+.modal-change-header { background: #0d6efd; color: white; border-radius: 16px 16px 0 0; border-bottom: 4px solid var(--extremoz-yellow); }
+
+/* Accent module card (used for exportação consolidated) */
+.module-card--accent { background: linear-gradient(135deg, var(--primary-blue), #052244); color: white; cursor: pointer; }
+.module-card--accent .module-icon { background: rgba(255,255,255,0.15); color: white; font-size: 2rem; }
+.module-card--accent h5 { color: white; }
+.accent-desc { font-size: 0.9rem; color: rgba(255,255,255,0.9); opacity: 0.9; }
+.text-white { color: white; }

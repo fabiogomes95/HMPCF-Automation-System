@@ -12,21 +12,21 @@
 <body>
 
 <div class="topbar">
-    <a href="automacao.html" style="position: absolute; left: 30px; color: white; text-decoration: none; font-weight: 600;">⬅️ Voltar</a>
+    <a href="automacao.html" class="top-back-link">⬅️ Voltar</a>
     <h4>🏥 HMPCF - EXECUÇÃO BPA (ROBÔ)</h4>
-    <span id="alerta-status" style="position: absolute; right: 30px; color: white; font-weight: bold;">🟢 Módulo Automação</span>
+    <span id="alerta-status" class="topbar-status">🟢 Módulo Automação</span>
 </div>
 
 <div class="container-fluid py-4 px-4">
     <div class="toolbar d-flex justify-content-between align-items-center mb-4">
         <div class="d-flex align-items-center gap-3">
-            <span class="fw-bold" style="color: var(--primary-blue);">📂 Lote de Produção:</span>
+            <span class="fw-bold badge-primary">📂 Lote de Produção:</span>
             <select id="combo_producao" class="form-select w-auto" onchange="carregarProducaoSelecionada()"></select>
-            <button class="btn-custom btn-verde" onclick="iniciarFluxoRobo()">▶️ Iniciar Automação BPA</button>
+            <button class="btn-custom btn-verde">▶️ Iniciar Automação BPA</button>
         </div>
     </div>
 
-    <div class="editor-container" style="max-width: 800px; margin: 0 auto;">
+    <div class="editor-container editor-container--wide" style="margin: 0 auto;">
         <span class="editor-title destino fw-bold">📄 Conteúdo do Lote Selecionado</span>
         <textarea id="texto_lote" class="form-control" rows="20" spellcheck="false" readonly placeholder="O conteúdo do lote aparecerá aqui para conferência..."></textarea>
     </div>
