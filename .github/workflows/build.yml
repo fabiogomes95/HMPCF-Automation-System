@@ -42,45 +42,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build with PyInstaller
-        shell: cmd
-        run: |
-          pyinstaller ^
-            --name "HMPCF" ^
-            --onefile ^
-            --console ^
-            --icon "assets/robo-icon.ico" ^
-            --add-data "web_recepcao/index.html;web_recepcao" ^
-            --add-data "web_recepcao/style.css;web_recepcao" ^
-            --add-data "web_recepcao/script.js;web_recepcao" ^
-            --add-data "web_recepcao/logo.png;web_recepcao" ^
-            --add-data "web_recepcao/assets/bootstrap.min.css;web_recepcao/assets" ^
-            --add-data "web_recepcao/assets/bootstrap.bundle.min.js;web_recepcao/assets" ^
-            --add-data "web_painel/index.html;web_painel" ^
-            --add-data "web_painel/analise.html;web_painel" ^
-            --add-data "web_painel/integracao.html;web_painel" ^
-            --add-data "web_painel/automacao.html;web_painel" ^
-            --add-data "web_painel/digitacao.html;web_painel" ^
-            --add-data "web_painel/triagem.html;web_painel" ^
-            --add-data "web_painel/robo.html;web_painel" ^
-            --add-data "web_painel/style.css;web_painel" ^
-            --add-data "assets/robo-icon.ico;assets" ^
-            --add-data "version.json;." ^
-            --hidden-import "eel" ^
-            --hidden-import "firebirdsql" ^
-            --hidden-import "pandas" ^
-            --hidden-import "seaborn" ^
-            --hidden-import "openpyxl" ^
-            --hidden-import "matplotlib" ^
-            --hidden-import "weasyprint" ^
-            --hidden-import "pyautogui" ^
-            --hidden-import "keyboard" ^
-            --hidden-import "gspread" ^
-            --hidden-import "google.auth" ^
-            main.py
+      - name: Build HMPCF_Recepcao.exe
+        run: pyinstaller recepcao.spec --onefile
+
+      - name: Build HMPCF_Painel.exe
+        run: pyinstaller painel.spec --onefile
 
       - name: Upload .exe to Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.existing_tag || github.event.release.tag_name }}
-          files: dist/HMPCF.exe
+          files: |
+            dist/HMPCF_Recepcao.exe
+            dist/HMPCF_Painel.exe

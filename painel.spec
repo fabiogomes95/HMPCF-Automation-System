@@ -1,0 +1,60 @@
+# -*- mode: python ; coding: utf-8 -*-
+
+a = Analysis(
+    ['app_painel.py'],
+    pathex=[],
+    binaries=[],
+    datas=[
+        ('web_painel/index.html', 'web_painel'),
+        ('web_painel/analise.html', 'web_painel'),
+        ('web_painel/integracao.html', 'web_painel'),
+        ('web_painel/automacao.html', 'web_painel'),
+        ('web_painel/digitacao.html', 'web_painel'),
+        ('web_painel/triagem.html', 'web_painel'),
+        ('web_painel/robo.html', 'web_painel'),
+        ('web_painel/style.css', 'web_painel'),
+        ('version.json', '.'),
+    ],
+    hiddenimports=[
+        'eel',
+        'firebirdsql',
+        'pandas',
+        'seaborn',
+        'openpyxl',
+        'matplotlib',
+        'weasyprint',
+        'pyautogui',
+        'keyboard',
+        'gspread',
+        'google.auth',
+    ],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.datas,
+    [],
+    name='HMPCF_Painel',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=True,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon='assets/robo-icon.ico',
+)
