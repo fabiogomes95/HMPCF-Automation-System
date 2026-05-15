@@ -1,185 +1,286 @@
-# 🏥 HMPCF-Automation-System — Ecossistema Hospitalar H.M.P.C.F
+# HMPCF Automation System
 
-Sistema completo de automação hospitalar desenvolvido para modernizar o fluxo de dados do **Hospital Municipal Presidente Café Filho** (Extremoz/RN). Substitui fichas de papel por um fluxo digital integrado com **RPA**, **Business Intelligence** e **sincronização em nuvem**, resolvendo o gargalo entre a recepção física e o faturamento governamental (SUS/BPA).
-
----
-
-## 📈 Impacto Operacional
-
-| Indicador | Antes | Agora |
-|-----------|-------|-------|
-| Processamento | 24h para 1 dia de produção | 4 dias de produção por turno/máquina |
-| Capacidade | Backlog crescente | 8 dias de produção por dia útil |
-| Velocidade | — | **+400%** com margem de erro zero |
+Sistema de automação hospitalar desenvolvido para otimizar processos operacionais, recepção, integração BPA/SUS, auditoria e fluxos administrativos em ambiente hospitalar real.
 
 ---
 
-## 🧱 Arquitetura
+# Visão Geral
 
+O HMPCF Automation System surgiu da necessidade de reduzir retrabalho operacional, automatizar processos repetitivos e melhorar o fluxo administrativo hospitalar.
+
+O sistema integra:
+- automações BPA/SUS;
+- recepção digital;
+- auditoria;
+- sincronização;
+- painéis administrativos;
+- validações;
+- integração com sistemas legados.
+
+O projeto foi desenvolvido com foco em:
+- produtividade;
+- redução de erros;
+- automação operacional;
+- fluxo hospitalar real.
+
+---
+
+# Impacto Operacional
+
+- Redução significativa de retrabalho manual na recepção
+- Automatização de processos BPA/SUS
+- Eliminação parcial de fichas em papel
+- Integração digital entre setores
+- Geração automatizada de lotes
+- Redução de inconsistências operacionais
+- Auditoria facilitada
+- Centralização de informações administrativas
+- Sincronização automática de dados
+- Sistema utilizado em ambiente hospitalar real
+
+---
+
+# Problemas Resolvidos
+
+## Antes do sistema
+- Processos manuais repetitivos
+- Uso excessivo de papel
+- Retrabalho operacional
+- Lançamentos BPA manuais
+- Falta de auditoria centralizada
+- Dificuldade de sincronização
+- Perda de produtividade
+- Alto risco de erro humano
+
+## Após automação
+- Fluxo digital integrado
+- Automação operacional
+- Painéis administrativos
+- Processamento automatizado
+- Auditoria facilitada
+- Validação de dados
+- Redução de erros
+- Melhor rastreabilidade operacional
+
+---
+
+# Interface
+
+## Recepção
+
+![Recepção](./screenshots/recepcao.png)
+
+---
+
+## Painel Administrativo
+
+![Painel](./screenshots/painel.png)
+
+---
+
+## Auditoria e Automação
+
+![Auditoria](./screenshots/auditoria.png)
+
+---
+
+# Arquitetura do Sistema
+
+```text
+Recepção → Banco Local → Painel Administrativo
+                ↓
+        Automação BPA/SUS
+                ↓
+          Auditoria
+                ↓
+          Exportações
 ```
+
+---
+
+## Arquitetura do Projeto
+
+```text
 📦 HMPCF-Automation-System
- ┣ 📂 analise/          # BI — Dashboards, relatórios Excel e PDF
- ┣ 📂 automacao/        # RPA — Robô digitador, triagem e fila de lotes
- ┣ 📂 integracao/       # Integração SUS — conversores TXT e sincronizadores
- ┣ 📂 scripts/          # Ferramentas de manutenção DBA
- ┣ 📂 web_recepcao/     # Frontend da Recepção (Eel)
- ┣ 📂 web_painel/       # Frontend do Painel de Gestão (Eel)
- ┣ 📂 assets/           # Recursos estáticos (ícones)
- ┣ 📂 registro/         # Registro de sessão (dev)
- ┣ 📜 app_recepcao.py   # Servidor da Recepção (Eel, porta 8000)
- ┣ 📜 app_painel.py     # Servidor do Painel de Gestão (Eel, porta 8001)
- ┣ 📜 main.py           # Launcher unificado (opcional)
- ┣ 📜 config.py         # Configuração centralizada
- ┣ 📜 planilha_nuvem.py # "Gari da Nuvem" — sincronizador Google Sheets
- ┣ 📜 utils.py          # Motor de validações (CPF, CNS, regex)
- ┣ 📜 pyproject.toml    # Estrutura de pacote
- ┣ 📜 .env.example      # Template de configuração
- ┣ 📜 hospital.db       # Banco SQLite local
- ┣ 📜 credentials.json  # Chave de API Google Cloud
- ┣ 📜 requirements.txt  # Dependências
- ┣ 📜 backlog.md        # Pendências e ideias
- ┣ 📜 CHANGELOG.md      # Histórico de alterações
- ┣ 📜 start_painel.vbs  # Atalho silencioso — Painel
- ┣ 📜 start_recepcao.vbs# Atalho silencioso — Recepção
- ┣ 📜 iniciar_painel.bat# Inicializador — Painel (porta 8001)
- ┗ 📜 iniciar_recepcao.bat # Inicializador — Recepção (porta 8000)
+ ┣ 📂 analise/                 # BI — Dashboards, relatórios Excel e PDF
+ ┣ 📂 automacao/               # RPA — Robô digitador, triagem e fila de lotes
+ ┣ 📂 integracao/              # Integração SUS — conversores TXT e sincronizadores
+ ┣ 📂 scripts/                 # Ferramentas de manutenção DBA
+ ┣ 📂 web_recepcao/            # Frontend da Recepção (Eel)
+ ┣ 📂 web_painel/              # Frontend do Painel de Gestão (Eel)
+ ┣ 📂 assets/                  # Recursos estáticos (ícones)
+ ┣ 📂 registro/                # Registro de sessão (desenvolvimento)
+ ┣ 📜 app_recepcao.py          # Servidor da Recepção (Eel — porta 8000)
+ ┣ 📜 app_painel.py            # Servidor do Painel de Gestão (Eel — porta 8001)
+ ┣ 📜 main.py                  # Launcher unificado
+ ┣ 📜 config.py                # Configuração centralizada
+ ┣ 📜 planilha_nuvem.py        # "Gari da Nuvem" — sincronizador Google Sheets
+ ┣ 📜 utils.py                 # Motor de validações (CPF, CNS, regex)
+ ┣ 📜 pyproject.toml           # Estrutura do pacote Python
+ ┣ 📜 .env.example             # Template de configuração
+ ┣ 📜 local_database.db        # Banco SQLite local
+ ┣ 📜 google_credentials.example.json # Template de credenciais Google Cloud
+ ┣ 📜 requirements.txt         # Dependências do projeto
+ ┣ 📜 backlog.md               # Pendências e ideias futuras
+ ┣ 📜 CHANGELOG.md             # Histórico de alterações
+ ┣ 📜 start_painel.vbs         # Inicializador silencioso — Painel
+ ┣ 📜 start_recepcao.vbs       # Inicializador silencioso — Recepção
+ ┣ 📜 iniciar_painel.bat       # Inicializador Painel (porta 8001)
+ ┗ 📜 iniciar_recepcao.bat     # Inicializador Recepção (porta 8000)
 ```
 
 ---
 
-## ⚙️ Módulos
+## Fluxo Arquitetural
 
-### 🏪 Recepção (`app_recepcao.py` + `web_recepcao/`)
-Formulário web A4 com cadastro inteligente de pacientes, busca automática por CPF/SUS, classificação de risco, sinais vitais, comorbidades e impressão do boletim. Atalho F2 para salvar. Validação matemática de CPF e SUS em tempo real no frontend.
+```mermaid
+flowchart TD
 
-### 🚀 Launcher Unificado (`main.py`)
-Ponto de entrada único que:
-1. **Verifica atualizações** no GitHub (compara `version.json` local × remoto)
-2. Se há versão nova, pergunta se deseja atualizar (via `git pull` ou download ZIP)
-3. Inicia os servidores da **Recepção** (8000) e **Painel** (8001) em simultâneo
-4. Abre o navegador automaticamente
+A[Recepção Digital] --> B[SQLite Local]
 
+B --> C[Painel Administrativo]
+B --> D[Automação BPA/SUS]
+B --> E[Sincronização Google Sheets]
+
+D --> F[Triagem e Fila de Lotes]
+D --> G[Auditoria Operacional]
+
+G --> H[Relatórios Excel/PDF]
+
+C --> I[Monitoramento Operacional]
 ```
-python main.py                  # Modo normal (com verificação de update)
-python main.py --no-update      # Pula verificação
-python main.py --build          # Testa se PyInstaller está pronto
-```
 
-### 📊 Painel de Gestão (`app_painel.py` + `web_painel/`)
-Central de controle com 4 módulos:
-- **Digitação** — busca pacientes na base BPA (Firebird em RAM), monta lotes de 99 com quebra automática
-- **Triagem** — extrai CPF/SUS de dados sujos, divide em lotes por enfermeiro
-- **Robô RPA** — executa digitação automática no sistema BPA governamental com PyAutoGUI
-- **Análise / BI** — dashboards, relatórios Excel e PDFs de auditoria via interface web
+# Principais Funcionalidades
 
-### ☁️ Gari da Nuvem (`planilha_nuvem.py`)
-Thread em background sincroniza atendimentos do SQLite para uma planilha Google Sheets em tempo real, respeitando a regra de plantão (07h).
+## Recepção Digital
+- Cadastro e gerenciamento de pacientes
+- Fluxo digital integrado
+- Validação de dados
+- Controle operacional
 
-### 🤖 Automação / RPA (`automacao/`)
-- **`executor_rpa.py`** — robô digitador com validação tripla e fail-safe (mouse no canto para parar)
-- **`digitacao.py`** — assistente de digitação manual com montagem de lotes
-- **`cpf_sus.py`** — extrator/validador de CPF e SUS via regex + Módulo 11
+## Automação BPA/SUS
+- Processamento automatizado
+- Geração de lotes
+- Integração operacional
+- Exportações automatizadas
 
-### 🔌 Integração SUS (`integracao/`)
-Acessível via web no Painel de Gestão → [Integração](http://localhost:8001/integracao.html)
-- `exportar_bpa.py` — exporta SQLite → TXT posicional Datasus
-- `converter_csv.py` — converte CSVs antigos para TXT BPA
-- `sincronizar_firebird.py` — sincronizador SQLite ↔ Firebird
-- `importador_recepcao.py` — importa CSV com Smart Update (enriquece campos vazios)
-- `sincronizar_contingencia.py` — processa planilhas offline com regex inteligente
-- `corrigir_nulls.py` — aniquila NULLs no Firebird
-- `duplicatas_gdb.py` — caça e remove duplicatas por pontuação
+## Auditoria
+- Verificação de inconsistências
+- Controle operacional
+- Rastreabilidade
+- Análise de dados
 
-### 📈 Business Intelligence (`analise/`)
-Acessível via web no Painel de Gestão → [Análise / BI](http://localhost:8001/analise.html)
-- `dashboard_visual.py` — dashboard PNG (idade x sexo, top bairros, picos, volume)
-- `planilha_producao.py` — relatório Excel com separação DIURNO/NOTURNO e regra da madrugada
-- `auditoria_periodica.py` — PDF de auditoria mensal/trimestral/semestral (fpdf2)
-- `analise_anual_csv.py` — relatório Top 20 a partir de CSVs
-- `historico_paciente.py` — "Lupa do Auditor" — busca interativa por nome/CPF/SUS
+## Painel Administrativo
+- Visualização operacional
+- Controle administrativo
+- Monitoramento de fluxo
+- Indicadores internos
 
-### 🛠️ Manutenção / DBA (`scripts/`)
-- `faxina.py` — faxina geral do banco SQLite (valida CPF/SUS, mescla duplicados, recria estrutura)
-- `validar_cns.py` — faxina cirúrgica de CNS inválidos
-- `fusao.py` — deduplicação inteligente com fusão de clones
-- `auditor_bpa.py` — auditor de sexo em TXT BPA
-- `corrigir_sexo_bpa.py` — RPA corretor de sexo no sistema BPA
-- `atualizar_sexo.py` — atualização em massa de sexo no SQLite
-- `inspecionar_db.py` — debug de registros no banco
-- `relatorio_fusao.py` — relatório pós-faxina
+## Sincronização
+- Integração entre setores
+- Atualização automática
+- Controle de contingência
 
 ---
 
-## 🛠️ Tecnologias
+# Tecnologias Utilizadas
 
-<p align="left">
-  <img src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" />
-  <img src="https://img.shields.io/badge/eel-2E8B57?style=for-the-badge&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white" />
-  <img src="https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white" />
-  <img src="https://img.shields.io/badge/css3-%231572B6.svg?style=for-the-badge&logo=css3&logoColor=white" />
-  <img src="https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E" />
-  <img src="https://img.shields.io/badge/pandas-%23150458.svg?style=for-the-badge&logo=pandas&logoColor=white" />
-  <img src="https://img.shields.io/badge/firebird-CC2927?style=for-the-badge&logo=firebird&logoColor=white" />
-  <img src="https://img.shields.io/badge/Google%20Sheets-34A853?style=for-the-badge&logo=googlesheets&logoColor=white" />
-</p>
+## Backend
+- Python
 
-- **Backend:** Python 3.11+, Eel (Desktop WebView), Firebird SQL
-- **Frontend:** HTML5, CSS3 (`@media print`), JavaScript ES6+, Bootstrap 5
-- **RPA:** PyAutoGUI
-- **BI:** Pandas, Matplotlib, Seaborn, OpenPyXL, fpdf2
-- **Cloud:** Google Sheets & Drive API (gspread, google-auth)
-- **Banco:** SQLite3, Firebird (BPAMAG.GDB)
+## Frontend
+- HTML
+- CSS
+- JavaScript
+
+## Automação
+- PyAutoGUI
+- Scripts de integração
+
+## Banco de Dados
+- SQLite
+- Firebird (integração)
+
+## Interface Desktop/Web
+- Eel
 
 ---
 
-## 🚀 Instalação
+# Objetivos do Projeto
+
+- Automatizar processos hospitalares
+- Reduzir erros operacionais
+- Melhorar produtividade
+- Facilitar auditoria
+- Digitalizar fluxos administrativos
+- Integrar setores
+- Minimizar retrabalho
+
+---
+
+# Diferenciais
+
+- Desenvolvido com base em problemas reais
+- Fluxo hospitalar real
+- Integração SUS/BPA
+- Automação operacional prática
+- Sistema modular
+- Painel administrativo integrado
+- Auditoria operacional
+- Sincronização de dados
+- Contingência operacional
+
+---
+
+# Roadmap Futuro
+
+- Migração gradual para FastAPI
+- PostgreSQL
+- APIs REST
+- Dashboard avançado
+- Logs estruturados
+- Melhorias de segurança
+- Deploy profissional
+- Docker
+- Multiusuário
+- Observabilidade
+- OCR e automação avançada
+
+---
+
+# Instalação
 
 ```bash
-git clone https://github.com/fabiogomes95/HMPCF-Automation-System.git
-cd HMPCF-Automation-System
-python -m venv venv
-
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-pip install -r requirements.txt
+git clone https://github.com/fabiogomes95/HMPCF-Automation-System
 ```
 
-### ⚙️ Configuração Google Sheets
-Coloque o arquivo `credentials.json` (Google Cloud Console) na raiz do projeto para ativar o Gari da Nuvem.
+---
 
-### ▶️ Execução
+# Execução
 
-| Módulo | Comando | Porta |
-|--------|---------|-------|
-| Launcher (recomendado) | `python main.py` | 8000 + 8001 |
-| Recepção | `python app_recepcao.py` | 8000 |
-| Painel de Gestão | `python app_painel.py` | 8001 |
-| Gari da Nuvem | Inicia automaticamente com a Recepção | — |
-
-**Produção (Windows):** execute `start_painel.vbs` (Painel) ou `start_recepcao.vbs` (Recepção).
-
-### 🏗️ Execução via atalho no Windows
-
-Crie atalhos na Área de Trabalho apontando para:
-- `wscript.exe "C:\caminho\HMPCF-Automation-System\start_painel.vbs"` — Painel
-- `wscript.exe "C:\caminho\HMPCF-Automation-System\start_recepcao.vbs"` — Recepção
+```bash
+python main.py
+```
 
 ---
 
-## 📌 Fluxo de Trabalho
+# Licença
 
-1. **Recepção** cadastra pacientes no formulário web → SQLite
-2. **Gari da Nuvem** sincroniza com Google Sheets em background
-3. **Painel de Gestão** carrega base BPA do Firebird
-4. **Digitação/Triagem** prepara lotes de 99 pacientes
-5. **Robô RPA** digita automaticamente no sistema governamental
-6. **Integração** exporta para TXT Datasus / sincroniza sistemas
-7. **BI** gera dashboards, relatórios Excel e PDFs de auditoria
+Copyright (c) 2026 Fabio Gomes
 
----
+Este projeto está disponível publicamente apenas para fins de:
+- estudo;
+- demonstração técnica;
+- portfólio;
+- avaliação educacional.
 
-Desenvolvido por **Fábio Gomes da Silva** • <fabiogsilva@disroot.org>
+Não é permitida:
+- redistribuição comercial;
+- revenda;
+- uso institucional;
+- implantação em produção;
+- modificação para fins comerciais;
+
+sem autorização explícita do autor.
+
+Todos os direitos reservados.
