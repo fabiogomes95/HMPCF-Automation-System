@@ -15,7 +15,7 @@ Por que isso existe? Porque o sistema BPA do governo REJEITA
 qualquer paciente com SUS inválido. Melhor deletar do que
 ter o lote inteiro rejeitado.
 
-Uso: python archive/cns_validator_tool.py
+Uso: python scripts/cns_validator_tool.py
 """
 
 import sqlite3

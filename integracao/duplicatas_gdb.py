@@ -22,6 +22,7 @@ os registros duplicados.
 import firebirdsql
 import sys
 import os
+from config import FIREBIRD_USER, FIREBIRD_PASSWORD
 
 
 def limpar_duplicados_gdb(caminho_gdb=""):
@@ -48,8 +49,8 @@ def limpar_duplicados_gdb(caminho_gdb=""):
         conexao = firebirdsql.connect(
             host='localhost',
             database=caminho_gdb,
-            user='SYSDBA',
-            password='masterkey',
+            user=FIREBIRD_USER,
+            password=FIREBIRD_PASSWORD,
             charset='ISO8859_1'
         )
         cursor = conexao.cursor()

@@ -1,4 +1,4 @@
-# 🗄️ Archive — Caixa de Ferramentas DBA
+# 🛠️ Scripts — Caixa de Ferramentas DBA
 
 Este diretório é a **caixa de ferramentas de manutenção** do sistema HMPCF. Aqui ficam scripts de faxina profunda, correção de dados, auditoria de arquivos BPA e utilidades de debug. Não fazem parte do fluxo diário, mas são **essenciais para a saúde do banco de dados** e para resolver problemas pontuais.
 
@@ -17,7 +17,7 @@ Este diretório é a **caixa de ferramentas de manutenção** do sistema HMPCF. 
 
 **Como usar:**
 ```bash
-python archive/faxina.py
+python scripts/faxina.py
 ```
 
 ---
@@ -33,7 +33,7 @@ Faxina focada **apenas em Cartão SUS** (ignora CPFs propositalmente).
 
 **Como usar:**
 ```bash
-python archive/cns_validator_tool.py
+python scripts/cns_validator_tool.py
 ```
 
 ---
@@ -51,7 +51,7 @@ Faxina avançada com **inteligência artificial** para fusão de clones.
 
 **Como usar:**
 ```bash
-python archive/fusao.py
+python scripts/fusao.py
 ```
 
 ---
@@ -66,7 +66,7 @@ Lê o arquivo `ExpPaciente.txt` gerado para o governo e verifica:
 
 **Como usar:**
 ```bash
-python archive/auditor_bpa.py
+python scripts/auditor_bpa.py
 # Coloque o ExpPaciente.txt na mesma pasta
 ```
 
@@ -78,7 +78,7 @@ python archive/auditor_bpa.py
 
 **Como usar:**
 ```bash
-python archive/corrigir_sexo_bpa.py
+python scripts/corrigir_sexo_bpa.py
 # Informe data e procedimento
 # Deixe o robô trabalhar no BPA
 ```
@@ -91,7 +91,7 @@ Varre o `hospital.db` e seta sexo como `'I'` (Indefinido) para todos os paciente
 
 **Como usar:**
 ```bash
-python archive/att_sexo.py
+python scripts/att_sexo.py
 ```
 
 ---
@@ -102,7 +102,7 @@ Sincroniza pacientes do SQLite com o Firebird usando **NOME + DATA DE NASCIMENTO
 
 **Como usar:**
 ```bash
-python archive/cpf_bpa.py
+python scripts/cpf_bpa.py
 # Informe mês e ano
 ```
 
@@ -114,7 +114,7 @@ Gera um arquivo `RELATORIO_FINAL_FAXINA.txt` com a lista de todos os pacientes q
 
 **Como usar:**
 ```bash
-python archive/gerar_txt_fusao.py
+python scripts/gerar_txt_fusao.py
 ```
 
 ---
@@ -130,7 +130,7 @@ Ferramenta de **debug** para desenvolvedores. Faz uma busca por nome no SQLite e
 
 **Como usar:**
 ```bash
-python archive/sonda_db.py
+python scripts/sonda_db.py
 ```
 
 ---

@@ -20,13 +20,12 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils import apenas_numeros, remove_accents
+from config import CNS_PROFISSIONAL, CBO_CODIGO, FOLHA_CODIGO, SEQ_PROFISSIONAL
 
-# === CONSTANTES DO LAYOUT BPA ===
-# Esses valores são fixos pro hospital no formato do Datasus
-E_CBO = "240360"         # Código CBO do profissional (médico)
-F_FOLHA = "010"          # Código da folha (sempre 010)
-G_SEQ = "03"             # Sequencial do profissional
-H_CNS_PROF = "59575000081"  # CNS do profissional responsável
+E_CBO = CBO_CODIGO
+F_FOLHA = FOLHA_CODIGO
+G_SEQ = SEQ_PROFISSIONAL
+H_CNS_PROF = CNS_PROFISSIONAL
 
 
 def exportar_dados(mes_ano="", caminho_salvar=""):

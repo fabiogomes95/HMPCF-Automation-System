@@ -16,7 +16,7 @@ SOLUÇÃO:
 4. Move os atendimentos dos clones pro master
 5. Deleta os clones
 
-Uso: python archive/fusao.py
+Uso: python scripts/fusao.py
 """
 
 import sqlite3

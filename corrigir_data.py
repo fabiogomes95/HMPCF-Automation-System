@@ -14,18 +14,12 @@ Uso: python corrigir_data.py
 """
 
 import firebirdsql
-# firebirdsql = biblioteca pra conectar no Firebird (banco oficial do BPA)
 from datetime import datetime
-# datetime — uso pra referência de data, mas aqui só uso pra padrão
+from config import FIREBIRD_PATH, FIREBIRD_USER, FIREBIRD_PASSWORD
 
-# === CONFIGURAÇÕES DO BANCO FIREBIRD ===
-# Caminho do arquivo .GDB — o banco do sistema BPA
-CAMINHO_GDB = r'C:/BPA/BPAMAG.GDB'
-# Credenciais padrão do Firebird (usuário SYSDBA é o admin universal)
-USER = 'SYSDBA'
-PASS = 'masterkey'
-# Data padrão: se achar data inválida, substitui por 01/01/1990
-# Esse valor é aceito pelo BPA e não causa erro no faturamento
+CAMINHO_GDB = FIREBIRD_PATH
+USER = FIREBIRD_USER
+PASS = FIREBIRD_PASSWORD
 DATA_PADRAO = '19900101'
 
 

@@ -28,6 +28,7 @@ hospital.db
 
 !requirements.txt   # Exceção: O requirements.txt DEVE subir para o GitHub
 /automacao/*.txt
+/scripts/*.txt
 /bpa/*.txt
 /bpa/LOG_*.txt
 Relatorio_Producao_*.xlsx

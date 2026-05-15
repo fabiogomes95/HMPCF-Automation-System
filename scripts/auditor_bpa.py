@@ -14,7 +14,7 @@ O que o auditor faz:
 3. Se o SUS é válido mas o sexo está vazio/errado → lista pra correção
 4. Gera lista_correcao.txt pro Robô RPA corrigir depois
 
-Uso: python archive/auditor_bpa.py
+Uso: python scripts/auditor_bpa.py
 (Precisa do ExpPaciente.txt na mesma pasta)
 """
 

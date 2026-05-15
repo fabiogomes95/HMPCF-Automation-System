@@ -25,20 +25,10 @@ import re
 from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 from utils import apenas_numeros, remove_accents
-
-# === CONFIGURAÇÕES ===
-DB_NAME = 'hospital.db'  # SQLite local com os atendimentos
-
-# Escopos de permissão da API Google:
-# - sheets: ler/escrever na planilha
-# - drive: gerenciar arquivos no Drive
-SCOPE = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
-]
-
-# ID da planilha Google Sheets (vem da URL: /d/1xw_x-.../edit)
-ID_PLANILHA = "1xw_x-bYlHCHzMe39g1mJKPFAD_IcXA8BB0uRfmmuR90"
+from config import (
+    GOOGLE_SHEET_ID, GOOGLE_CREDENTIALS_PATH,
+    GOOGLE_SCOPE_SHEETS, GOOGLE_SCOPE_DRIVE, DB_SQLITE
+)
 
 
 def enviar_para_planilha(dados):
@@ -58,11 +48,11 @@ def enviar_para_planilha(dados):
         # --- AUTENTICAÇÃO GOOGLE ---
         # Carrego as credenciais do arquivo JSON baixado do Google Cloud
         creds = Credentials.from_service_account_file(
-            'credentials.json', scopes=SCOPE
+            GOOGLE_CREDENTIALS_PATH,
+            scopes=[GOOGLE_SCOPE_SHEETS, GOOGLE_SCOPE_DRIVE]
         )
         client = gspread.authorize(creds)
-        # Abro a planilha pelo ID (mais seguro que pelo nome)
-        spreadsheet = client.open_by_key(ID_PLANILHA)
+        spreadsheet = client.open_by_key(GOOGLE_SHEET_ID)
 
         # --- LÓGICA DA VIRADA DO MÊS (REGRA DO PLANTÃO) ---
         # Se agora é 05/05 às 03:00, o plantão NOTURNO ainda é de MAIO
@@ -229,7 +219,7 @@ def gari_da_nuvem():
     """
     while True:
         try:
-            conn = sqlite3.connect(DB_NAME)
+            conn = sqlite3.connect(DB_SQLITE)
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 

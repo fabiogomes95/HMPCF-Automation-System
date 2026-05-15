@@ -21,6 +21,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils import apenas_numeros, remove_accents
+from config import FIREBIRD_USER, FIREBIRD_PASSWORD
 
 
 def sincronizar_sqlite_para_gdb(mes_ano="", caminho_gdb=""):
@@ -76,8 +77,8 @@ def sincronizar_sqlite_para_gdb(mes_ano="", caminho_gdb=""):
         conexao_fb = firebirdsql.connect(
             host='localhost',
             database=caminho_gdb,
-            user='SYSDBA',
-            password='masterkey',
+            user=FIREBIRD_USER,
+            password=FIREBIRD_PASSWORD,
             charset='WIN1252'
         )
         cursor_fb = conexao_fb.cursor()

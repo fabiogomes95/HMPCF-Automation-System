@@ -22,6 +22,7 @@ import glob
 import eel
 import firebirdsql
 import sys
+from config import FIREBIRD_PATH, FIREBIRD_USER, FIREBIRD_PASSWORD
 
 # =====================================================================
 # CONFIGURAÇÃO DE DIRETÓRIOS
@@ -79,7 +80,7 @@ def carregar_base():
     Cada paciente vira um dicionário com: sus, nome, dtnasc, cpf
     """
     global BASE_PACIENTES
-    caminho_gdb = r'C:/BPA/BPAMAG.GDB'
+    caminho_gdb = FIREBIRD_PATH
 
     try:
         print("Carregando pacientes para a memoria...")
@@ -87,8 +88,8 @@ def carregar_base():
         con = firebirdsql.connect(
             host='localhost',
             database=caminho_gdb,
-            user='SYSDBA',
-            password='masterkey',
+            user=FIREBIRD_USER,
+            password=FIREBIRD_PASSWORD,
             charset='WIN1252'
         )
         cur = con.cursor()

@@ -13,7 +13,7 @@ Diferenças:
 Por que existe? Porque antes de refatorar o módulo de integração,
 esse era o sincronizador principal. Agora é mantido como backup.
 
-Uso: python archive/cpf_bpa.py
+Uso: python scripts/cpf_bpa.py
 """
 
 import sqlite3
@@ -24,9 +24,9 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils import apenas_numeros
+from config import DB_SQLITE, FIREBIRD_PATH, FIREBIRD_USER, FIREBIRD_PASSWORD
 
-DB_SQLITE = 'hospital.db'
-DB_FIREBIRD = 'C:/BPA/BPAMAG.GDB'
+DB_FIREBIRD = FIREBIRD_PATH
 
 
 def sincronizar():
@@ -74,8 +74,8 @@ def sincronizar():
         con_fb = firebirdsql.connect(
             host='localhost',
             database=DB_FIREBIRD,
-            user='SYSDBA',
-            password='masterkey',
+            user=FIREBIRD_USER,
+            password=FIREBIRD_PASSWORD,
             charset='WIN1252'
         )
         cur_fb = con_fb.cursor()

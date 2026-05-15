@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "hmpcf-automation-system"
+version = "1.1.0"
+description = "Sistema de automação do BPA para o Hospital Municipal Presidente Café Filho"
+requires-python = ">=3.10"
+dependencies = [
+    "Eel",
+    "pyautogui",
+    "keyboard",
+    "firebirdsql",
+    "pandas",
+    "seaborn",
+    "openpyxl",
+    "gspread",
+    "google-auth",
+    "matplotlib",
+    "weasyprint",
+    "pyinstaller",
+    "requests",
+]
+
+[tool.setuptools.packages.find]
+include = [
+    "automacao*",
+    "analise*",
+    "integracao*",
+    "scripts*",
+]

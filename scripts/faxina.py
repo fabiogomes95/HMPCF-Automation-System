@@ -11,7 +11,7 @@ Esse script faz uma faxina COMPLETA no banco hospital.db:
 4. REESTRUTURAÇÃO: Recria a tabela com PRIMARY KEY (cpf, sus)
 5. LIMPEZA DOS ATENDIMENTOS: Valida CPF/SUS dos históricos
 
-Uso: python archive/faxina.py
+Uso: python scripts/faxina.py
 """
 
 import sqlite3

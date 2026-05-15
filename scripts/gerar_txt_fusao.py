@@ -4,7 +4,7 @@ GERAR_TXT_FUSAO.PY — Relatório Pós-Faxina
 Gera um relatório .txt com a lista de pacientes que
 sobreviveram à faxina/fusão.
 
-Uso: python archive/gerar_txt_fusao.py
+Uso: python scripts/gerar_txt_fusao.py
 """
 
 import sqlite3

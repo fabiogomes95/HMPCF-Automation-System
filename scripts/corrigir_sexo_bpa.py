@@ -18,7 +18,7 @@ SEGURANÇA:
 - O usuário tem 5 segundos pra posicionar o cursor no BPA
 - ESC não funciona aqui (diferente do executor_rpa.py)
 
-Uso: python archive/corrigir_sexo_bpa.py
+Uso: python scripts/corrigir_sexo_bpa.py
 """
 
 import pyautogui

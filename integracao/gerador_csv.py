@@ -18,12 +18,12 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils import apenas_numeros, remove_accents
+from config import CNS_PROFISSIONAL, CBO_CODIGO, FOLHA_CODIGO, SEQ_PROFISSIONAL
 
-# === CONSTANTES DO LAYOUT BPA (mesmas do gerador_arquivo_bpa.py) ===
-E_CBO = "240360"
-F_FOLHA = "010"
-G_SEQ = "03"
-H_CNS_PROF = "59575000081"
+E_CBO = CBO_CODIGO
+F_FOLHA = FOLHA_CODIGO
+G_SEQ = SEQ_PROFISSIONAL
+H_CNS_PROF = CNS_PROFISSIONAL
 
 
 def processar_csv_antigo(caminho_csv="", caminho_salvar=""):
