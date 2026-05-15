@@ -20,8 +20,8 @@
 </div>
 
 <div class="container py-4">
-
-    <div class="row g-4 mb-4 justify-content-center">
+    <div id="integrationAreaWrapper">
+    <div class="row g-4 mb-4 justify-content-center" id="integrationArea">
         <div class="col-md-4">
             <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('exportar_bpa')">
                 <div class="module-icon" style="font-size: 2rem;">📤</div>
@@ -41,6 +41,21 @@
                 <div class="module-icon" style="font-size: 2rem;">📥</div>
                 <h5>Importar CSV em Lote</h5>
                 <p style="font-size: 0.8rem; color: var(--text-muted);">Importa CSVs com Smart Update</p>
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- LOCK OVERLAY: shown by default to 'close' the integration panel -->
+    <div id="integrationLock" style="position: absolute; left:0; right:0; top:84px; bottom:0; background: rgba(0,0,0,0.55); z-index: 999; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px;">
+        <div style="background: white; padding: 24px; border-radius: 12px; text-align: center; min-width: 320px;">
+            <div style="font-size: 2.5rem;">🔒</div>
+            <h5 style="margin-top: 8px;">Painel de Integração Fechado</h5>
+            <p style="color: #666; font-size: 0.9rem;">Acesse com senha administrativa para desbloquear.</p>
+            <div style="display:flex; gap:8px; justify-content:center; margin-top:12px;">
+                <button class="btn btn-outline-secondary" onclick="document.getElementById('integrationLock').style.display='none'">Fechar (apenas ocultar)</button>
+                <button class="btn btn-danger" onclick="pedirSenhaAdmin('unlock_panel')">Desbloquear</button>
             </div>
         </div>
     </div>
@@ -68,7 +83,7 @@
             </div>
         </div>
     </div>
-
+    </div>
     <div class="row g-4 mb-5 justify-content-center">
         <div class="col-md-4">
             <div class="module-card admin-only" style="padding: 20px; cursor: pointer;" onclick="pedirSenhaAdmin('limpar_duplicatas')">
@@ -254,6 +269,15 @@
             if (typeof res === 'string' && res.toLowerCase().includes('enabled')) {
                 const comando = adminPendingCommand;
                 adminPendingCommand = null;
+                // If the pending action is to unlock the panel, just hide the overlay
+                if (comando === 'unlock_panel') {
+                    const lockEl = document.getElementById('integrationLock');
+                    if (lockEl) lockEl.style.display = 'none';
+                    updateAdminBadge();
+                    const bootstrapModal = bootstrap.Modal.getInstance(document.getElementById('adminModal'));
+                    if (bootstrapModal) bootstrapModal.hide();
+                    return;
+                }
                 const cfg = toolConfigs[comando];
                 if (cfg && cfg.fields && cfg.fields.length > 0) {
                     abrirModal(comando);

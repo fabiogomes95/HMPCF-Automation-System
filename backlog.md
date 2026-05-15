@@ -33,3 +33,4 @@
 - [x] Registrar tentativas de autenticação admin no `auditoria_log` e em `logger`.
  - [x] Confirmado: não registrar username (apenas status/resultado da autenticação admin é logado).
  - [x] Implementado timeout de sessão admin (`ADMIN_SESSION_MINUTES`), endpoint `logout_admin` e badge de status no painel.
+ - [x] Painel de integração iniciado **fechado** por padrão com overlay de cadeado; botão `Desbloquear` exige autenticação admin.
