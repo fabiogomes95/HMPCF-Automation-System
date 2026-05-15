@@ -17,4 +17,20 @@
 
 ### Fixed
 - **Build GitHub Actions:** movido `--onefile` do comando `pyinstaller` para dentro dos `.spec` files (`onefile=True`).
-- **Renomeado** `ideias.md` → `BACKLOG.md` + criado `CHANGELOG.md` separado.
+- **Renomeado** `ideias.md` → `backlog.md` + criado `CHANGELOG.md` separado.
+
+## [2026-05-16]
+
+### Added
+- **Startup scripts:** `iniciar_painel.bat` + `start_painel.vbs` (Painel, porta 8001)
+- **Startup scripts:** `iniciar_recepcao.bat` + `start_recepcao.vbs` (Recepção, porta 8000)
+- Busca automática por Python em múltiplos caminhos (PATH, `%LOCALAPPDATA%`)
+- Verificação de porta antes de iniciar (evita servidor duplicado)
+
+### Changed
+- `iniciar.bat` e `start.vbs` atualizados para apontar ao Painel (compatibilidade)
+- `corrigir_data.py` movido para `scripts/`
+
+### Removed
+- `.spec` files e `build.yml` (não serão mais usados)
+- `.exe` da release v1.1.0 removidos manualmente do GitHub
