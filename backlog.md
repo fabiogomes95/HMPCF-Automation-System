@@ -7,8 +7,8 @@
 - [ ] **credentials.json** — Remover do histórico do Git (vazamento de chave Google) e trocar a chave no Google Cloud
 - [ ] **Arquivos com dados reais** — Remover ou ignorar CSVs/TXTs com dados de pacientes do repositório (privacidade)
 - [x] **Senhas centralizadas** — Criado `config.py` + `.env.example` (Firebird, Google Sheets, CNS, códigos BPA)
-- [ ] **Código duplicado** — `scripts/sinc_nome.py` é cópia de `integracao/sincronizar_firebird.py`. Decidir se mantém ou apaga
-- [ ] **WeasyPrint / GTK3** — Trocar por alternativa sem dependência externa (matplotlib, Pillow ou fpdf2)
+- [x] **Código duplicado** — `scripts/sinc_nome.py` removido (manter `integracao/sincronizar_firebird.py`)
+- [x] **WeasyPrint / GTK3** — Substituído por fpdf2 (zero dependência externa)
 
 ## 💡 Ideias Futuras
 

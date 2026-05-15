@@ -11,10 +11,67 @@ import os
 import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta
+from fpdf import FPDF
 
 pasta_atual = os.path.dirname(os.path.abspath(__file__))
 pasta_raiz = os.path.abspath(os.path.join(pasta_atual, '..'))
 caminho_db = os.path.join(pasta_raiz, 'hospital.db')
+
+LARGURA_COL = 88
+MARGEM_ESQ = 10
+ENTRE_COL = 8
+MARGEM_INFERIOR = 20
+Y_CABECALHO = 25
+
+coluna_x = [MARGEM_ESQ, MARGEM_ESQ + LARGURA_COL + ENTRE_COL]
+
+
+def _coluna_atual(pdf, col, y):
+    if y > 297 - MARGEM_INFERIOR:
+        col += 1
+        if col > 1:
+            pdf.add_page()
+            col = 0
+            y = Y_CABECALHO
+        else:
+            y = Y_CABECALHO
+    return col, y
+
+
+def _card_paciente(pdf, col, y, nome, cpf, sus, total, linhas_tempo):
+    col, y = _coluna_atual(pdf, col, y)
+    x0 = coluna_x[col]
+    alt = 12 + len(linhas_tempo) * 5
+    if alt < 25:
+        alt = 25
+    if y + alt > 297 - MARGEM_INFERIOR:
+        col += 1
+        if col > 1:
+            pdf.add_page()
+            col = 0
+            y = Y_CABECALHO
+        else:
+            y = Y_CABECALHO
+        x0 = coluna_x[col]
+    pdf.set_xy(x0, y)
+    pdf.set_fill_color(255, 255, 255)
+    pdf.set_draw_color(180, 180, 180)
+    w = LARGURA_COL
+    pdf.rect(x0, y, w, alt)
+    pdf.set_xy(x0 + 2, y + 1)
+    pdf.set_font('Helvetica', 'B', 10)
+    pdf.multi_cell(w - 4, 5, nome)
+    pdf.set_xy(x0 + 2, pdf.get_y() + 1)
+    pdf.set_font('Helvetica', '', 8)
+    pdf.multi_cell(w - 4, 4, f"CPF: {cpf}")
+    pdf.multi_cell(w - 4, 4, f"SUS: {sus}")
+    pdf.set_font('Helvetica', 'B', 8)
+    pdf.multi_cell(w - 4, 4, f"TOTAL: {total} vez(es)")
+    pdf.set_font('Helvetica', '', 7)
+    for t in linhas_tempo:
+        pdf.multi_cell(w - 4, 4, t)
+    y = pdf.get_y() + 3
+    return col, y
 
 
 def calcular_data_inicio(meses):
@@ -68,8 +125,22 @@ def gerar_auditoria_periodo(opcao):
             by=['nome', 'data_atendimento', 'hora_atendimento']
         )
 
-        print("Montando blocos de informacao para o PDF...")
-        pacientes_html = ""
+        print("Montando PDF com fpdf2...")
+        pdf = FPDF(orientation='P', unit='mm', format='A4')
+        pdf.alias_nb_pages()
+        pdf.set_auto_page_break(auto=False)
+
+        def cabecalho():
+            pdf.set_font('Helvetica', 'B', 14)
+            pdf.cell(0, 8, f'HMPCF - AUDITORIA {titulo_periodo}', ln=True, align='C')
+            pdf.set_font('Helvetica', '', 8)
+            pdf.cell(0, 4, f'Top 20 Pacientes | Gerado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}', ln=True, align='C')
+            pdf.ln(4)
+
+        pdf.add_page()
+        cabecalho()
+        col = 0
+        y = pdf.get_y()
 
         for sus in top_sus:
             dados_p = df_top20[df_top20['sus'] == sus]
@@ -78,7 +149,7 @@ def gerar_auditoria_periodo(opcao):
             nome = str(dados_p['nome'].iloc[0]).strip()
             cpf = str(dados_p['cpf'].iloc[0]).strip() if dados_p['cpf'].iloc[0] else "NAO INFORMADO"
             total_entradas = len(dados_p)
-            linhas_tempo = ""
+            linhas_tempo = []
             for i, (_, row) in enumerate(dados_p.iterrows(), start=1):
                 d_br = row['data_atendimento']
                 try:
@@ -86,55 +157,10 @@ def gerar_auditoria_periodo(opcao):
                         d_br = datetime.strptime(d_br, '%Y-%m-%d').strftime('%d/%m/%Y')
                 except ValueError:
                     pass
-                linhas_tempo += (
-                    f"<div><span class='idx'>[{i:02d}]</span> "
-                    f"-> Data: {d_br} as {row['hora_atendimento']}</div>"
-                )
-            pacientes_html += f"""
-            <div class="patient-card">
-                <div class="patient-name">{nome}</div>
-                <div class="patient-info"><b>CPF:</b> {cpf}</div>
-                <div class="patient-info"><b>SUS:</b> {sus}</div>
-                <div class="patient-info"><b>TOTAL DE ENTRADAS:</b> {total_entradas} vez(es)</div>
-                <div class="history-title">LINHA DO TEMPO:</div>
-                <div class="history-list">{linhas_tempo}</div>
-            </div>"""
+                linhas_tempo.append(f"[{i:02d}] Data: {d_br} as {row['hora_atendimento']}")
+            col, y = _card_paciente(pdf, col, y, nome, cpf, sus, total_entradas, linhas_tempo)
 
-        html_template = f"""
-        <html><head><meta charset="UTF-8"><style>
-            @page {{ size: A4; margin: 1.5cm; background-color: #ffffff;
-                @bottom-right {{ content: "Pagina " counter(page) " de " counter(pages);
-                    font-family: Arial, sans-serif; font-size: 8pt; color: #555; }} }}
-            body {{ font-family: 'Segoe UI', sans-serif; color: #000; background: #ffffff; margin: 0; }}
-            .header {{ text-align: center; background-color: #ffffff; color: #000; padding: 10px 0;
-                border-bottom: 2px solid #000; margin-bottom: 20px; }}
-            .header h1 {{ margin: 0; font-size: 16pt; letter-spacing: 1px; font-weight: bold; }}
-            .header p {{ margin: 5px 0 0 0; font-size: 10pt; color: #555; }}
-            .container {{ column-count: 2; column-gap: 1.5cm; width: 100%; }}
-            .patient-card {{ break-inside: avoid; page-break-inside: avoid; background-color: #ffffff;
-                border: 1px solid #ccc; border-left: 4px solid #333; border-radius: 4px; padding: 12px;
-                margin-bottom: 15px; font-size: 9pt; }}
-            .patient-name {{ font-weight: bold; font-size: 11pt; text-transform: uppercase;
-                margin-bottom: 8px; color: #000; border-bottom: 1px solid #ddd; padding-bottom: 4px; }}
-            .patient-info {{ margin-bottom: 3px; color: #333; }}
-            .history-title {{ font-weight: bold; margin-top: 8px; margin-bottom: 4px; color: #555; font-size: 8.5pt; }}
-            .history-list {{ margin-left: 5px; padding-left: 8px; border-left: 2px solid #ddd;
-                line-height: 1.4; color: #222; }}
-            .idx {{ color: #555; font-family: monospace; font-weight: bold; }}
-        </style></head><body>
-            <div class="header">
-                <h1>HMPCF - AUDITORIA {titulo_periodo}</h1>
-                <p>Top 20 Pacientes - Dados Higienizados (Distinct) |
-                Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
-            </div>
-            <div class="container">{pacientes_html}</div>
-        </body></html>"""
-
-        try:
-            from weasyprint import HTML
-        except Exception:
-            return "ERRO: Biblioteca WeasyPrint requer GTK3 instalado. Baixe de: https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases/download/2022-01-04/gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe"
-        HTML(string=html_template).write_pdf(arquivo_pdf)
+        pdf.output(arquivo_pdf)
         msg = f"SUCESSO! PDF gerado: {arquivo_pdf}"
         print(msg)
         return msg

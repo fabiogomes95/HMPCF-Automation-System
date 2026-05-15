@@ -94,7 +94,7 @@ Acessível via web no Painel de Gestão → [Integração](http://localhost:8001
 Acessível via web no Painel de Gestão → [Análise / BI](http://localhost:8001/analise.html)
 - `dashboard_visual.py` — dashboard PNG (idade x sexo, top bairros, picos, volume)
 - `planilha_producao.py` — relatório Excel com separação DIURNO/NOTURNO e regra da madrugada
-- `auditoria_periodica.py` — PDF de auditoria mensal/trimestral/semestral (WeasyPrint)
+- `auditoria_periodica.py` — PDF de auditoria mensal/trimestral/semestral (fpdf2)
 - `analise_anual_csv.py` — relatório Top 20 a partir de CSVs
 - `historico_paciente.py` — "Lupa do Auditor" — busca interativa por nome/CPF/SUS
 
@@ -106,7 +106,6 @@ Acessível via web no Painel de Gestão → [Análise / BI](http://localhost:800
 - `corrigir_sexo_bpa.py` — RPA corretor de sexo no sistema BPA
 - `atualizar_sexo.py` — atualização em massa de sexo no SQLite
 - `inspecionar_db.py` — debug de registros no banco
-- `sinc_nome.py` — sincronizador alternativo por nome + data de nascimento
 - `relatorio_fusao.py` — relatório pós-faxina
 
 ---
@@ -128,7 +127,7 @@ Acessível via web no Painel de Gestão → [Análise / BI](http://localhost:800
 - **Backend:** Python 3.11+, Eel (Desktop WebView), Firebird SQL
 - **Frontend:** HTML5, CSS3 (`@media print`), JavaScript ES6+, Bootstrap 5
 - **RPA:** PyAutoGUI
-- **BI:** Pandas, Matplotlib, Seaborn, OpenPyXL, WeasyPrint
+- **BI:** Pandas, Matplotlib, Seaborn, OpenPyXL, fpdf2
 - **Cloud:** Google Sheets & Drive API (gspread, google-auth)
 - **Banco:** SQLite3, Firebird (BPAMAG.GDB)
 

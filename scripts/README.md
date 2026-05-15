@@ -96,19 +96,7 @@ python scripts/atualizar_sexo.py
 
 ---
 
-### 7. `sinc_nome.py` — Sincronizador BPA Alternativo
-
-Sincroniza pacientes do SQLite com o Firebird usando **NOME + DATA DE NASCIMENTO** como chave de busca (em vez de SUS). Útil quando o SUS está inconsistente mas o nome e data estão corretos.
-
-**Como usar:**
-```bash
-python scripts/sinc_nome.py
-# Informe mês e ano
-```
-
----
-
-### 8. `relatorio_fusao.py` — Relatório Pós-Faxina
+### 7. `relatorio_fusao.py` — Relatório Pós-Faxina
 
 Gera um arquivo `RELATORIO_FINAL_FAXINA.txt` com a lista de todos os pacientes que sobreviveram à faxina, ordenados por nome.
 
@@ -119,7 +107,7 @@ python scripts/relatorio_fusao.py
 
 ---
 
-### 9. `inspecionar_db.py` — Inspeção de Banco de Dados
+### 8. `inspecionar_db.py` — Inspeção de Banco de Dados
 
 Ferraramenta de **debug** para desenvolvedores. Faz uma busca por nome no SQLite e exibe os valores **exatos** salvos no banco (incluindo espaços, formatação e caracteres).
 

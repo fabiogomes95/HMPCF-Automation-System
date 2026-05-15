@@ -19,7 +19,7 @@ google-auth
 
 # --- Visualização e Relatórios (BI) ---
 matplotlib
-weasyprint
+fpdf2
 
 # --- Build do Instalador ---
 pyinstaller

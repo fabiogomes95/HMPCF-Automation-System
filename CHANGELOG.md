@@ -62,5 +62,11 @@
 ### Fixed
 - `scripts/corrigir_data.py`, `integracao/corrigir_nulls.py`, `integracao/duplicatas_gdb.py` — adicionado `sys.path.append` para rodarem standalone
 
+### Changed
+- `weasyprint` → `fpdf2` (elimina dependência de GTK3)
+- `auditoria_periodica.py` e `analise_anual_csv.py` reescritos com fpdf2 (mesmo layout, zero dependência externa)
+
 ### Removed
 - `build_exe.bat` e `main.spec` (obsoletos)
+- `scripts/sinc_nome.py` (código duplicado — `sincronizar_firebird.py` faz o mesmo)
+- `requirements.txt`/`pyproject.toml`: `weasyprint` removido, `fpdf2` adicionado

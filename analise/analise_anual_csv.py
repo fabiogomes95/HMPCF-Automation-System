@@ -13,9 +13,60 @@ from io import StringIO
 import pandas as pd
 from datetime import datetime
 import sys
+from fpdf import FPDF
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils import apenas_numeros
+
+LARGURA_COL = 88
+MARGEM_ESQ = 10
+ENTRE_COL = 8
+MARGEM_INFERIOR = 20
+Y_CABECALHO = 25
+coluna_x = [MARGEM_ESQ, MARGEM_ESQ + LARGURA_COL + ENTRE_COL]
+
+
+def _coluna_atual(pdf, col, y):
+    if y > 297 - MARGEM_INFERIOR:
+        col += 1
+        if col > 1:
+            pdf.add_page()
+            col = 0
+            y = Y_CABECALHO
+        else:
+            y = Y_CABECALHO
+    return col, y
+
+
+def _card(pdf, col, y, i, nome, dn, cpf, sus, total):
+    col, y = _coluna_atual(pdf, col, y)
+    x0 = coluna_x[col]
+    alt = 40
+    if y + alt > 297 - MARGEM_INFERIOR:
+        col += 1
+        if col > 1:
+            pdf.add_page()
+            col = 0
+            y = Y_CABECALHO
+        else:
+            y = Y_CABECALHO
+        x0 = coluna_x[col]
+    pdf.set_xy(x0, y)
+    pdf.set_fill_color(255, 255, 255)
+    pdf.set_draw_color(180, 180, 180)
+    pdf.rect(x0, y, LARGURA_COL, alt)
+    pdf.set_xy(x0 + 2, y + 1)
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.multi_cell(LARGURA_COL - 4, 4, f"{i} - {nome}")
+    pdf.set_xy(x0 + 2, pdf.get_y() + 1)
+    pdf.set_font('Helvetica', '', 8)
+    pdf.multi_cell(LARGURA_COL - 4, 4, f"NASC: {dn}")
+    pdf.multi_cell(LARGURA_COL - 4, 4, f"CPF: {cpf}")
+    pdf.multi_cell(LARGURA_COL - 4, 4, f"SUS: {sus}")
+    pdf.set_font('Helvetica', 'B', 8)
+    pdf.multi_cell(LARGURA_COL - 4, 4, f"TOTAL: {total} vez(es)")
+    y = pdf.get_y() + 3
+    return col, y
 
 
 def formatar_cpf(cpf):
@@ -108,8 +159,20 @@ def analisar_csvs_para_pdf():
     top_ids = df_geral['ID_UNICO'].value_counts().head(20).index
     df_top = df_geral[df_geral['ID_UNICO'].isin(top_ids)]
 
-    print("Gerando o PDF...")
-    pacientes_html = ""
+    print("Gerando o PDF com fpdf2...")
+    pdf = FPDF(orientation='P', unit='mm', format='A4')
+    pdf.alias_nb_pages()
+    pdf.set_auto_page_break(auto=False)
+
+    pdf.add_page()
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 8, 'HMPCF - AUDITORIA DE FREQUENCIA (CSV)', ln=True, align='C')
+    pdf.set_font('Helvetica', '', 8)
+    pdf.cell(0, 4, f'Top 20 Pacientes | Gerado em: {datetime.now().strftime("%d/%m/%Y %H:%M")}', ln=True, align='C')
+    pdf.ln(4)
+
+    col = 0
+    y = pdf.get_y()
 
     for i, id_paciente in enumerate(top_ids, start=1):
         dados_p = df_top[df_top['ID_UNICO'] == id_paciente]
@@ -123,44 +186,10 @@ def analisar_csvs_para_pdf():
         dn_exibicao = str(dn_raw.iloc[0]).strip() if not dn_raw.empty else "NAO INFORMADA"
         total_entradas = len(dados_p)
 
-        pacientes_html += f"""
-        <div class="patient-card">
-            <div class="patient-name">{i} - {nome_exibicao}</div>
-            <div class="patient-info"><b>NASCIMENTO:</b> {dn_exibicao}</div>
-            <div class="patient-info"><b>CPF:</b> {cpf_exibicao}</div>
-            <div class="patient-info"><b>SUS:</b> {sus_exibicao}</div>
-            <div class="patient-info"><b>TOTAL DE ENTRADAS:</b> {total_entradas} vez(es)</div>
-        </div>"""
+        col, y = _card(pdf, col, y, i, nome_exibicao, dn_exibicao, cpf_exibicao, sus_exibicao, total_entradas)
 
-    html_template = f"""
-    <html><head><meta charset="UTF-8"><style>
-        @page {{ size: A4; margin: 1.5cm; background-color: #ffffff; }}
-        body {{ font-family: 'Segoe UI', sans-serif; color: #000; background: #ffffff; margin: 0; }}
-        .header {{ text-align: center; background-color: #ffffff; color: #000; padding: 10px 0;
-            border-bottom: 2px solid #000; margin-bottom: 20px; }}
-        .header h1 {{ margin: 0; font-size: 16pt; letter-spacing: 1px; font-weight: bold; }}
-        .header p {{ margin: 5px 0 0 0; font-size: 10pt; color: #555; }}
-        .container {{ column-count: 2; column-gap: 1.5cm; width: 100%; }}
-        .patient-card {{ break-inside: avoid; page-break-inside: avoid; background-color: #ffffff;
-            border: 1px solid #ccc; border-left: 4px solid #333; border-radius: 4px; padding: 12px;
-            margin-bottom: 15px; font-size: 9pt; }}
-        .patient-name {{ font-weight: bold; font-size: 11pt; text-transform: uppercase;
-            margin-bottom: 8px; color: #000; border-bottom: 1px solid #ddd; padding-bottom: 4px; }}
-        .patient-info {{ margin-bottom: 3px; color: #333; font-size: 10pt; }}
-    </style></head><body>
-        <div class="header">
-            <h1>HMPCF - AUDITORIA DE FREQUENCIA (CSV)</h1>
-            <p>Top 20 Pacientes | Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
-        </div>
-        <div class="container">{pacientes_html}</div>
-    </body></html>"""
-
-    try:
-        from weasyprint import HTML
-    except Exception:
-        return "ERRO: Biblioteca WeasyPrint requer GTK3 instalado. Baixe de: https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases/download/2022-01-04/gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe"
     arquivo_pdf = os.path.join(pasta_atual, "RELATORIO_FREQUENCIA_CSV.pdf")
-    HTML(string=html_template).write_pdf(arquivo_pdf)
+    pdf.output(arquivo_pdf)
     msg = f"SUCESSO! PDF gerado: {arquivo_pdf}"
     print(msg)
     return msg

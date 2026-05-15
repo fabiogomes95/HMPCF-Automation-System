@@ -18,7 +18,7 @@ dependencies = [
     "gspread",
     "google-auth",
     "matplotlib",
-    "weasyprint",
+    "fpdf2",
     "pyinstaller",
 ]
 
