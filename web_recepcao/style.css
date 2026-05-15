@@ -277,8 +277,7 @@ CABEÇALHO DO BOLETIM
 GRID DO FORMULÁRIO
 --------------------------------------------------- */
 .row {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
+    display: flex;
     border-left: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
@@ -288,6 +287,7 @@ GRID DO FORMULÁRIO
 .spacer-row { margin-bottom: 10px; }
 
 .field {
+    flex: 1;
     padding: 3px 6px;
     border-right: 1px solid var(--border-color);
     display: flex;
@@ -296,7 +296,6 @@ GRID DO FORMULÁRIO
 }
 
 .field:last-child { border-right: none; }
-.field:only-child { grid-column: 1 / -1; }
 
 label {
     font-weight: bold;
