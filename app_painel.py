@@ -398,19 +398,15 @@ def analise_buscar_historico(termo):
 
 
 # =====================================================================
-# PONTO DE ENTRADA
+# INICIAR (usado pelo main.py)
 # =====================================================================
-if __name__ == '__main__':
+def iniciar():
     print("Servidor HMPCF Iniciado e Persistente na porta 8001")
     carregar_base()
 
-    # Função "fantasma" pra evitar que o Eel feche quando
-    # a janela for fechada (modo servidor headless)
     def manter_vivo(rota, websockets):
         pass
 
-    # mode=None significa: NÃO abre navegador (modo servidor)
-    # block=False: não bloqueia o terminal (pra poder usar while True)
     eel.start(
         'index.html',
         mode=None,
@@ -420,6 +416,11 @@ if __name__ == '__main__':
         close_callback=manter_vivo
     )
 
-    # Mantém o servidor rodando pra sempre
     while True:
         eel.sleep(1.0)
+
+# =====================================================================
+# PONTO DE ENTRADA (direto)
+# =====================================================================
+if __name__ == '__main__':
+    iniciar()

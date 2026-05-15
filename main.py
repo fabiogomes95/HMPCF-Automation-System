@@ -225,7 +225,7 @@ def servidor_recepcao():
     try:
         sys.path.insert(0, PASTA_RAIZ)
         import app_recepcao
-        # O app_recepcao chama eel.start() que é bloqueante
+        app_recepcao.iniciar()
     except Exception as e:
         erro(f"Falha ao iniciar Recepção: {e}")
 
@@ -234,6 +234,7 @@ def servidor_painel():
     try:
         sys.path.insert(0, PASTA_RAIZ)
         import app_painel
+        app_painel.iniciar()
     except Exception as e:
         erro(f"Falha ao iniciar Painel: {e}")
 

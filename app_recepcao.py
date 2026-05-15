@@ -312,12 +312,16 @@ def status_gari():
 
 
 # =====================================================================
-# PONTO DE ENTRADA
+# INICIAR (usado pelo main.py)
 # =====================================================================
-if __name__ == '__main__':
+def iniciar():
     init_db()
-
     threading.Thread(target=rodar_gari, daemon=True).start()
-
     print("App Recepcao HMPCF Iniciado...")
     eel.start('index.html', mode='msedge', size=(1250, 850), port=8000)
+
+# =====================================================================
+# PONTO DE ENTRADA (direto)
+# =====================================================================
+if __name__ == '__main__':
+    iniciar()
