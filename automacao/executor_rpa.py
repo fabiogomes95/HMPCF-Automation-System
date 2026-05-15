@@ -96,10 +96,21 @@ def preparar_lotes(arq_leitura: str, base_pacientes_ram: list[dict] | None = Non
             }
         elif lote_atual:
             # --- PACIENTE DENTRO DO LOTE ---
-            # Só valido se tem base_pacientes_ram
-            if not base_pacientes_ram or linha in documentos_validos:
-                lote_atual['validados'].append(linha)
-            lote_atual['pacientes'].append(linha)
+            
+            # 1. Se a gente carregou o banco (RAM), faz a peneira fina:
+            if base_pacientes_ram:
+                if linha in documentos_validos:
+                    lote_atual['validados'].append(linha)
+                    lote_atual['pacientes'].append(linha)
+                else:
+                    # ❌ IGNORA O PACIENTE: Ele não entra na lista do robô!
+                    # Opcional: imprimir no log pra você saber quem ficou de fora
+                    # logger.warning(f"Paciente ignorado (Não está no .GDB): {linha}")
+                    continue 
+            
+            # 2. Se a gente não passou a RAM pra verificar, adiciona tudo direto:
+            else:
+                lote_atual['pacientes'].append(linha)
 
     if lote_atual:
         lotes.append(lote_atual)
