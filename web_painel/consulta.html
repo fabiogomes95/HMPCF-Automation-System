@@ -191,6 +191,7 @@
                     <tbody id="tabelaBody"></tbody>
                 </table>
             </div>
+            <div id="paginacaoNav" class="d-flex justify-content-center align-items-center py-2"></div>
             <div id="semResultados" class="text-center text-muted py-4" style="display:none;">
                 Nenhum atendimento encontrado no período.
             </div>
@@ -210,6 +211,27 @@
 <script>
     let chartProcedencia = null;
     let chartDias = null;
+    let _allAtendimentos = [];
+    let _paginaAtual = 1;
+    const _POR_PAGINA = 100;
+
+    function mostrarToast(mensagem, tipo) {
+        tipo = tipo || 'info';
+        const container = document.getElementById('toastContainer') || (function() {
+            const div = document.createElement('div');
+            div.id = 'toastContainer';
+            div.className = 'toast-container';
+            document.body.appendChild(div);
+            return div;
+        })();
+        const bgMap = { success: '#28a745', danger: '#dc3545', warning: '#ffc107', info: '#0d6efd' };
+        const el = document.createElement('div');
+        el.className = 'toast align-items-center text-white border-0 mb-2';
+        el.style.backgroundColor = bgMap[tipo] || bgMap.info;
+        el.innerHTML = `<div class="d-flex"><div class="toast-body">${mensagem}</div></div>`;
+        container.appendChild(el);
+        setTimeout(() => { el.remove(); }, 4000);
+    }
 
     function hojeISO() {
         return new Date().toISOString().split('T')[0];
@@ -398,25 +420,17 @@
         });
     }
 
-    function preencherTabela(atendimentos) {
+    function renderizarPagina() {
         const tbody = document.getElementById('tabelaBody');
-        const semRes = document.getElementById('semResultados');
-        const count = document.getElementById('tabelaCount');
+        const inicio = (_paginaAtual - 1) * _POR_PAGINA;
+        const fim = Math.min(inicio + _POR_PAGINA, _allAtendimentos.length);
+        const pagina = _allAtendimentos.slice(inicio, fim);
 
         tbody.innerHTML = '';
-
-        if (!atendimentos || atendimentos.length === 0) {
-            semRes.style.display = 'block';
-            count.textContent = '0 registros';
-            return;
-        }
-        semRes.style.display = 'none';
-        count.textContent = `${atendimentos.length} registros`;
-
-        atendimentos.forEach((a, i) => {
+        pagina.forEach((a, i) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${i + 1}</td>
+                <td>${inicio + i + 1}</td>
                 <td>${a.data_atendimento || ''}</td>
                 <td>${a.hora_atendimento || ''}</td>
                 <td><strong>${a.registro || ''}</strong></td>
@@ -428,6 +442,41 @@
             `;
             tbody.appendChild(tr);
         });
+
+        const totalPag = Math.ceil(_allAtendimentos.length / _POR_PAGINA);
+        const nav = document.getElementById('paginacaoNav');
+        nav.innerHTML = `
+            <button class="btn btn-sm btn-outline-secondary" onclick="mudarPagina(1)" ${_paginaAtual <= 1 ? 'disabled' : ''}>⏮</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="mudarPagina(${_paginaAtual - 1})" ${_paginaAtual <= 1 ? 'disabled' : ''}>◀</button>
+            <span class="mx-2" style="font-size: 0.85rem;">Pág ${_paginaAtual} de ${totalPag}</span>
+            <button class="btn btn-sm btn-outline-secondary" onclick="mudarPagina(${_paginaAtual + 1})" ${_paginaAtual >= totalPag ? 'disabled' : ''}>▶</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="mudarPagina(${totalPag})" ${_paginaAtual >= totalPag ? 'disabled' : ''}>⏭</button>
+        `;
+    }
+
+    function mudarPagina(pag) {
+        _paginaAtual = pag;
+        renderizarPagina();
+    }
+
+    function preencherTabela(atendimentos) {
+        const semRes = document.getElementById('semResultados');
+        const count = document.getElementById('tabelaCount');
+        const nav = document.getElementById('paginacaoNav');
+
+        _allAtendimentos = atendimentos || [];
+        _paginaAtual = 1;
+
+        if (_allAtendimentos.length === 0) {
+            semRes.style.display = 'block';
+            count.textContent = '0 registros';
+            nav.innerHTML = '';
+            return;
+        }
+
+        semRes.style.display = 'none';
+        count.textContent = `${_allAtendimentos.length} registros`;
+        renderizarPagina();
     }
 
     async function recarregar() {
