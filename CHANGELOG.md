@@ -31,6 +31,36 @@
 - `iniciar.bat` e `start.vbs` atualizados para apontar ao Painel (compatibilidade)
 - `corrigir_data.py` movido para `scripts/`
 
+### Changed
+- `.bat` files agora **matam o processo atual** na porta antes de reiniciar (taskkill)
+- `README.md` — instruções de build removidas, substituídas por atalhos .vbs
+
 ### Removed
 - `.spec` files e `build.yml` (não serão mais usados)
 - `.exe` da release v1.1.0 removidos manualmente do GitHub
+- `requests` das dependências (não era usado)
+
+## [2026-05-16] — Sessão 3
+
+### Added
+- `registro/README.md` — registro de sessão para continuidade entre conversas
+
+### Changed
+- **9 scripts renomeados** para maior clareza:
+  - `banco_de_dados_hospital_bpa.py` → `sincronizar_firebird.py`
+  - `nacionalidade_gdb.py` → `corrigir_nulls.py`
+  - `gerador_arquivo_bpa.py` → `exportar_bpa.py`
+  - `gerador_csv.py` → `converter_csv.py`
+  - `cns_validator_tool.py` → `validar_cns.py`
+  - `att_sexo.py` → `atualizar_sexo.py`
+  - `cpf_bpa.py` → `sinc_nome.py`
+  - `gerar_txt_fusao.py` → `relatorio_fusao.py`
+  - `sonda_db.py` → `inspecionar_db.py`
+- Todos os imports em `app_painel.py` atualizados para os novos nomes
+- Todos os READMEs, docstrings e diagramas atualizados
+
+### Fixed
+- `scripts/corrigir_data.py`, `integracao/corrigir_nulls.py`, `integracao/duplicatas_gdb.py` — adicionado `sys.path.append` para rodarem standalone
+
+### Removed
+- `build_exe.bat` e `main.spec` (obsoletos)

@@ -104,3 +104,39 @@ HMPCF-Automation-System/
 - **credentials.json** — serviço Google Cloud (já na pasta)
 - **Sheet ID:** `1xw_x-bYlHCHzMe39g1mJKPFAD_IcXA8BB0uRfmmuR90`
 - Sincroniza atendimentos da recepção em tempo real
+
+---
+
+## Sessão 3 — 2026-05-16 (continuação)
+
+### Renomeação de scripts (9 arquivos)
+
+| Nome antigo | Nome novo | Motivo |
+|---|---|---|
+| `integracao/banco_de_dados_hospital_bpa.py` | `integracao/sincronizar_firebird.py` | Muito longo (34 chars) |
+| `integracao/nacionalidade_gdb.py` | `integracao/corrigir_nulls.py` | Nome enganava (não é sobre nacionalidade) |
+| `integracao/gerador_arquivo_bpa.py` | `integracao/exportar_bpa.py` | Mais direto |
+| `integracao/gerador_csv.py` | `integracao/converter_csv.py` | "gerador" não descrevia a função |
+| `scripts/cns_validator_tool.py` | `scripts/validar_cns.py` | PT/EN misturado |
+| `scripts/att_sexo.py` | `scripts/atualizar_sexo.py` | Abreviação pouco clara |
+| `scripts/cpf_bpa.py` | `scripts/sinc_nome.py` | "cpf_bpa" não explicava que sincroniza por nome |
+| `scripts/gerar_txt_fusao.py` | `scripts/relatorio_fusao.py` | "gerar_txt" é detalhe técnico |
+| `scripts/sonda_db.py` | `scripts/inspecionar_db.py` | "sonda" muito informal |
+
+### Bugs corrigidos
+- `scripts/corrigir_data.py`, `integracao/corrigir_nulls.py`, `integracao/duplicatas_gdb.py` — faltava `sys.path.append`, quebravam quando rodados standalone
+- `README.md` — diagrama desatualizado (mostrava `corrigir_data.py` na raiz, faltavam arquivos)
+
+### Arquivos removidos
+- `build_exe.bat` e `main.spec` (obsoletos após abandonar build .exe)
+- `requests` removido do `requirements.txt` (não era usado)
+
+### .bat agora matam processo antes de reiniciar
+- `iniciar_painel.bat` e `iniciar_recepcao.bat` agora dão `taskkill /f` no processo atual da porta antes de subir novo servidor
+
+### Revisão final da arquitetura
+- **38 arquivos Python**
+- **4 pacotes**: `automacao/`, `integracao/`, `analise/`, `scripts/`
+- **Zero hardcoded credentials** fora do `config.py`
+- **Todos os imports verificados** — nenhum quebrado
+- **3 arquivos com `from config import ...`** corrigidos para funcionar standalone
