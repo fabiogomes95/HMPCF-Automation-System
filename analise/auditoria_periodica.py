@@ -10,6 +10,7 @@ Via Eel:     analise_gerar_auditoria_periodo("1")  / "3" / "6"
 import os
 import sqlite3
 import pandas as pd
+from weasyprint import HTML
 from datetime import datetime, timedelta
 
 pasta_atual = os.path.dirname(os.path.abspath(__file__))
@@ -130,7 +131,6 @@ def gerar_auditoria_periodo(opcao):
             <div class="container">{pacientes_html}</div>
         </body></html>"""
 
-        from weasyprint import HTML
         HTML(string=html_template).write_pdf(arquivo_pdf)
         msg = f"SUCESSO! PDF gerado: {arquivo_pdf}"
         print(msg)

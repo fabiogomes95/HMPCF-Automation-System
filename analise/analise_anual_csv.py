@@ -12,6 +12,7 @@ import csv
 from io import StringIO
 import pandas as pd
 from datetime import datetime
+from weasyprint import HTML
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -155,7 +156,6 @@ def analisar_csvs_para_pdf():
         <div class="container">{pacientes_html}</div>
     </body></html>"""
 
-    from weasyprint import HTML
     arquivo_pdf = os.path.join(pasta_atual, "RELATORIO_FREQUENCIA_CSV.pdf")
     HTML(string=html_template).write_pdf(arquivo_pdf)
     msg = f"SUCESSO! PDF gerado: {arquivo_pdf}"
