@@ -23,6 +23,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install GTK3 (required by WeasyPrint)
+        run: |
+          choco install gtk3-runtime -y --no-progress
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
