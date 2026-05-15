@@ -237,3 +237,43 @@ HMPCF-Automation-System/
 - `hospital.db` precisa estar acessível de onde o `app_painel.py` roda
 - Se for em outra máquina, configurar `DB_SQLITE=\servidor\compartilhado\hospital.db` no `.env`
 - Gráficos usam Chart.js 4.4.7 via CDN
+
+---
+
+## Sessão 8 — 2026-05-15 — Backup, auditoria, exportação, indicadores, dark mode, lembrete
+
+### O que foi feito
+
+**6 novos recursos:**
+
+1. **Backup automático** (`integracao/backup_utils.py`)
+   - `fazer_backup(caminho, prefixo)` copia arquivo para `backups/` com timestamp
+   - Disparado automaticamente antes de: sincronizar_firebird, aniquilar_nulls, limpar_duplicatas
+   - Backup manual + listagem via Eel
+
+2. **Log de auditoria** (`auditoria_log.py`)
+   - `registrar(acao, detalhes)` append JSON Lines em `auditoria.log`
+   - Toda ação importante registrada (início do painel, relatórios, BPA, RPA)
+   - `listar(limite=100)` exibido na home com auto-atualização 30s
+
+3. **Exportação consolidada** (`analise/exportacao_consolidada.py`)
+   - Dashboard + Excel + PDF auditoria + análise CSV em ZIP único
+   - Card especial (gradiente azul) na página Análise
+
+4. **Indicadores na home** (`web_painel/index.html`)
+   - 4 cards: Pacientes BPA na RAM, Atendimentos na RAM, Backups, Status BPA
+
+5. **Lembrete de competência**
+   - Banner vermelho se BPA do mês não exportado, verde se sim
+
+6. **Modo escuro**
+   - CSS variables dark mode, toggle com localStorage
+
+### Arquivos
+- `integracao/backup_utils.py` (novo)
+- `auditoria_log.py` (novo)
+- `analise/exportacao_consolidada.py` (novo)
+- `app_painel.py` (+129 linhas, seções 7-9)
+- `web_painel/index.html` (reescrito)
+- `web_painel/style.css` (+ dark mode)
+- `web_painel/analise.html` (+ card exportação)
