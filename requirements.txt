@@ -20,3 +20,9 @@ google-auth
 # --- Visualização e Relatórios (BI) ---
 matplotlib
 weasyprint
+
+# --- Build do Instalador ---
+pyinstaller
+
+# --- Auto-Update (GitHub) ---
+requests
