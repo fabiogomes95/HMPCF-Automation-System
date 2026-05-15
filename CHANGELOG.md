@@ -17,6 +17,10 @@
 - **`planilha_nuvem.py`** — Agora usa `config.py` para Google Sheet ID, escopos e caminho do SQLite.
 - **`integracao/gerador_arquivo_bpa.py`**, **`integracao/gerador_csv.py`** — Agora usam `config.py` para CNS_PROFISSIONAL e códigos BPA.
 - **`.gitignore`** — Adicionado `/scripts/*.txt`.
+ - **`app_painel.py`** — Autenticação admin refinada: `set_admin` agora cria sessão com tempo de expiração, `is_admin` valida/expira sessão automaticamente e `logout_admin` foi adicionado.
+ - **`config.py`** — Nova opção `ADMIN_SESSION_MINUTES` para controlar duração da sessão admin (padrão 15 minutos).
+ - **`web_painel/integracao.html`** — UI: badge de status `Admin: on/off`, botão `Logout` e polling para atualizar o status; modal de autenticação admin mantido.
+ - **`backlog.md`** — Atualizado automaticamente com entradas sobre autenticação admin (status-only logging) e implementação de timeout.
 
 ### Fixed
 - **Build GitHub Actions:** movido `--onefile` do comando `pyinstaller` para dentro dos `.spec` files (`onefile=True`).
