@@ -409,7 +409,8 @@ def iniciar():
 
     eel.start(
         'index.html',
-        mode=None,
+        mode='msedge',
+        size=(1250, 850),
         host='localhost',
         port=8001,
         block=False,
