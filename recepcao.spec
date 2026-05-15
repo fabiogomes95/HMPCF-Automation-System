@@ -36,6 +36,7 @@ exe = EXE(
     name='HMPCF_Recepcao',
     debug=False,
     bootloader_ignore_signals=False,
+    onefile=True,
     strip=False,
     upx=True,
     upx_exclude=[],

@@ -43,10 +43,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: Build HMPCF_Recepcao.exe
-        run: pyinstaller recepcao.spec --onefile
+        run: pyinstaller recepcao.spec
 
       - name: Build HMPCF_Painel.exe
-        run: pyinstaller painel.spec --onefile
+        run: pyinstaller painel.spec
 
       - name: Upload .exe to Release
         uses: softprops/action-gh-release@v2

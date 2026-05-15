@@ -24,7 +24,6 @@ hospital.db
 *.xls
 *.txt
 *.pdf
-*.png
 !web_recepcao/logo.png
 
 !requirements.txt   # Exceção: O requirements.txt DEVE subir para o GitHub
