@@ -3,7 +3,7 @@ cd /d "%~dp0"
 
 netstat -ano | findstr :8001 >nul
 if %errorlevel% equ 0 (
-    echo [OK] Servidor ja esta rodando. Abrindo interface...
+    echo [OK] Painel ja esta rodando. Abrindo interface...
     start msedge http://localhost:8001
     exit
 )

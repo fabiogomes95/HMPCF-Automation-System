@@ -1,10 +1,10 @@
 @echo off
 cd /d "%~dp0"
 
-netstat -ano | findstr :8001 >nul
+netstat -ano | findstr :8000 >nul
 if %errorlevel% equ 0 (
-    echo [OK] Servidor ja esta rodando. Abrindo interface...
-    start msedge http://localhost:8001
+    echo [OK] Recepcao ja esta rodando. Abrindo interface...
+    start msedge http://localhost:8000
     exit
 )
 
@@ -22,6 +22,6 @@ if not defined PY_PATH (
 )
 
 set "PYW_PATH=%PY_PATH:python.exe=pythonw.exe%"
-echo [!] Iniciando Painel de Gestao (porta 8001)...
-start "" "%PYW_PATH%" app_painel.py
+echo [!] Iniciando Recepcao (porta 8000)...
+start "" "%PYW_PATH%" app_recepcao.py
 exit
