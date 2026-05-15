@@ -1,6 +1,8 @@
-# 💰 Módulo de Faturamento e Integração SUS
+# 🔌 Módulo de Integração SUS
 
 Este diretório contém os scripts responsáveis por **traduzir os dados do sistema para a linguagem do Governo**. Eles convertem cadastros do SQLite para o formato BPA (Datasus), sincronizam com o Firebird oficial, importam planilhas legadas e garantem que nenhum paciente seja perdido — mesmo em contingência.
+
+Todas as ferramentas funcionam **via terminal** (com parâmetros opcionais) e **via interface web** no Painel de Gestão (Eel, porta 8001).
 
 ---
 
@@ -20,12 +22,13 @@ Gera o arquivo **TXT posicional** que o sistema BPA do governo importa.
 **Como usar:**
 ```bash
 python gerador_arquivo_bpa.py
-# Escolha o mês (opcional) e onde salvar o .txt
+# Informe mês/ano (opcional) e caminho de saída, ou use padrões
 ```
+Também disponível no Painel de Gestão → Integração → Exportar SQLite → TXT BPA.
 
 ---
 
-### 2. `gerador.csv.py` — Conversor de CSVs Antigos para TXT BPA
+### 2. `gerador_csv.py` — Conversor de CSVs Antigos para TXT BPA
 
 Lê o formato CSV usado antes do sistema atual (13 colunas: REGISTRO, NOME, DN, IDADE, SEXO, RAÇA, CIDADE, HORARIO, CPF, SUS, OBS, ENDERECO, TEL) e converte para o layout posicional do BPA.
 
@@ -37,8 +40,8 @@ Lê o formato CSV usado antes do sistema atual (13 colunas: REGISTRO, NOME, DN, 
 
 **Como usar:**
 ```bash
-python gerador.csv.py
-# Selecione o CSV antigo
+python gerador_csv.py
+# Informe o caminho do CSV e onde salvar (opcional), ou use padrões
 ```
 
 ---
@@ -57,6 +60,7 @@ Varre a pasta atual em busca de arquivos `.csv` da recepção e os importa para 
 **Como usar:**
 ```bash
 python importador_recepcao.py
+# Informe o separador (opcional, padrão ";")
 ```
 
 ---
@@ -73,7 +77,7 @@ Integra os pacientes do `hospital.db` (SQLite) com o banco oficial do BPA (`BPAM
 **Como usar:**
 ```bash
 python banco_de_dados_hospital_bpa.py
-# Selecione o arquivo .gdb e informe o mês (opcional)
+# Informe o mês/ano e caminho do .gdb (opcional), ou use padrões
 ```
 
 ---
@@ -91,7 +95,7 @@ python banco_de_dados_hospital_bpa.py
 **Como usar:**
 ```bash
 python sincronizar_contingencia.py
-# Selecione a planilha CSV manual
+# Informe o caminho do CSV (opcional), ou use o padrão
 ```
 
 ---
@@ -105,7 +109,7 @@ Varre **todas as colunas** da tabela `CADCNS` no Firebird e substitui valores `N
 **Como usar:**
 ```bash
 python nacionalidade_gdb.py
-# Selecione o arquivo .gdb
+# Informe o caminho do .gdb (opcional), ou use o padrão
 ```
 
 ---
@@ -117,7 +121,7 @@ Agrupa pacientes pelo **Cartão SUS**, avalia cada ficha por um **sistema de pon
 **Como usar:**
 ```bash
 python duplicatas_gdb.py
-# Selecione o arquivo .gdb
+# Informe o caminho do .gdb (opcional), ou use o padrão
 ```
 
 ---
@@ -129,7 +133,7 @@ python duplicatas_gdb.py
 | **SQLite3** | Conexão com o banco local hospital.db |
 | **Firebird SQL** | Conexão com o banco oficial BPAMAG.GDB |
 | **Pandas** | Leitura e processamento de CSVs |
-| **Tkinter** | Janelas de seleção de arquivos e diálogos |
+| **Eel** | Interface web (Painel de Gestão, porta 8001) |
 | **Regex (re)** | Extração de documentos de textos sujos |
 
 ---
@@ -143,7 +147,7 @@ CSVs da Recepção
   │
   ├── sincronizar_contingencia.py  →  SQLite (modo offline)
   │
-  └── gerador.csv.py  →  TXT BPA (CSVs antigos)
+  └── gerador_csv.py  →  TXT BPA (CSVs antigos)
   
 SQLite
   │
@@ -160,4 +164,4 @@ Firebird
 
 ---
 
-*Módulo de Faturamento desenvolvido por **Fábio Gomes da Silva** para o Hospital Municipal Presidente Café Filho.*
+*Módulo de Integração desenvolvido por **Fábio Gomes da Silva** para o Hospital Municipal Presidente Café Filho.*

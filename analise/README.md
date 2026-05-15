@@ -2,6 +2,8 @@
 
 Este diretório contém os scripts de inteligência de negócio do sistema HMPCF. Eles transformam os atendimentos salvos no banco SQLite em **relatórios gerenciais**, **gráficos visuais** e **PDFs de auditoria** — prontos para impressão ou envio à diretoria.
 
+Todas as ferramentas funcionam **via terminal** (com parâmetros opcionais) e **via interface web** no Painel de Gestão (Eel, porta 8001 → [Análise / BI](http://localhost:8001/analise.html)).
+
 ---
 
 ## 📋 Scripts
@@ -18,11 +20,13 @@ Gera uma planilha `.xlsx` profissional com separação automática entre **Plant
 - Painel congelado para scroll sem perder o cabeçalho
 - Mesclagem automática de células dos plantões
 
-**Como usar:**
+**Como usar (terminal):**
 ```bash
 python planilha_producao.py
-# Digite o mês desejado (ex: 04-2026)
+# Depois digite o mês desejado (ex: 04-2026)
 ```
+
+**Via Eel (web):** `analise_gerar_relatorio_mes("04-2026")` — parâmetro `mes_ref` no modal.
 
 ---
 
@@ -39,10 +43,12 @@ Gera um painel visual com **4 gráficos** em alta resolução (300 DPI):
 
 Também exibe no terminal o **Top 20 pacientes mais frequentes** com a linha do tempo de cada visita.
 
-**Como usar:**
+**Como usar (terminal):**
 ```bash
 python dashboard_visual.py
 ```
+
+**Via Eel (web):** `analise_gerar_dashboard()` — sem parâmetros.
 
 ---
 
@@ -57,11 +63,13 @@ Gera um PDF otimizado para impressão (modo econômico de tinta) com os **20 pac
 
 **Layout:** duas colunas (side-by-side) para economizar papel, com linha do tempo individual de cada paciente.
 
-**Como usar:**
+**Como usar (terminal):**
 ```bash
 python auditoria_periodica.py
 # Escolha 1, 3 ou 6 no menu
 ```
+
+**Via Eel (web):** `analise_gerar_auditoria_periodo("1")` — parâmetro `opcao` no modal.
 
 ---
 
@@ -71,11 +79,13 @@ Lê arquivos `.csv` antigos da recepção, cruza dados por CPF/SUS/Nome+DN para 
 
 Ideal para analisar **dados históricos** que ainda não foram importados para o SQLite.
 
-**Como usar:**
+**Como usar (terminal):**
 ```bash
 python analise_anual_csv.py
-# Coloque os CSVs na mesma pasta
+# Coloque os CSVs na mesma pasta analise/
 ```
+
+**Via Eel (web):** `analise_analisar_csvs_para_pdf()` — sem parâmetros.
 
 ---
 
@@ -89,10 +99,25 @@ Ferramenta interativa de consulta rápida. Busca o histórico **completo** de at
 
 Exibe nome, CPF, SUS e a linha do tempo cronológica de cada atendimento com data, hora e procedência.
 
-**Como usar:**
+**Como usar (terminal):**
 ```bash
 python historico_paciente.py
+# Depois digite o nome, CPF ou SUS
 ```
+
+**Via Eel (web):** `analise_buscar_historico("termo")` — parâmetro `termo` no modal.
+
+---
+
+## 🌐 Interface Web (Eel)
+
+Todas as 5 ferramentas estão disponíveis no Painel de Gestão, página **Análise / BI**:
+
+```
+http://localhost:8001/analise.html
+```
+
+Cada card abre um modal com os parâmetros necessários (quando aplicável). O resultado é exibido no terminal de saída abaixo dos cards.
 
 ---
 
@@ -105,6 +130,7 @@ python historico_paciente.py
 | **OpenPyXL** | Estilização e formatação do Excel |
 | **WeasyPrint** | Renderização de HTML para PDF |
 | **SQLite3** | Conexão direta com o banco hospital.db |
+| **Eel** | Interface web (Painel de Gestão, porta 8001) |
 
 ---
 
@@ -113,10 +139,10 @@ python historico_paciente.py
 | Script | Arquivo Gerado |
 |--------|---------------|
 | `planilha_producao.py` | `Relatorio_Producao_HMPCF.xlsx` |
-| `dashboard_visual.py` | `dashboard_04_2026.png` |
-| `auditoria_periodica.py` | `RELATORIO_AUDITORIA_MENSAL.pdf` |
-| `analise_anual_csv.py` | `RELATORIO_FREQUENCIA_CSV.pdf` |
-| `historico_paciente.py` | Exibição no terminal |
+| `dashboard_visual.py` | `analise/dashboard_hmpcf.png` |
+| `auditoria_periodica.py` | `analise/RELATORIO_AUDITORIA_*.pdf` |
+| `analise_anual_csv.py` | `analise/RELATORIO_FREQUENCIA_CSV.pdf` |
+| `historico_paciente.py` | Retorno em string (web) / terminal |
 
 ---
 

@@ -17,5 +17,6 @@ openpyxl
 gspread
 google-auth
 
-# --- Gestão de Ambiente ---
-python-dotenv
+# --- Visualização e Relatórios (BI) ---
+matplotlib
+weasyprint
