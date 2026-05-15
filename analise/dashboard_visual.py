@@ -23,6 +23,9 @@ pasta_pai = os.path.abspath(os.path.join(pasta_atual, '..'))
 if pasta_pai not in sys.path:
     sys.path.append(pasta_pai)
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
+
 
 def gerar_dashboard():
     """
@@ -33,7 +36,7 @@ def gerar_dashboard():
     caminho_db = os.path.join(pasta_pai, 'hospital.db')
     if not os.path.exists(caminho_db):
         msg = f"ERRO: Banco de dados nao encontrado em {caminho_db}"
-        print(msg)
+        logger.error(msg)
         return msg
 
     conn = sqlite3.connect(caminho_db)
@@ -54,7 +57,7 @@ def gerar_dashboard():
     buf = StringIO()
     _escrever_relatorio(df_mensal, buf)
     relatorio = buf.getvalue()
-    print(relatorio)
+    logger.info(relatorio)
 
     sns.set_theme(style="whitegrid")
     fig, axes = plt.subplots(2, 2, figsize=(16, 10))
@@ -138,4 +141,4 @@ def _escrever_relatorio(df, buf):
 
 
 if __name__ == "__main__":
-    print(gerar_dashboard())
+    logger.info(gerar_dashboard())

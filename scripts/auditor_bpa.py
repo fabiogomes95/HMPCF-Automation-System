@@ -23,15 +23,16 @@ import sys
 import re
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import valida_cns
 
-print("==================================================")
-print("AUDITORIA BPA: POSICAO 53 + VALIDACAO CNS")
-print("==================================================\n")
+logger.info("==================================================")
+logger.info("AUDITORIA BPA: POSICAO 53 + VALIDACAO CNS")
+logger.info("==================================================")
 
 arquivo = "ExpPaciente.txt"
 if not os.path.exists(arquivo):
-    print(f"Arquivo '{arquivo}' nao encontrado.")
+    logger.error(f"Arquivo '{arquivo}' nao encontrado.")
     exit()
 
 # No layout do governo, o campo Sexo fica no caractere 53
@@ -63,24 +64,17 @@ with open(arquivo, 'r', encoding='latin-1', errors='ignore') as f:
 # Remove duplicatas (um mesmo SUS pode aparecer várias vezes)
 sus_para_corrigir = list(set(sus_para_corrigir))
 
-print("==================================================")
-print(f"Total de pacientes analisados: {total_lidos}")
-print(
-    f"SUS descartados (erro matematico): "
-    f"{invalidos_matematicamente}"
-)
-print(
-    f"SUS validos que precisam de correcao de sexo: "
-    f"{len(sus_para_corrigir)}"
-)
-print("==================================================")
+logger.info("==================================================")
+logger.info(f"Total de pacientes analisados: {total_lidos}")
+logger.info(f"SUS descartados (erro matematico): {invalidos_matematicamente}")
+logger.info(f"SUS validos que precisam de correcao de sexo: {len(sus_para_corrigir)}")
+logger.info("==================================================")
 
 if sus_para_corrigir:
-    # Gera a lista pro Robô RPA corrigir depois
     with open("lista_correcao.txt", "w", encoding='utf-8') as out:
         for s in sus_para_corrigir:
             out.write(s + "\n")
-    print("\nLista 'lista_correcao.txt' gerada!")
-    print("Agora execute o Robo RPA para corrigir.")
+    logger.info("Lista 'lista_correcao.txt' gerada!")
+    logger.info("Agora execute o Robo RPA para corrigir.")
 else:
-    print("\nNenhum erro encontrado.")
+    logger.info("Nenhum erro encontrado.")

@@ -16,6 +16,7 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import apenas_numeros, remove_accents
 
 
@@ -29,7 +30,7 @@ def gerar_relatorio_mes(mes_ref=None):
     caminho_db = os.path.join(os.path.dirname(__file__), '..', 'hospital.db')
     if not os.path.exists(caminho_db):
         msg = f"ERRO: Banco nao encontrado em: {caminho_db}"
-        print(msg)
+        logger.error(msg)
         return msg
 
     try:
@@ -49,7 +50,7 @@ def gerar_relatorio_mes(mes_ref=None):
         df = df.drop_duplicates(subset=['nome', 'data_atendimento', 'hora_atendimento'])
     except Exception as e:
         msg = f"Erro ao ler o banco: {e}"
-        print(msg)
+        logger.error(msg)
         return msg
 
     df['dt_entrada'] = pd.to_datetime(
@@ -161,18 +162,18 @@ def gerar_relatorio_mes(mes_ref=None):
     wb.save(nome_arq)
 
     msg = f"Relatorio '{mes_ref}' gerado em '{nome_arq}'!"
-    print(msg)
+    logger.info(msg)
     return msg
 
 
 if __name__ == "__main__":
-    print("Meses detectados:", sorted(
+    logger.info("Meses detectados: " + str(sorted(
         pd.to_datetime(
             pd.read_sql_query(
                 "SELECT DISTINCT data_atendimento FROM atendimentos",
                 sqlite3.connect(os.path.join(os.path.dirname(__file__), '..', 'hospital.db'))
             )['data_atendimento'], errors='coerce'
         ).dropna().dt.strftime('%m-%Y').unique()
-    ))
+    )))
     mes = input("Digite o mes (Ex: 04-2026): ").strip()
-    print(gerar_relatorio_mes(mes))
+    logger.info(gerar_relatorio_mes(mes))

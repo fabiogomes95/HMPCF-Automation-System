@@ -20,6 +20,7 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import apenas_numeros, remove_accents
 from config import FIREBIRD_USER, FIREBIRD_PASSWORD
 
@@ -216,4 +217,4 @@ def sincronizar_sqlite_para_gdb(mes_ano="", caminho_gdb=""):
 if __name__ == "__main__":
     mes = input("Mes (ex: 03/2026) ou Enter para todos: ").strip()
     gdb = input("Caminho do .gdb: ").strip()
-    print(sincronizar_sqlite_para_gdb(mes, gdb))
+    logger.info(sincronizar_sqlite_para_gdb(mes, gdb))

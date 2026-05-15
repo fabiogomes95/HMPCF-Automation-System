@@ -23,11 +23,12 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import apenas_numeros, valida_cns
 
 PASTA_RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-print("Iniciando a FAXINA CIRURGICA (Focada APENAS em SUS Invalido)...")
+logger.info("Iniciando a FAXINA CIRURGICA (Focada APENAS em SUS Invalido)...")
 
 try:
     conn = sqlite3.connect(os.path.join(PASTA_RAIZ, 'hospital.db'))
@@ -118,9 +119,9 @@ try:
         f.write(f"- {datas_limpas} Datas de Nascimento APAGADAS.\n")
 
     conn.commit()
-    print("FAXINA CIRURGICA CONCLUIDA COM SUCESSO!")
+    logger.info("FAXINA CIRURGICA CONCLUIDA COM SUCESSO!")
 
 except Exception as e:
-    print(f"Ocorreu um erro: {e}")
+    logger.error(f"Ocorreu um erro: {e}")
 finally:
     conn.close()

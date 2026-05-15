@@ -21,6 +21,7 @@ import glob
 from datetime import datetime
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import apenas_numeros, valida_cns
 
 
@@ -191,4 +192,4 @@ def executar_importacao_lote(separador=";"):
 
 if __name__ == "__main__":
     sep = input("Separador (, ou ;): ").strip() or ";"
-    print(executar_importacao_lote(sep))
+    logger.info(executar_importacao_lote(sep))

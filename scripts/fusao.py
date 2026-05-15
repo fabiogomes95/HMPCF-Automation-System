@@ -24,6 +24,7 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import apenas_numeros, valida_cpf, valida_cns
 
 
@@ -41,9 +42,9 @@ def faxina_definitiva():
     Precisa de CONFIRMAÇÃO manual antes de começar
     (pra garantir que o backup foi feito).
     """
-    print("==================================================")
-    print("FAXINA V3 - MAXIMA SEGURANCA E PREVENCAO DE ERROS")
-    print("==================================================\n")
+    logger.info("==================================================")
+    logger.info("FAXINA V3 - MAXIMA SEGURANCA E PREVENCAO DE ERROS")
+    logger.info("==================================================")
 
     caminho_db = os.path.join(
         os.path.dirname(__file__), '..', 'hospital.db'
@@ -53,7 +54,7 @@ def faxina_definitiva():
         "ATENCAO: Voce RESTAUROU O BACKUP original de novo? (S/N): "
     ).strip().upper()
     if confirmar != 'S':
-        print("Operacao cancelada. Restaure o backup primeiro.")
+        logger.info("Operacao cancelada. Restaure o backup primeiro.")
         return
 
     conn = sqlite3.connect(caminho_db)
@@ -166,35 +167,22 @@ def faxina_definitiva():
                     )
                     total_clones_apagados += 1
 
-                    print(
-                        f"  -> Clone '{clone_nome}' "
-                        f"absorvido pelo Master '{master_nome}'"
-                    )
+                    logger.info(f"  -> Clone '{clone_nome}' absorvido pelo Master '{master_nome}'")
 
         conn.commit()
 
-        print("\n" + "=" * 50)
-        print("FAXINA DEFINITIVA CONCLUIDA!")
-        print("=" * 50)
-        print(
-            f"Pacientes corrigidos    : {total_grupos_fundidos}"
-        )
-        print(
-            f"Clones apagados         : {total_clones_apagados}"
-        )
-        print(
-            f"Atendimentos realocados : {total_atend_movidos}"
-        )
-        print(
-            f"Ignorados (Sem Doc)     : {pacientes_sem_doc}"
-        )
-        print(
-            f"Ignorados (CPF Coringa) : {cpf_generico_ignorado}"
-        )
-        print("=" * 50)
+        logger.info("=" * 50)
+        logger.info("FAXINA DEFINITIVA CONCLUIDA!")
+        logger.info("=" * 50)
+        logger.info(f"Pacientes corrigidos    : {total_grupos_fundidos}")
+        logger.info(f"Clones apagados         : {total_clones_apagados}")
+        logger.info(f"Atendimentos realocados : {total_atend_movidos}")
+        logger.info(f"Ignorados (Sem Doc)     : {pacientes_sem_doc}")
+        logger.info(f"Ignorados (CPF Coringa) : {cpf_generico_ignorado}")
+        logger.info("=" * 50)
 
     except Exception as e:
-        print(f"\nERRO: {e}")
+        logger.error(f"ERRO: {e}")
         conn.rollback()
     finally:
         conn.close()

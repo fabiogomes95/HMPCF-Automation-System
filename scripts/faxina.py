@@ -19,6 +19,7 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import apenas_numeros, valida_cns, valida_cpf
 
 # Garante que vai achar o banco na raiz do projeto
@@ -39,7 +40,7 @@ def fazer_faxina():
     5. Recria a tabela com nova estrutura
     6. Audita também a tabela de atendimentos
     """
-    print("Iniciando a Grande Faxina e Auditoria no Banco de Dados...")
+    logger.info("Iniciando a Grande Faxina e Auditoria no Banco de Dados...")
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -86,20 +87,12 @@ def fazer_faxina():
         else:
             pacientes_limpos[chave_unica] = dados
 
-    print(
-        f"Encontrados {len(pacientes_sujos)} registros totais."
-    )
-    print(
-        f"Foram APAGADAS {fichas_excluidas} fichas "
-        f"sem CPF ou SUS validos."
-    )
-    print(
-        f"Apos auditoria e mesclagem, restaram "
-        f"{len(pacientes_limpos)} pacientes UNICOS."
-    )
+    logger.info(f"Encontrados {len(pacientes_sujos)} registros totais.")
+    logger.info(f"Foram APAGADAS {fichas_excluidas} fichas sem CPF ou SUS validos.")
+    logger.info(f"Apos auditoria e mesclagem, restaram {len(pacientes_limpos)} pacientes UNICOS.")
 
     # --- PASSO 5: REESTRUTURAÇÃO ---
-    print("Recriando a tabela com nova arquitetura...")
+    logger.info("Recriando a tabela com nova arquitetura...")
     cursor.execute("DROP TABLE pacientes")
 
     # Nova tabela com PRIMARY KEY composta (cpf + sus)
@@ -114,7 +107,7 @@ def fazer_faxina():
         )
     ''')
 
-    print("Salvando pacientes sobreviventes...")
+    logger.info("Salvando pacientes sobreviventes...")
     for chave, dados in pacientes_limpos.items():
         colunas = ', '.join(dados.keys())
         placeholders = ', '.join(['?'] * len(dados))
@@ -126,7 +119,7 @@ def fazer_faxina():
         )
 
     # --- PASSO 6: AUDITAR OS ATENDIMENTOS ---
-    print("Auditando tabela de atendimentos...")
+    logger.info("Auditando tabela de atendimentos...")
     cursor.execute("SELECT id, cpf, sus FROM atendimentos")
     for a in cursor.fetchall():
         id_atend = a['id']
@@ -143,7 +136,7 @@ def fazer_faxina():
 
     conn.commit()
     conn.close()
-    print("Faxina e Auditoria Concluidas!")
+    logger.info("Faxina e Auditoria Concluidas!")
 
 
 if __name__ == '__main__':

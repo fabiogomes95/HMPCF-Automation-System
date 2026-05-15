@@ -13,6 +13,9 @@ import pandas as pd
 from datetime import datetime, timedelta
 from fpdf import FPDF
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
+
 pasta_atual = os.path.dirname(os.path.abspath(__file__))
 pasta_raiz = os.path.abspath(os.path.join(pasta_atual, '..'))
 caminho_db = os.path.join(pasta_raiz, 'hospital.db')
@@ -97,10 +100,10 @@ def gerar_auditoria_periodo(opcao):
 
     if not os.path.exists(caminho_db):
         msg = f"ERRO: Banco nao encontrado em:\n{caminho_db}"
-        print(msg)
+        logger.error(msg)
         return msg
 
-    print(f"Buscando dados a partir de {data_limite}...")
+    logger.info(f"Buscando dados a partir de {data_limite}...")
 
     try:
         conn = sqlite3.connect(caminho_db)
@@ -125,7 +128,7 @@ def gerar_auditoria_periodo(opcao):
             by=['nome', 'data_atendimento', 'hora_atendimento']
         )
 
-        print("Montando PDF com fpdf2...")
+        logger.info("Montando PDF com fpdf2...")
         pdf = FPDF(orientation='P', unit='mm', format='A4')
         pdf.alias_nb_pages()
         pdf.set_auto_page_break(auto=False)
@@ -162,19 +165,19 @@ def gerar_auditoria_periodo(opcao):
 
         pdf.output(arquivo_pdf)
         msg = f"SUCESSO! PDF gerado: {arquivo_pdf}"
-        print(msg)
+        logger.info(msg)
         return msg
 
     except Exception as e:
         msg = f"ERRO FATAL AO PROCESSAR PDF: {e}"
-        print(msg)
+        logger.error(msg)
         return msg
 
 
 if __name__ == "__main__":
-    print("Escolha o periodo retroativo do relatorio:")
-    print("[1] Mensal (Ultimos 30 dias)")
-    print("[3] Trimestral (Ultimos 90 dias)")
-    print("[6] Semestral (Ultimos 180 dias)")
+    logger.info("Escolha o periodo retroativo do relatorio:")
+    logger.info("[1] Mensal (Ultimos 30 dias)")
+    logger.info("[3] Trimestral (Ultimos 90 dias)")
+    logger.info("[6] Semestral (Ultimos 180 dias)")
     opcao = input("\nDigite a opcao (1, 3 ou 6): ").strip()
-    print(gerar_auditoria_periodo(opcao))
+    logger.info(gerar_auditoria_periodo(opcao))

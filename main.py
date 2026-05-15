@@ -25,6 +25,9 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from logging_setup import logger
+
 # ──────────────────────────────────────────────────────────────────────
 # CONFIGURAÇÕES
 # ──────────────────────────────────────────────────────────────────────
@@ -46,10 +49,10 @@ class Cores:
     RESET = '\033[0m'
     NEGRITO = '\033[1m'
 
-def info(msg):    print(f"{Cores.AZUL}[INFO]{Cores.RESET} {msg}")
-def sucesso(msg): print(f"{Cores.VERDE}[OK]{Cores.RESET} {msg}")
-def aviso(msg):   print(f"{Cores.AMARELO}[!]{Cores.RESET} {msg}")
-def erro(msg):    print(f"{Cores.VERMELHO}[ERRO]{Cores.RESET} {msg}")
+def info(msg):    logger.info(f"{Cores.AZUL}[INFO]{Cores.RESET} {msg}")
+def sucesso(msg): logger.info(f"{Cores.VERDE}[OK]{Cores.RESET} {msg}")
+def aviso(msg):   logger.warning(f"{Cores.AMARELO}[!]{Cores.RESET} {msg}")
+def erro(msg):    logger.error(f"{Cores.VERMELHO}[ERRO]{Cores.RESET} {msg}")
 
 # ──────────────────────────────────────────────────────────────────────
 # 1. VERIFICADOR DE VERSÃO (Auto-Update)
@@ -163,9 +166,9 @@ def verificar_atualizacao():
     Verifica se há versão nova no GitHub.
     Retorna True se atualizou, False se já está atualizado.
     """
-    print(f"\n{Cores.NEGRITO}═" * 50)
-    print(f"  HMPCF — VERIFICADOR DE ATUALIZAÇÕES")
-    print(f"═" * 50 + f"{Cores.RESET}\n")
+    logger.info(f"\n{Cores.NEGRITO}═" * 50)
+    logger.info(f"  HMPCF — VERIFICADOR DE ATUALIZAÇÕES")
+    logger.info(f"═" * 50 + f"{Cores.RESET}")
 
     local = get_versao_local()
     remota = get_versao_remota()
@@ -188,9 +191,7 @@ def verificar_atualizacao():
         while len(partes_remota) < 3: partes_remota.append(0)
 
         if tuple(partes_remota) > tuple(partes_local):
-            print()
             aviso(f"Nova versão disponível: {remota}")
-            print()
 
             resposta = input(f"{Cores.AMARELO}Deseja atualizar? (S/N): {Cores.RESET}").strip().upper()
 
@@ -246,9 +247,9 @@ def modo_servico():
     Modo produção: sobe ambos os servidores em threads separadas.
     Como o Eel usa block=False no app_painel, conseguimos rodar ambos.
     """
-    print(f"\n{Cores.NEGRITO}═" * 50)
-    print(f"  HMPCF — INICIANDO SERVIDORES")
-    print(f"═" * 50 + f"{Cores.RESET}\n")
+    logger.info(f"\n{Cores.NEGRITO}═" * 50)
+    logger.info(f"  HMPCF — INICIANDO SERVIDORES")
+    logger.info(f"═" * 50 + f"{Cores.RESET}")
 
     # Pré-configura o app_painel (block=False) e importa antecipadamente
     os.chdir(PASTA_RAIZ)
@@ -270,24 +271,24 @@ def modo_servico():
     time.sleep(2)
     webbrowser.open('http://localhost:8000')
 
-    print(f"\n{Cores.VERDE}{Cores.NEGRITO}✓ Sistema HMPCF operacional!{Cores.RESET}")
-    print(f"  Recepção: http://localhost:8000")
-    print(f"  Painel:   http://localhost:8001")
-    print(f"\n{Cores.AMARELO}Pressione CTRL+C para parar todos os servidores.{Cores.RESET}\n")
+    logger.info(f"{Cores.VERDE}{Cores.NEGRITO}✓ Sistema HMPCF operacional!{Cores.RESET}")
+    logger.info(f"  Recepção: http://localhost:8000")
+    logger.info(f"  Painel:   http://localhost:8001")
+    logger.warning(f"Pressione CTRL+C para parar todos os servidores.{Cores.RESET}")
 
     # Mantém o main vivo
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print(f"\n{Cores.AMARELO}Servidores encerrados pelo usuário.{Cores.RESET}")
+        logger.warning(f"Servidores encerrados pelo usuário.{Cores.RESET}")
         sys.exit(0)
 
 # ──────────────────────────────────────────────────────────────────────
 # PONTO DE ENTRADA
 # ──────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    print(f"""{Cores.AZUL}{Cores.NEGRITO}
+    logger.info(f"""{Cores.AZUL}{Cores.NEGRITO}
     ╔══════════════════════════════════════════╗
     ║   HMPCF - AUTOMAÇÃO HOSPITALAR v{VERSAO_LOCAL.ljust(6)}║
     ║   Hospital Municipal Pres. Café Filho   ║
@@ -304,7 +305,7 @@ if __name__ == '__main__':
 
     # Flag --build apenas testa ambiente
     if '--build' in args:
-        print(f"\n{Cores.NEGRITO}Verificando ambiente para build...{Cores.RESET}")
+        logger.info(f"Verificando ambiente para build...{Cores.RESET}")
         try:
             import PyInstaller
             sucesso(f"PyInstaller disponível ({PyInstaller.__version__})")

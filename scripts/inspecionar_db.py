@@ -15,13 +15,17 @@ Uso: python scripts/inspecionar_db.py
 
 import sqlite3
 import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 
 pasta_raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 caminho_db = os.path.join(pasta_raiz, 'hospital.db')
 
-print("=========================================")
-print("NOVA BUSCA: PROCURANDO POR NOME...")
-print("=========================================\n")
+logger.info("=========================================")
+logger.info("NOVA BUSCA: PROCURANDO POR NOME...")
+logger.info("=========================================")
 
 try:
     conn = sqlite3.connect(caminho_db)
@@ -39,17 +43,14 @@ try:
     if paciente:
         nome, sus, sexo = paciente
 
-        print("ACHEI A PACIENTE PELO NOME!")
-        print(f"Nome no banco: {nome}")
-        print(f"SUS salvo como: [{sus}]")
-        print(f"VALOR EXATO DO SEXO: [{sexo}]")
+        logger.info("ACHEI A PACIENTE PELO NOME!")
+        logger.info(f"Nome no banco: {nome}")
+        logger.info(f"SUS salvo como: [{sus}]")
+        logger.info(f"VALOR EXATO DO SEXO: [{sexo}]")
     else:
-        print(
-            "Nenhuma paciente com o termo especificado "
-            "foi encontrada."
-        )
+        logger.info("Nenhuma paciente com o termo especificado foi encontrada.")
 
     conn.close()
 
 except sqlite3.Error as e:
-    print(f"Erro no banco: {e}")
+    logger.error(f"Erro no banco: {e}")

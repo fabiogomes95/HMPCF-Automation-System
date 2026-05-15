@@ -22,6 +22,7 @@ import glob
 import eel
 import firebirdsql
 import sys
+from logging_setup import logger
 from config import FIREBIRD_PATH, FIREBIRD_USER, FIREBIRD_PASSWORD
 
 # =====================================================================
@@ -83,7 +84,7 @@ def carregar_base():
     caminho_gdb = FIREBIRD_PATH
 
     try:
-        print("Carregando pacientes para a memoria...")
+        logger.info("Carregando pacientes para a memoria...")
 
         con = firebirdsql.connect(
             host='localhost',
@@ -117,13 +118,13 @@ def carregar_base():
             })
 
         con.close()
-        print(
+        logger.info(
             f"SUCESSO! {len(BASE_PACIENTES)} pacientes na RAM. "
             f"Busca ultrarrápida ativada!"
         )
 
     except Exception as e:
-        print(f"Erro Critico ao carregar base: {e}")
+        logger.error(f"Erro Critico ao carregar base: {e}")
 
 
 # =====================================================================
@@ -402,7 +403,7 @@ def analise_buscar_historico(termo):
 # INICIAR (usado pelo main.py)
 # =====================================================================
 def iniciar():
-    print("Servidor HMPCF Iniciado e Persistente na porta 8001")
+    logger.info("Servidor HMPCF Iniciado e Persistente na porta 8001")
     carregar_base()
 
     def manter_vivo(rota, websockets):

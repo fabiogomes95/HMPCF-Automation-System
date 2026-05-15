@@ -18,6 +18,7 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import apenas_numeros
 
 
@@ -68,7 +69,7 @@ def criar_cabecalho_producao(caminho_completo, medico, data):
             f.write(f"PROFISSIONAL: {medico.upper()} | DATA: {data}\n")
         return True
     except Exception as e:
-        print(f"Erro ao criar cabecalho manual: {e}")
+        logger.error(f"Erro ao criar cabecalho manual: {e}")
         return False
 
 
@@ -121,5 +122,5 @@ def adicionar_ficha_producao(caminho_completo, documento):
         return True
 
     except Exception as e:
-        print(f"Erro ao salvar ficha manual: {e}")
+        logger.error(f"Erro ao salvar ficha manual: {e}")
         return False

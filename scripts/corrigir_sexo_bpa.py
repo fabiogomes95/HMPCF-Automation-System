@@ -24,13 +24,17 @@ Uso: python scripts/corrigir_sexo_bpa.py
 import pyautogui
 import time
 import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 
 # Trava de segurança: mouse no canto da tela = PARA TUDO
 pyautogui.FAILSAFE = True
 
-print("==================================================")
-print("ROBO INJETOR: MODO CONTROLE VIA TXT")
-print("==================================================\n")
+logger.info("==================================================")
+logger.info("ROBO INJETOR: MODO CONTROLE VIA TXT")
+logger.info("==================================================")
 
 # --- PARÂMETROS ---
 data_atend = input(
@@ -43,28 +47,24 @@ procedimento = input(
 arquivo_lista = 'lista_correcao.txt'
 
 if not os.path.exists(arquivo_lista):
-    print(
-        f"Erro: O arquivo '{arquivo_lista}' nao foi encontrado!"
-    )
+    logger.error(f"Erro: O arquivo '{arquivo_lista}' nao foi encontrado!")
     exit()
 
 # Carrega a lista de SUS pra corrigir
 with open(arquivo_lista, 'r') as f:
     sus_lista = [linha.strip() for linha in f if linha.strip()]
 
-print(f"{len(sus_lista)} registros carregados do arquivo.")
+logger.info(f"{len(sus_lista)} registros carregados do arquivo.")
 input(
     "=> Va ao BPA, abra uma folha NOVA e aperte ENTER aqui..."
 )
 
-print("Iniciando em 5 segundos... Prepare o BPA!")
+logger.info("Iniciando em 5 segundos... Prepare o BPA!")
 time.sleep(5)
 
 # --- EXECUÇÃO DO FLUXO ---
 for p in sus_lista:
-    print(f"Processando: {p}")
-
-    # 1. Digita o SUS
+    logger.info(f"Processando: {p}")
     pyautogui.write(p)
     pyautogui.press('tab')
 
@@ -90,7 +90,7 @@ for p in sus_lista:
     pyautogui.press(['tab', 'tab'])
     pyautogui.press('enter')  # Salva
 
-    print(f"Finalizado: {p}")
+    logger.info(f"Finalizado: {p}")
     time.sleep(1.0)
 
-print("\nFim da lista de correcao!")
+logger.info("Fim da lista de correcao!")

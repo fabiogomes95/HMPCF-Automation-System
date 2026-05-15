@@ -23,6 +23,9 @@ import os
 import sys
 import keyboard
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
+
 # === TRAVA DE SEGURANÇA ===
 # Se eu jogar o mouse no CANTO SUPERIOR ESQUERDO da tela,
 # o PyAutoGUI levanta uma exceção e PARA TUDO.
@@ -170,5 +173,5 @@ def executar_pyautogui(medico, data_atend, procedimento, pacientes, callback=Non
             time.sleep(0.7)
 
         except Exception as e:
-            print(f"Erro na digitacao: {e}")
+            logger.error(f"Erro na digitacao: {e}")
             continue

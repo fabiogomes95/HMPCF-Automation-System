@@ -18,11 +18,14 @@ pasta_pai = os.path.abspath(os.path.join(pasta_atual, '..'))
 if pasta_pai not in sys.path:
     sys.path.append(pasta_pai)
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
+
 try:
     from utils import apenas_numeros, remove_accents
 except ImportError as e:
     msg = f"ERRO: Nao foi possivel importar o utils.py. Motivo: {e}"
-    print(msg)
+    logger.error(msg)
 
 
 def buscar_por_termo(termo_busca):
@@ -42,7 +45,7 @@ def buscar_por_termo(termo_busca):
     caminho_db = os.path.join(pasta_pai, 'hospital.db')
     if not os.path.exists(caminho_db):
         msg = f"ERRO: Banco nao encontrado em:\n{caminho_db}"
-        print(msg)
+        logger.error(msg)
         return msg
 
     try:
@@ -75,7 +78,7 @@ def buscar_por_termo(termo_busca):
         if not resultados:
             msg = ("NENHUM ATENDIMENTO ENCONTRADO para este paciente.\n"
                    "Verifique se o nome/documento esta correto ou se ele ja foi atendido na unidade.")
-            print(msg)
+            logger.warning(msg)
             return msg
 
         nome_paciente = resultados[0][0]
@@ -110,23 +113,23 @@ def buscar_por_termo(termo_busca):
 
         linhas.append("=" * 50 + "\n")
         resultado = "\n".join(linhas)
-        print(resultado)
+        logger.info(resultado)
         return resultado
 
     except sqlite3.Error as e:
         msg = f"ERRO FATAL NO BANCO DE DADOS: {e}"
-        print(msg)
+        logger.error(msg)
         return msg
 
 
 if __name__ == "__main__":
-    print("==================================================")
-    print("LUPA DO AUDITOR - HISTORICO DE PACIENTES")
-    print("==================================================\n")
+    logger.info("==================================================")
+    logger.info("LUPA DO AUDITOR - HISTORICO DE PACIENTES")
+    logger.info("==================================================")
     while True:
         termo = input("Digite o NOME, CPF ou SUS do paciente: ").strip()
         buscar_por_termo(termo)
         continuar = input("Pesquisar outro paciente? (S/N): ").strip().upper()
         if continuar != 'S':
-            print("Encerrando Lupa do Auditor.")
+            logger.info("Encerrando Lupa do Auditor.")
             break

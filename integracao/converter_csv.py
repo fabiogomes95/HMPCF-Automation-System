@@ -17,6 +17,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import apenas_numeros, remove_accents
 from config import CNS_PROFISSIONAL, CBO_CODIGO, FOLHA_CODIGO, SEQ_PROFISSIONAL
 
@@ -196,4 +197,4 @@ def processar_csv_antigo(caminho_csv="", caminho_salvar=""):
 
 if __name__ == "__main__":
     csv_path = input("Caminho do CSV: ").strip()
-    print(processar_csv_antigo(csv_path))
+    logger.info(processar_csv_antigo(csv_path))

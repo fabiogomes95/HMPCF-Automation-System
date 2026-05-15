@@ -16,7 +16,7 @@
 - [x] **Config centralizada** — Firebird paths, Google Sheet ID, CNS_PROFISSIONAL movidos para `config.py`
 - [x] **Mover `corrigir_data.py`** para `scripts/` (concluído)
 - [ ] **Type hints** — Adicionar tipos nos arquivos Python
-- [ ] **Logging** — Trocar `print()` por logging module
+- [x] **Logging** — `print()` substituído por `logging_setup.logger` em 27 arquivos
 - [x] **Remover `requests`** das dependências (não era usado)
 - [x] **Renomear `archive/`** para `scripts/` (concluído)
 - [ ] **Connection pool** para Firebird nas integrações

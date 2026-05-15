@@ -19,6 +19,7 @@ import firebirdsql
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from config import FIREBIRD_USER, FIREBIRD_PASSWORD
 
 
@@ -116,4 +117,4 @@ def aniquilar_nulls_bpa(caminho_gdb=""):
 
 if __name__ == "__main__":
     gdb = input("Caminho do .gdb: ").strip()
-    print(aniquilar_nulls_bpa(gdb))
+    logger.info(aniquilar_nulls_bpa(gdb))

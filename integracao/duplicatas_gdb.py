@@ -23,6 +23,7 @@ import firebirdsql
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from config import FIREBIRD_USER, FIREBIRD_PASSWORD
 
 
@@ -143,4 +144,4 @@ def limpar_duplicados_gdb(caminho_gdb=""):
 
 if __name__ == "__main__":
     gdb = input("Caminho do .gdb: ").strip()
-    print(limpar_duplicados_gdb(gdb))
+    logger.info(limpar_duplicados_gdb(gdb))

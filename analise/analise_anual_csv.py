@@ -16,6 +16,7 @@ import sys
 from fpdf import FPDF
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import apenas_numeros
 
 LARGURA_COL = 88
@@ -119,7 +120,7 @@ def analisar_csvs_para_pdf():
         'cidade', 'hora', 'cpf', 'sus', 'obs', 'endereco', 'tel'
     ]
 
-    print("\nINICIANDO LEITURA DOS CSVS...")
+    logger.info("INICIANDO LEITURA DOS CSVS...")
     for f in arquivos_csv:
         try:
             try:
@@ -144,22 +145,22 @@ def analisar_csvs_para_pdf():
             if not df.empty and str(df.iloc[0]['nome']).strip().lower() == 'nome':
                 df = df.iloc[1:].reset_index(drop=True)
             dfs.append(df)
-            print(f"Arquivo processado: {os.path.basename(f)} ({len(df)} registros)")
+            logger.info(f"Arquivo processado: {os.path.basename(f)} ({len(df)} registros)")
         except Exception as e:
-            print(f"Erro ao ler {os.path.basename(f)}: {e}")
+            logger.error(f"Erro ao ler {os.path.basename(f)}: {e}")
 
     if not dfs:
         return "Nenhum dado valido pode ser extraido dos CSVs."
 
     df_geral = pd.concat(dfs, ignore_index=True)
-    print("\nCruzando os dados e limpando ruidos...")
+    logger.info("Cruzando os dados e limpando ruidos...")
     df_geral['ID_UNICO'] = df_geral.apply(gerar_id_unico, axis=1)
     df_geral = df_geral[df_geral['ID_UNICO'] != "IGNORAR"]
 
     top_ids = df_geral['ID_UNICO'].value_counts().head(20).index
     df_top = df_geral[df_geral['ID_UNICO'].isin(top_ids)]
 
-    print("Gerando o PDF com fpdf2...")
+    logger.info("Gerando o PDF com fpdf2...")
     pdf = FPDF(orientation='P', unit='mm', format='A4')
     pdf.alias_nb_pages()
     pdf.set_auto_page_break(auto=False)
@@ -191,12 +192,12 @@ def analisar_csvs_para_pdf():
     arquivo_pdf = os.path.join(pasta_atual, "RELATORIO_FREQUENCIA_CSV.pdf")
     pdf.output(arquivo_pdf)
     msg = f"SUCESSO! PDF gerado: {arquivo_pdf}"
-    print(msg)
+    logger.info(msg)
     return msg
 
 
 if __name__ == "__main__":
-    print("==================================================")
-    print("ANALISADOR DE FREQUENCIA DE PACIENTES (.CSV)")
-    print("==================================================\n")
-    print(analisar_csvs_para_pdf())
+    logger.info("==================================================")
+    logger.info("ANALISADOR DE FREQUENCIA DE PACIENTES (.CSV)")
+    logger.info("==================================================")
+    logger.info(analisar_csvs_para_pdf())

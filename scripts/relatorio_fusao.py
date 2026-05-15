@@ -9,6 +9,10 @@ Uso: python scripts/relatorio_fusao.py
 
 import sqlite3
 import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 
 
 def gerar_relatorio_txt():
@@ -52,7 +56,7 @@ def gerar_relatorio_txt():
             )
 
     conn.close()
-    print(f"Arquivo '{arquivo_txt}' gerado com sucesso!")
+    logger.info(f"Arquivo '{arquivo_txt}' gerado com sucesso!")
 
 
 if __name__ == "__main__":

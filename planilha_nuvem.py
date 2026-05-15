@@ -29,6 +29,7 @@ from config import (
     GOOGLE_SHEET_ID, GOOGLE_CREDENTIALS_PATH,
     GOOGLE_SCOPE_SHEETS, GOOGLE_SCOPE_DRIVE, DB_SQLITE
 )
+from logging_setup import logger
 
 
 def enviar_para_planilha(dados):
@@ -199,7 +200,7 @@ def enviar_para_planilha(dados):
         return True
 
     except Exception as e:
-        print(f"Erro na Sincronizacao Google: {e}")
+        logger.error(f"Erro na Sincronizacao Google: {e}")
         return False
 
 

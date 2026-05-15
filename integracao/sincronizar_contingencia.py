@@ -22,6 +22,7 @@ from datetime import datetime
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import (
     apenas_numeros, remove_accents, parse_endereco_fixed, valida_cns
 )
@@ -252,4 +253,4 @@ def sincronizar_contingencia(caminho_csv=""):
 
 if __name__ == "__main__":
     csv_path = input("Caminho do CSV de contingencia: ").strip()
-    print(sincronizar_contingencia(csv_path))
+    logger.info(sincronizar_contingencia(csv_path))

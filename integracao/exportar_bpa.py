@@ -19,6 +19,7 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from logging_setup import logger
 from utils import apenas_numeros, remove_accents
 from config import CNS_PROFISSIONAL, CBO_CODIGO, FOLHA_CODIGO, SEQ_PROFISSIONAL
 
@@ -183,8 +184,5 @@ def exportar_dados(mes_ano="", caminho_salvar=""):
 
 
 if __name__ == "__main__":
-    # Roda direto no terminal (sem web)
-    mes = input(
-        "Digite o mes (ex: 03/2026) ou Enter para todos: "
-    ).strip()
-    print(exportar_dados(mes))
+    mes = input("Digite o mes (ex: 03/2026) ou Enter para todos: ").strip()
+    logger.info(exportar_dados(mes))

@@ -85,3 +85,19 @@
 ### Security
 - Verificado: `credentials.json` **nunca** foi commitado ao Git (`.gitignore` já protegia)
 - Verificado: nenhum CSV/TXT de paciente está trackeado (apenas `requirements.txt`)
+
+## [2026-05-15] — Sessão 5
+
+### Added
+- **`logging_setup.py`** — Módulo centralizado de logging com formato timestamp + nível (`logging.getLogger("hmpcf")`)
+
+### Changed
+- **Todos os 27 arquivos com `print()`** agora usam `logging_setup.logger` com nível adequado:
+  - `automacao/digitacao.py`, `automacao/executor_rpa.py`
+  - `planilha_nuvem.py`
+  - `app_painel.py`, `app_recepcao.py`
+  - `main.py` (helpers `info/sucesso/aviso/erro` agora usam `logger.info/warning/error`)
+  - `analise/analise_anual_csv.py`, `analise/auditoria_periodica.py`, `analise/dashboard_visual.py`, `analise/historico_paciente.py`, `analise/planilha_producao.py`
+  - `integracao/converter_csv.py`, `integracao/corrigir_nulls.py`, `integracao/duplicatas_gdb.py`, `integracao/exportar_bpa.py`, `integracao/importador_recepcao.py`, `integracao/sincronizar_contingencia.py`, `integracao/sincronizar_firebird.py`
+  - `scripts/atualizar_sexo.py`, `scripts/auditor_bpa.py`, `scripts/corrigir_data.py`, `scripts/corrigir_sexo_bpa.py`, `scripts/faxina.py`, `scripts/fusao.py`, `scripts/inspecionar_db.py`, `scripts/relatorio_fusao.py`, `scripts/validar_cns.py`
+- `backlog.md` — item de logging marcado como concluído

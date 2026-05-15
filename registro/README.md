@@ -140,3 +140,33 @@ HMPCF-Automation-System/
 - **Zero hardcoded credentials** fora do `config.py`
 - **Todos os imports verificados** — nenhum quebrado
 - **3 arquivos com `from config import ...`** corrigidos para funcionar standalone
+
+---
+
+## Sessão 5 — 2026-05-15 — Logging: print() → logging module
+
+### O que foi feito
+- Criado `logging_setup.py` — módulo centralizado de logging (timestamp + nível + stdout)
+- Substituído `print()` por `logger.info()`, `logger.warning()`, `logger.error()` em **todos os 27 arquivos** que usavam print
+- Cada `print()` classificado por nível:
+  - `logger.error()` — exceptions, erros de banco, falhas críticas
+  - `logger.warning()` — avisos, cancelamentos, dados não encontrados
+  - `logger.info()` — tudo o resto (progresso, sucesso, banners)
+- `main.py` — helpers `info()`, `sucesso()`, `aviso()`, `erro()` mantidos mas agora usam `logger` internamente (com ANSI colors preservados)
+- `backlog.md` — item de logging marcado como concluído
+
+### Formato das mensagens
+```
+2026-05-15 05:27:04 [INFO] Servidor HMPCF Iniciado...
+2026-05-15 05:27:04 [ERROR] Erro ao salvar: ...
+```
+
+### Arquivos modificados (27)
+- `automacao/`: `digitacao.py`, `executor_rpa.py`
+- `raiz/`: `main.py`, `planilha_nuvem.py`, `app_painel.py`, `app_recepcao.py`
+- `analise/`: `analise_anual_csv.py`, `auditoria_periodica.py`, `dashboard_visual.py`, `historico_paciente.py`, `planilha_producao.py`
+- `integracao/`: `converter_csv.py`, `corrigir_nulls.py`, `duplicatas_gdb.py`, `exportar_bpa.py`, `importador_recepcao.py`, `sincronizar_contingencia.py`, `sincronizar_firebird.py`
+- `scripts/`: `atualizar_sexo.py`, `auditor_bpa.py`, `corrigir_data.py`, `corrigir_sexo_bpa.py`, `faxina.py`, `fusao.py`, `inspecionar_db.py`, `relatorio_fusao.py`, `validar_cns.py`
+
+### Pendente
+- Nada. Todos os prints substituídos e verificados (syntax check OK nos 35 .py).

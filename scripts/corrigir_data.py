@@ -19,6 +19,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import firebirdsql
 from datetime import datetime
+from logging_setup import logger
 from config import FIREBIRD_PATH, FIREBIRD_USER, FIREBIRD_PASSWORD
 
 CAMINHO_GDB = FIREBIRD_PATH
@@ -36,7 +37,7 @@ def corrigir_banco():
     - Aplica a correção se autorizado
     """
     try:
-        print(f"Conectando ao banco em: {CAMINHO_GDB}")
+        logger.info(f"Conectando ao banco em: {CAMINHO_GDB}")
 
         # Abro a conexão com o Firebird
         # charset='WIN1252' porque o BPA usa codificação Windows
@@ -55,7 +56,7 @@ def corrigir_banco():
         # - Posteriores a 2026 (ano futuro, não faz sentido)
         # - Nulas/NULL (campo vazio)
         # - "00000000" e "99999999" (placeholders inválidos)
-        print("Analisando registros...")
+        logger.info("Analisando registros...")
 
         sql_busca = """
             SELECT CNS, NOME, DTNASC
@@ -71,18 +72,17 @@ def corrigir_banco():
         pacientes_com_erro = cur.fetchall()
 
         if not pacientes_com_erro:
-            print("Nenhuma data absurda encontrada! Banco limpo.")
+            logger.info("Nenhuma data absurda encontrada! Banco limpo.")
             con.close()
             return
 
         # --- PASSO 2: PREVIEW DOS DADOS ---
         # Mostro quantos registros problemáticos foram achados
-        print(f"\nATENCAO: Encontrados {len(pacientes_com_erro)} pacientes com datas invalidas.")
-        print("-" * 50)
-        # Mostro só os 10 primeiros pra não poluir a tela
+        logger.warning(f"ATENCAO: Encontrados {len(pacientes_com_erro)} pacientes com datas invalidas.")
+        logger.info("-" * 50)
         for p in pacientes_com_erro[:10]:
-            print(f"PACIENTE: {p[1][:25]} | DATA ATUAL: {p[2]}")
-        print("-" * 50)
+            logger.info(f"PACIENTE: {p[1][:25]} | DATA ATUAL: {p[2]}")
+        logger.info("-" * 50)
 
         # --- PASSO 3: CONFIRMAÇÃO MANUAL ---
         # Só aplico a correção se o usuário digitar 'S'
@@ -93,7 +93,7 @@ def corrigir_banco():
         )
 
         if confirmar.upper() == 'S':
-            print("Corrigindo registros no banco de dados...")
+            logger.info("Corrigindo registros no banco de dados...")
 
             # UPDATE em lote: mesma condição da busca
             sql_update = f"""
@@ -109,14 +109,14 @@ def corrigir_banco():
             cur.execute(sql_update)
             con.commit()  # COMMIT = salva de verdade no banco
 
-            print(f"SUCESSO! {len(pacientes_com_erro)} pacientes atualizados para 01/01/1990.")
+            logger.info(f"SUCESSO! {len(pacientes_com_erro)} pacientes atualizados para 01/01/1990.")
         else:
-            print("Operacao cancelada. Nada foi alterado.")
+            logger.info("Operacao cancelada. Nada foi alterado.")
 
         con.close()
 
     except Exception as e:
-        print(f"ERRO AO ACESSAR O BANCO: {e}")
+        logger.error(f"ERRO AO ACESSAR O BANCO: {e}")
 
 
 if __name__ == "__main__":

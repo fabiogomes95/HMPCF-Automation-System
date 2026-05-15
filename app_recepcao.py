@@ -14,6 +14,7 @@ import os
 import sqlite3
 import threading
 import eel
+from logging_setup import logger
 from utils import apenas_numeros
 from planilha_nuvem import gari_da_nuvem
 
@@ -118,7 +119,7 @@ def buscar_paciente(id_procurado):
             return {"erro": "nulo"}
 
     except Exception as e:
-        print(f"ERRO CRITICO NA BUSCA: {e}")
+        logger.error(f"ERRO CRITICO NA BUSCA: {e}")
         return {"erro": "banco_travado"}
 
 
@@ -154,7 +155,7 @@ def buscar_por_nome(termo):
         return resultados
 
     except Exception as e:
-        print(f"ERRO NA BUSCA POR NOME: {e}")
+        logger.error(f"ERRO NA BUSCA POR NOME: {e}")
         return []
 
 
@@ -191,7 +192,7 @@ def buscar_historico(cpf_ou_sus):
         ]
 
     except Exception as e:
-        print(f"ERRO NO HISTORICO: {e}")
+        logger.error(f"ERRO NO HISTORICO: {e}")
         return []
 
 
@@ -223,7 +224,7 @@ def verificar_duplicata(nome, dn):
         ]
 
     except Exception as e:
-        print(f"ERRO NA VERIFICACAO DE DUPLICATA: {e}")
+        logger.error(f"ERRO NA VERIFICACAO DE DUPLICATA: {e}")
         return []
 
 
@@ -286,7 +287,7 @@ def salvar(dados):
         return {"status": "sucesso", "registro_gerado": dados.get('registro')}
 
     except Exception as e:
-        print(f"ERRO AO SALVAR: {e}")
+        logger.error(f"ERRO AO SALVAR: {e}")
         return {"status": "erro", "mensagem": str(e)}
 
     finally:
@@ -317,7 +318,7 @@ def status_gari():
 def iniciar():
     init_db()
     threading.Thread(target=rodar_gari, daemon=True).start()
-    print("App Recepcao HMPCF Iniciado...")
+    logger.info("App Recepcao HMPCF Iniciado...")
     eel.start('index.html', mode='msedge', size=(1250, 850), port=8000)
 
 # =====================================================================
