@@ -42,6 +42,19 @@ Sistema completo de automação hospitalar desenvolvido para modernizar o fluxo 
 ### 🏪 Recepção (`app_recepcao.py` + `web_recepcao/`)
 Formulário web A4 com cadastro inteligente de pacientes, busca automática por CPF/SUS, classificação de risco, sinais vitais, comorbidades e impressão do boletim. Atalho F2 para salvar. Validação matemática de CPF e SUS em tempo real no frontend.
 
+### 🚀 Launcher Unificado (`main.py`)
+Ponto de entrada único que:
+1. **Verifica atualizações** no GitHub (compara `version.json` local × remoto)
+2. Se há versão nova, pergunta se deseja atualizar (via `git pull` ou download ZIP)
+3. Inicia os servidores da **Recepção** (8000) e **Painel** (8001) em simultâneo
+4. Abre o navegador automaticamente
+
+```
+python main.py                  # Modo normal (com verificação de update)
+python main.py --no-update      # Pula verificação
+python main.py --build          # Testa se PyInstaller está pronto
+```
+
 ### 📊 Painel de Gestão (`app_painel.py` + `web_painel/`)
 Central de controle com 4 módulos:
 - **Digitação** — busca pacientes na base BPA (Firebird em RAM), monta lotes de 99 com quebra automática
@@ -133,11 +146,24 @@ Coloque o arquivo `credentials.json` (Google Cloud Console) na raiz do projeto p
 
 | Módulo | Comando | Porta |
 |--------|---------|-------|
+| Launcher (recomendado) | `python main.py` | 8000 + 8001 |
 | Recepção | `python app_recepcao.py` | 8000 |
 | Painel de Gestão | `python app_painel.py` | 8001 |
 | Gari da Nuvem | Inicia automaticamente com a Recepção | — |
 
-**Produção (Windows):** execute `start.vbs` — sobe o servidor oculto e abre o navegador.
+**Produção (Windows):** execute `start.vbs` ou compile com `build_exe.bat` para gerar `HMPCF.exe`.
+
+### 🏗️ Build do Instalador (.exe)
+
+```bash
+pip install pyinstaller
+build_exe.bat          # Gera dist/HMPCF.exe
+```
+
+O executável já inclui:
+- Todos os módulos (recepção, painel, BI, integração, automação)
+- Bootstrap local (sem depender de internet)
+- Verificador de atualização via GitHub na inicialização
 
 ---
 

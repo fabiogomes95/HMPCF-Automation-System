@@ -1,0 +1,11 @@
+{
+  "version": "1.1.0",
+  "release_date": "2026-05-14",
+  "description": "HMPCF Automation System",
+  "github_repo": "fabiogomes95/HMPCF-Automation-System",
+  "update_url": "https://api.github.com/repos/fabiogomes95/HMPCF-Automation-System/releases/latest",
+  "changelog": [
+    "1.1.0 — Web UI Análise/BI + Refatoração Recepção (dark mode, toasts, busca nome)",
+    "1.0.0 — Versão inicial do sistema"
+  ]
+}
