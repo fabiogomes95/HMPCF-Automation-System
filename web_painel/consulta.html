@@ -140,10 +140,14 @@
         <div>
             <button class="btn btn-sm" style="background: var(--extremoz-yellow); color: #5C4A00; border-radius: 8px; padding: 8px 16px; font-weight: 600;" onclick="definirMes()">📅 Este Mês</button>
         </div>
+        <div>
+            <button class="btn btn-sm" style="background: #10B981; color: white; border-radius: 8px; padding: 8px 16px; font-weight: 600;" onclick="recarregar()">🔄 Recarregar</button>
+        </div>
         <div id="loadingSpinner" style="display:none;">
             <span class="spinner-border spinner-border-sm text-primary" role="status"></span> Carregando...
         </div>
     </div>
+    <div id="cacheStatus" class="text-muted" style="font-size: 0.8rem; text-align: center; margin-bottom: 8px;"></div>
 
     <div id="resultArea" style="display:none;">
 
@@ -426,8 +430,27 @@
         });
     }
 
+    async function recarregar() {
+        try {
+            const status = await eel.consulta_recarregar()();
+            document.getElementById('cacheStatus').textContent = '🔄 ' + status;
+            mostrarToast('Cache recarregado: ' + status, 'info');
+            consultar();
+        } catch (e) {
+            console.error('Erro ao recarregar:', e);
+        }
+    }
+
+    async function atualizarCacheStatus() {
+        try {
+            const status = await eel.consulta_status_cache()();
+            document.getElementById('cacheStatus').textContent = '📦 ' + status;
+        } catch (e) {}
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         definirHoje();
+        atualizarCacheStatus();
     });
 </script>
 

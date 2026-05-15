@@ -19,7 +19,6 @@ pra fazer buscas ultrarrápidas (sem consultar o banco toda hora).
 
 import os
 import glob
-import concurrent.futures
 import eel
 import firebirdsql
 import sys
@@ -401,49 +400,42 @@ def analise_buscar_historico(termo: str) -> str:
 
 
 # =====================================================================
-# 6. CONSULTA ATENDIMENTOS (RECEPÇÃO) — Thread-safe
+# 6. CONSULTA ATENDIMENTOS (RECEPÇÃO) — Tudo na RAM
 # =====================================================================
-# Usa ThreadPoolExecutor pra não travar o loop principal do Eel.
-# Se a query demorar >30s, retorna vazio em vez de travar o painel.
 from analise.consulta_recepcao import (
+    carregar,
+    status as consulta_status,
     consultar_atendimentos,
     resumo_atendimentos,
     atendimentos_por_dia,
 )
-_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2)
-_CONSULTA_TIMEOUT = 30
-
-
-def _executar(fn, *args):
-    future = _EXECUTOR.submit(fn, *args)
-    try:
-        return future.result(timeout=_CONSULTA_TIMEOUT)
-    except concurrent.futures.TimeoutError:
-        logger.error(f"Consulta timeout ({_CONSULTA_TIMEOUT}s): {fn.__name__}")
-        return None
-    except Exception as e:
-        logger.error(f"Erro na consulta {fn.__name__}: {e}")
-        return None
 
 
 @eel.expose
 def consulta_listar_atendimentos(data_inicio: str, data_fim: str) -> list[dict]:
-    result = _executar(consultar_atendimentos, data_inicio, data_fim)
-    return result if isinstance(result, list) else []
+    return consultar_atendimentos(data_inicio, data_fim) or []
 
 
 @eel.expose
 def consulta_resumo_atendimentos(data_inicio: str, data_fim: str) -> dict:
-    result = _executar(resumo_atendimentos, data_inicio, data_fim)
-    if isinstance(result, dict):
-        return result
-    return {"total": 0, "por_procedencia": {}, "media_dia": 0}
+    return resumo_atendimentos(data_inicio, data_fim)
 
 
 @eel.expose
 def consulta_atendimentos_por_dia(data_inicio: str, data_fim: str) -> list[dict]:
-    result = _executar(atendimentos_por_dia, data_inicio, data_fim)
-    return result if isinstance(result, list) else []
+    return atendimentos_por_dia(data_inicio, data_fim) or []
+
+
+@eel.expose
+def consulta_recarregar() -> str:
+    """Recarrega hospital.db na RAM (usado pelo botão de refresh)."""
+    return carregar()
+
+
+@eel.expose
+def consulta_status_cache() -> str:
+    """Status do cache sem recarregar."""
+    return consulta_status()
 
 
 # =====================================================================
@@ -452,6 +444,7 @@ def consulta_atendimentos_por_dia(data_inicio: str, data_fim: str) -> list[dict]
 def iniciar() -> None:
     logger.info("Servidor HMPCF Iniciado e Persistente na porta 8001")
     carregar_base()
+    carregar()
 
     def manter_vivo(rota, websockets):
         pass
