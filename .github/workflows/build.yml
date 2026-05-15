@@ -24,8 +24,11 @@ jobs:
           python-version: "3.11"
 
       - name: Install GTK3 (required by WeasyPrint)
+        shell: pwsh
         run: |
-          choco install gtk3-runtime -y --no-progress
+          Invoke-WebRequest -Uri "https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases/download/3.3.3/gtk3-runtime-3.3.3-x86_64.exe" -OutFile "gtk3-installer.exe"
+          Start-Process -Wait -FilePath ".\gtk3-installer.exe" -ArgumentList "/S"
+          echo "C:\Program Files\GTK3-Runtime\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Install dependencies
         run: |
