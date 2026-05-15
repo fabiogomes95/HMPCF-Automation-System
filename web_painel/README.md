@@ -12,11 +12,27 @@ Dashboard com cards modulares para acesso rápido:
 
 | Card | Descrição |
 |------|-----------|
-| 📊 **Análise Pandas** | Relatórios gerenciais e estatísticas |
-| 💰 **Faturamento** | Gestão de contas e auditoria |
+| 📊 **Análise / BI** | Relatórios gerenciais, dashboards e auditoria |
+| 🔌 **Integração** | Exportação BPA, importação de CSVs e sincronização |
 | 🤖 **Automação BPA** | Digitação, triagem e robô RPA |
 
 Inclui um **Terminal de Eventos** que exibe logs do sistema em tempo real.
+
+---
+
+### `analise.html` — Central de Análise / BI
+
+Página com 5 ferramentas de Business Intelligence acessíveis via web:
+
+| Card | Função | Eel Endpoint |
+|------|--------|-------------|
+| 📈 **Dashboard Visual** | Gera PNG com 4 gráficos + relatório Top 20 | `analise_gerar_dashboard()` |
+| 📋 **Planilha de Produção** | Excel com separação DIURNO/NOTURNO | `analise_gerar_relatorio_mes()` |
+| 🔍 **Auditoria Periódica** | PDF Top 20 (mensal/trimestral/semestral) | `analise_gerar_auditoria_periodo()` |
+| 📄 **Analisar CSVs Antigos** | PDF Top 20 a partir de CSVs legados | `analise_analisar_csvs_para_pdf()` |
+| 👤 **Histórico do Paciente** | Busca completa por nome, CPF ou SUS | `analise_buscar_historico()` |
+
+Cada card abre um modal com seus parâmetros. Resultados aparecem no terminal de saída.
 
 ---
 
@@ -97,6 +113,7 @@ O painel delega o trabalho pesado para 3 módulos Python:
 
 | Tela | Módulo | Função |
 |------|--------|--------|
+| Análise / BI | `analise/dashboard_visual.py` | Dashboard PNG, Excel, PDFs e busca de histórico |
 | Digitação | `automacao/digitacao.py` | Busca na RAM, montagem de lotes |
 | Triagem | `automacao/cpf_sus.py` | Extração e validação de documentos |
 | Robô | `automacao/executor_rpa.py` | Automação RPA com PyAutoGUI |

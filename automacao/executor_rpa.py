@@ -1,23 +1,66 @@
-import pyautogui    
-import time         
-import os           
-import sys          
-import keyboard      
+"""
+EXECUTOR_RPA.PY — Robô Digitador Automático (PyAutoGUI)
+=========================================================
+Esse é o coração do RPA — o robô que DIGITA automaticamente
+os pacientes no sistema BPA do governo.
 
-# Trava de Segurança (Jogue o mouse pro canto da tela se quiser que o robô pare na marra)
-pyautogui.FAILSAFE = True 
+Como funciona:
+1. O painel chama preparar_lotes() pra organizar os lotes
+2. O usuário clica "Executar RPA" no frontend
+3. O robô assume o controle do mouse/teclado
+4. Digita paciente por paciente no sistema BPA
+5. Se o usuário apertar ESC, o robô para na hora
+
+SEGURANÇA:
+- FAILSAFE = True: se o mouse for pro canto da tela, o robô para
+- ESC: interrompe a execução imediatamente
+- delay entre cada ação pra dar tempo do sistema processar
+"""
+
+import pyautogui
+import time
+import os
+import sys
+import keyboard
+
+# === TRAVA DE SEGURANÇA ===
+# Se eu jogar o mouse no CANTO SUPERIOR ESQUERDO da tela,
+# o PyAutoGUI levanta uma exceção e PARA TUDO.
+# Isso é o "botão de pânico" físico do robô.
+pyautogui.FAILSAFE = True
+
 
 def preparar_lotes(arq_leitura, base_pacientes_ram=None):
-    """Lê o arquivo de produção e organiza as 'pilhas' de fichas de forma instantânea."""
+    """
+    Lê o arquivo de produção e organiza os lotes.
+    
+    O arquivo tem o formato:
+        PROFISSIONAL: DR. FULANO | DATA: 13/04/2026
+        123456789012345
+        898765432109876
+        ...
+    
+    Cada lote é um dicionário com:
+        medico, data, pacientes, validados
+    
+    Parâmetros:
+        arq_leitura: caminho do .txt de produção
+        base_pacientes_ram: lista de dicts da RAM (pra validar)
+    
+    Retorna (lotes, erro).
+    """
     if not os.path.exists(arq_leitura):
-        return [], "Ficheiro não encontrado."
+        return [], "Ficheiro nao encontrado."
 
-    # Filtro super rápido na RAM usando a memória enviada pelo painel
+    # --- PRÉ-CARREGA OS DOCUMENTOS VÁLIDOS DA RAM ---
+    # Crio um SET pra busca ser instantânea (O(1) vs O(n))
     documentos_validos = set()
     if base_pacientes_ram:
         for p in base_pacientes_ram:
-            if p.get('sus'): documentos_validos.add(p['sus'])
-            if p.get('cpf'): documentos_validos.add(p['cpf'])
+            if p.get('sus'):
+                documentos_validos.add(p['sus'])
+            if p.get('cpf'):
+                documentos_validos.add(p['cpf'])
 
     with open(arq_leitura, 'r', encoding='utf-8') as f:
         linhas = f.readlines()
@@ -27,15 +70,20 @@ def preparar_lotes(arq_leitura, base_pacientes_ram=None):
 
     for linha in linhas:
         linha = linha.strip()
-        if not linha: continue
+        if not linha:
+            continue
 
+        # --- CABEÇALHO DO LOTE ---
         if "PROFISSIONAL:" in linha:
-            if lote_atual: lotes.append(lote_atual)
-            
+            # Salva o lote anterior antes de começar um novo
+            if lote_atual:
+                lotes.append(lote_atual)
+
+            # Parse: "PROFISSIONAL: DR. FULANO | DATA: 13/04/2026"
             partes = linha.split('|')
             medico = partes[0].replace("PROFISSIONAL:", "").strip()
             data = partes[1].replace("DATA:", "").strip()
-            
+
             lote_atual = {
                 'medico': medico,
                 'data': data,
@@ -43,54 +91,84 @@ def preparar_lotes(arq_leitura, base_pacientes_ram=None):
                 'validados': []
             }
         elif lote_atual:
-            # Validação Mágica: Testa contra a RAM em 0.0001 segundo sem travar
+            # --- PACIENTE DENTRO DO LOTE ---
+            # Só valido se tem base_pacientes_ram
             if not base_pacientes_ram or linha in documentos_validos:
                 lote_atual['validados'].append(linha)
             lote_atual['pacientes'].append(linha)
 
-    if lote_atual: lotes.append(lote_atual)
+    if lote_atual:
+        lotes.append(lote_atual)
+
     return lotes, ""
 
+
 def executar_pyautogui(medico, data_atend, procedimento, pacientes, callback=None):
-    """A rotina de digitação física do Robô RPA."""
+    """
+    Executa a digitação automática no sistema BPA.
     
-    # Limpeza da data (Remove barras, mantendo apenas números)
+    Parâmetros:
+        medico: nome do médico (só pra exibição)
+        data_atend: data no formato DD/MM/AAAA
+        procedimento: código do procedimento (ex: "240360")
+        pacientes: lista de strings (CPF ou SUS)
+        callback: função pra atualizar o frontend
+    
+    Fluxo de teclas:
+    1. Digita o documento (CPF/SUS)
+    2. F7 → busca no sistema
+    3. Digita a data
+    4. Tab → procedimento
+    5. Tab → digita código
+    6. Enter → confirma
+    
+    O robô NÃO move o mouse — tudo é feito por TECLAS.
+    """
+    # Limpa a data: "13/04/2026" → "13042026"
     data_limpa = "".join([c for c in data_atend if c.isdigit()])
-    
+
     total = len(pacientes)
     for i, p in enumerate(pacientes, 1):
+        # --- VERIFICA INTERRUPÇÃO ---
+        # Se o usuário apertar ESC, para tudo
         if keyboard.is_pressed('esc'):
-            if callback: callback("🛑 INTERROMPIDO PELO USUÁRIO (ESC)")
+            if callback:
+                callback("INTERROMPIDO PELO USUARIO (ESC)")
             break
 
-        if callback: callback(f"🚀 {medico} | {i}/{total} | Doc: {p}")
+        if callback:
+            callback(f"{medico} | {i}/{total} | Doc: {p}")
 
         try:
-            # ==============================================================================
-            # LÓGICA DE TECLAS RESTAURADA (EXATAMENTE COMO VOCÊ CONFIGUROU)
-            # ==============================================================================
-            pyautogui.write(p)       
-            pyautogui.press('f7')    
-            time.sleep(1.0)          
-            
-            # Envia a data limpa (ex: 13042026) e dá o Tab
+            # --- SEQUÊNCIA DE DIGITAÇÃO ---
+            # Cada passo tem um delay pra dar tempo do sistema processar
+
+            # Passo 1: Digita o CPF/SUS do paciente
+            pyautogui.write(p)
+
+            # Passo 2: Aperta F7 (atalho de busca do sistema BPA)
+            pyautogui.press('f7')
+            time.sleep(1.0)
+
+            # Passo 3: Digita a data do atendimento (sem barras)
             pyautogui.write(data_limpa)
             pyautogui.press('tab')
-            
+
+            # Passo 4: Digita o código do procedimento
             pyautogui.write(procedimento)
-            pyautogui.press('1')     
+            pyautogui.press('1')  # Código de atuação
             time.sleep(0.5)
-            
-            pyautogui.press(['tab', 'tab', 'tab']) 
-            pyautogui.write('2')     
+
+            # Passo 5: Navega e confirma
+            pyautogui.press(['tab', 'tab', 'tab'])
+            pyautogui.write('2')  # Código complementar
             time.sleep(0.3)
-            
+
+            # Passo 6: Confirma o registro
             pyautogui.press(['tab', 'tab'])
-            pyautogui.press('enter') 
-            
+            pyautogui.press('enter')
             time.sleep(0.7)
-            # ==============================================================================
-            
+
         except Exception as e:
-            print(f"Erro na digitação: {e}")
+            print(f"Erro na digitacao: {e}")
             continue

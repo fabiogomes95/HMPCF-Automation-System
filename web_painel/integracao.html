@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Módulo Integração - HMPCF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script type="text/javascript" src="/eel.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+    <a href="index.html" style="position: absolute; left: 30px; color: white; text-decoration: none; font-weight: 600;">⬅️ Início</a>
+    <h4>🔌 MÓDULO DE INTEGRAÇÃO SUS</h4>
+</div>
+
+<div class="container py-4">
+
+    <div class="row g-4 mb-4 justify-content-center">
+        <div class="col-md-4">
+            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('exportar_bpa')">
+                <div class="module-icon" style="font-size: 2rem;">📤</div>
+                <h5>Exportar SQLite → TXT BPA</h5>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Gera arquivo posicional para o Datasus</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('converter_csv')">
+                <div class="module-icon" style="font-size: 2rem;">📂</div>
+                <h5>Converter CSV Antigo → TXT</h5>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Converte CSVs legados para layout BPA</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('importar_lote')">
+                <div class="module-icon" style="font-size: 2rem;">📥</div>
+                <h5>Importar CSV em Lote</h5>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Importa CSVs com Smart Update</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4 justify-content-center">
+        <div class="col-md-4">
+            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('sincronizar_firebird')">
+                <div class="module-icon" style="font-size: 2rem;">🔄</div>
+                <h5>Sincronizar SQLite → Firebird</h5>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Integra hospital.db com BPAMAG.GDB</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('sincronizar_contingencia')">
+                <div class="module-icon" style="font-size: 2rem;">🆘</div>
+                <h5>Sincronizar Contingência</h5>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Importa planilhas manuais offline</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('aniquilar_nulls')">
+                <div class="module-icon" style="font-size: 2rem;">💣</div>
+                <h5>Aniquilar NULLs no Firebird</h5>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Remove campos NULL do BPAMAG.GDB</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5 justify-content-center">
+        <div class="col-md-4">
+            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('limpar_duplicatas')">
+                <div class="module-icon" style="font-size: 2rem;">🧹</div>
+                <h5>Limpar Duplicatas no Firebird</h5>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Remove fichas duplicadas por pontuação</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="editor-container shadow-sm" style="max-width: 900px; margin: 0 auto;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-bold" style="color: var(--primary-blue);">📋 Terminal de Saída:</span>
+            <button class="btn btn-sm btn-outline-secondary" onclick="limparLog()">Limpar</button>
+        </div>
+        <textarea id="log_output" class="form-control" rows="12" readonly placeholder="Clique em uma ferramenta acima para executar..."></textarea>
+    </div>
+</div>
+
+<div class="modal fade" id="paramModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: var(--primary-blue); color: white; border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title" id="paramModalLabel">Parâmetros</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="paramModalBody">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn" style="background: var(--primary-blue); color: white;" onclick="executarModal()">Executar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let comandoAtual = null;
+
+    const toolConfigs = {
+        exportar_bpa: {
+            label: 'Exportar SQLite → TXT BPA',
+            fields: [
+                { id: 'mes_ano', label: 'Mês/Ano (MMAAAA)', placeholder: 'Ex: 012025', required: false },
+                { id: 'caminho_salvar', label: 'Caminho para salvar', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        },
+        converter_csv: {
+            label: 'Converter CSV Antigo → TXT',
+            fields: [
+                { id: 'caminho_csv', label: 'Caminho do CSV', placeholder: 'Deixe vazio para padrão', required: false },
+                { id: 'caminho_salvar', label: 'Caminho para salvar', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        },
+        importar_lote: {
+            label: 'Importar CSV em Lote',
+            fields: [
+                { id: 'separador', label: 'Separador CSV', placeholder: 'Ex: ;', defaultValue: ';', required: false }
+            ]
+        },
+        sincronizar_firebird: {
+            label: 'Sincronizar SQLite → Firebird',
+            fields: [
+                { id: 'mes_ano', label: 'Mês/Ano (MMAAAA)', placeholder: 'Ex: 012025', required: false },
+                { id: 'caminho_gdb', label: 'Caminho do BPAMAG.GDB', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        },
+        sincronizar_contingencia: {
+            label: 'Sincronizar Contingência',
+            fields: [
+                { id: 'caminho_csv', label: 'Caminho do CSV', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        },
+        aniquilar_nulls: {
+            label: 'Aniquilar NULLs no Firebird',
+            fields: [
+                { id: 'caminho_gdb', label: 'Caminho do BPAMAG.GDB', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        },
+        limpar_duplicatas: {
+            label: 'Limpar Duplicatas no Firebird',
+            fields: [
+                { id: 'caminho_gdb', label: 'Caminho do BPAMAG.GDB', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        }
+    };
+
+    function abrirModal(comando) {
+        comandoAtual = comando;
+        const cfg = toolConfigs[comando];
+        document.getElementById('paramModalLabel').textContent = `⚙️ ${cfg.label}`;
+        let html = '<div class="mb-3"><small class="text-muted">Preencha os campos desejados ou deixe vazio para usar valores padrão:</small></div>';
+        cfg.fields.forEach(f => {
+            const value = f.defaultValue || '';
+            html += `
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">${f.label}</label>
+                    <input type="text" class="form-control" id="param_${f.id}" placeholder="${f.placeholder}" value="${value}">
+                </div>`;
+        });
+        document.getElementById('paramModalBody').innerHTML = html;
+        const modal = new bootstrap.Modal(document.getElementById('paramModal'));
+        modal.show();
+    }
+
+    async function executarModal() {
+        const comando = comandoAtual;
+        const cfg = toolConfigs[comando];
+        const params = {};
+        cfg.fields.forEach(f => {
+            const val = document.getElementById(`param_${f.id}`).value.trim();
+            params[f.id] = val;
+        });
+        const modal = bootstrap.Modal.getInstance(document.getElementById('paramModal'));
+        modal.hide();
+        await executar(comando, params);
+    }
+
+    async function executar(comando, params) {
+        const log = document.getElementById('log_output');
+        const paramStr = Object.values(params).filter(v => v).join(', ') || '(padrão)';
+        log.value += `[${agora()}] 🚀 Executando ${comando} — ${paramStr}\n`;
+        log.scrollTop = log.scrollHeight;
+        try {
+            const fn = eel[`integracao_${comando}`];
+            const args = cfgToArgs[comando].map(k => params[k] || '');
+            const resultado = await fn(...args)();
+            log.value += `[${agora()}] ✅ Concluído: ${resultado}\n`;
+        } catch (e) {
+            log.value += `[${agora()}] ❌ Erro: ${e}\n`;
+        }
+        log.scrollTop = log.scrollHeight;
+    }
+
+    const cfgToArgs = {
+        exportar_bpa: ['mes_ano', 'caminho_salvar'],
+        converter_csv: ['caminho_csv', 'caminho_salvar'],
+        importar_lote: ['separador'],
+        sincronizar_firebird: ['mes_ano', 'caminho_gdb'],
+        sincronizar_contingencia: ['caminho_csv'],
+        aniquilar_nulls: ['caminho_gdb'],
+        limpar_duplicatas: ['caminho_gdb']
+    };
+
+    function limparLog() {
+        document.getElementById('log_output').value = '';
+    }
+
+    function agora() {
+        return new Date().toLocaleTimeString('pt-BR');
+    }
+</script>
+</body>
+</html>
