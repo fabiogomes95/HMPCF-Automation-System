@@ -1,6 +1,6 @@
-# Ideias para o HMPCF
+# Backlog — HMPCF Automation System
 
-> Anotações de funcionalidades desejadas, melhorias e pendências.
+> Pendências, melhorias e ideias futuras para o projeto.
 
 ## 📌 Pendências
 
@@ -20,7 +20,3 @@
 - [ ] **Remover `requests`** das dependências (não é usado, só `urllib`)
 - [ ] **Renomear `archive/`** para `scripts/` ou `tools/` (não é só lixo)
 - [ ] **Connection pool** para Firebird nas integrações
-
-## 📝 Histórico de Alterações
-
-- **2026-05-15** — Fix build GitHub Actions: movido `--onefile` do comando `pyinstaller` para dentro dos `.spec` files (`onefile=True`), pois o PyInstaller não aceita flags de makespec quando um `.spec` é passado. 
