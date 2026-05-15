@@ -10,7 +10,6 @@ Via Eel:     analise_gerar_auditoria_periodo("1")  / "3" / "6"
 import os
 import sqlite3
 import pandas as pd
-from weasyprint import HTML
 from datetime import datetime, timedelta
 
 pasta_atual = os.path.dirname(os.path.abspath(__file__))
@@ -131,6 +130,10 @@ def gerar_auditoria_periodo(opcao):
             <div class="container">{pacientes_html}</div>
         </body></html>"""
 
+        try:
+            from weasyprint import HTML
+        except Exception:
+            return "ERRO: Biblioteca WeasyPrint requer GTK3 instalado. Baixe de: https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases/download/2022-01-04/gtk3-runtime-3.24.31-2022-01-04-ts-win64.exe"
         HTML(string=html_template).write_pdf(arquivo_pdf)
         msg = f"SUCESSO! PDF gerado: {arquivo_pdf}"
         print(msg)
