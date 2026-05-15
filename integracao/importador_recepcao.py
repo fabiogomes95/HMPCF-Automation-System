@@ -25,7 +25,7 @@ from logging_setup import logger
 from utils import apenas_numeros, valida_cns
 
 
-def pega_coluna_segura(linha, indice):
+def pega_coluna_segura(linha: list[str], indice: int) -> str:
     """
     Pega uma coluna da linha sem estourar IndexError.
     Se o índice não existe na linha, devolve string vazia.
@@ -35,7 +35,7 @@ def pega_coluna_segura(linha, indice):
     return ""
 
 
-def executar_importacao_lote(separador=";"):
+def executar_importacao_lote(separador: str = ";") -> str:
     """
     Importa TODOS os CSVs da pasta pro SQLite.
     

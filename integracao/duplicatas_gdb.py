@@ -27,7 +27,7 @@ from logging_setup import logger
 from config import FIREBIRD_USER, FIREBIRD_PASSWORD
 
 
-def limpar_duplicados_gdb(caminho_gdb=""):
+def limpar_duplicados_gdb(caminho_gdb: str = "") -> str:
     """
     Remove duplicatas da tabela CADCNS no Firebird.
     

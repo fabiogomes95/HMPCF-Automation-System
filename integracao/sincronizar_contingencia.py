@@ -28,7 +28,7 @@ from utils import (
 )
 
 
-def sincronizar_contingencia(caminho_csv=""):
+def sincronizar_contingencia(caminho_csv: str = "") -> str:
     """
     Processa um CSV de contingência e sincroniza com o SQLite.
     

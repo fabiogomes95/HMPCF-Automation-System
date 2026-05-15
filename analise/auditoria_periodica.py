@@ -29,7 +29,7 @@ Y_CABECALHO = 25
 coluna_x = [MARGEM_ESQ, MARGEM_ESQ + LARGURA_COL + ENTRE_COL]
 
 
-def _coluna_atual(pdf, col, y):
+def _coluna_atual(pdf, col: int, y: float) -> tuple[int, float]:
     if y > 297 - MARGEM_INFERIOR:
         col += 1
         if col > 1:
@@ -41,7 +41,7 @@ def _coluna_atual(pdf, col, y):
     return col, y
 
 
-def _card_paciente(pdf, col, y, nome, cpf, sus, total, linhas_tempo):
+def _card_paciente(pdf, col: int, y: float, nome: str, cpf: str, sus: str, total: int, linhas_tempo: list[str]) -> tuple[int, float]:
     col, y = _coluna_atual(pdf, col, y)
     x0 = coluna_x[col]
     alt = 12 + len(linhas_tempo) * 5
@@ -77,13 +77,13 @@ def _card_paciente(pdf, col, y, nome, cpf, sus, total, linhas_tempo):
     return col, y
 
 
-def calcular_data_inicio(meses):
+def calcular_data_inicio(meses: int) -> str:
     hoje = datetime.now()
     data_calculada = hoje - timedelta(days=meses * 30)
     return data_calculada.strftime('%Y-%m-%d')
 
 
-def gerar_auditoria_periodo(opcao):
+def gerar_auditoria_periodo(opcao: str) -> str:
     """
     Gera PDF de auditoria para o período escolhido.
     opcao: "1" (mensal), "3" (trimestral) ou "6" (semestral).

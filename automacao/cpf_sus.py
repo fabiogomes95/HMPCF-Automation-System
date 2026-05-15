@@ -25,7 +25,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils import apenas_numeros, valida_cns, valida_cpf
 
 
-def processar_lista(caminho_arquivo_sujo):
+def processar_lista(caminho_arquivo_sujo: str) -> list[str]:
     """
     Lê o arquivo com dados bagunçados e extrai CPFs/SUSs válidos.
     

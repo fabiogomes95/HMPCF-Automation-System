@@ -27,7 +27,7 @@ Y_CABECALHO = 25
 coluna_x = [MARGEM_ESQ, MARGEM_ESQ + LARGURA_COL + ENTRE_COL]
 
 
-def _coluna_atual(pdf, col, y):
+def _coluna_atual(pdf, col: int, y: float) -> tuple[int, float]:
     if y > 297 - MARGEM_INFERIOR:
         col += 1
         if col > 1:
@@ -39,7 +39,7 @@ def _coluna_atual(pdf, col, y):
     return col, y
 
 
-def _card(pdf, col, y, i, nome, dn, cpf, sus, total):
+def _card(pdf, col: int, y: float, i: int, nome: str, dn: str, cpf: str, sus: str, total: int) -> tuple[int, float]:
     col, y = _coluna_atual(pdf, col, y)
     x0 = coluna_x[col]
     alt = 40
@@ -70,21 +70,21 @@ def _card(pdf, col, y, i, nome, dn, cpf, sus, total):
     return col, y
 
 
-def formatar_cpf(cpf):
+def formatar_cpf(cpf: str) -> str:
     c = apenas_numeros(cpf)
     if len(c) == 11:
         return f"{c[:3]}.{c[3:6]}.{c[6:9]}-{c[9:]}"
     return "NAO INFORMADO"
 
 
-def formatar_sus(sus):
+def formatar_sus(sus: str) -> str:
     s = apenas_numeros(sus)
     if len(s) == 15:
         return f"{s[:3]} {s[3:7]} {s[7:11]} {s[11:]}"
     return "NAO INFORMADO"
 
 
-def gerar_id_unico(row):
+def gerar_id_unico(row: dict) -> str:
     cpf = apenas_numeros(row.get('cpf', ''))
     if len(cpf) == 11:
         return f"CPF_{cpf}"
@@ -99,7 +99,7 @@ def gerar_id_unico(row):
     return f"NOME_{nome}_DN_{dn}"
 
 
-def analisar_csvs_para_pdf():
+def analisar_csvs_para_pdf() -> str:
     """
     Procura CSVs na pasta analise/, processa e gera PDF com Top 20.
     Retorna string com resultado.

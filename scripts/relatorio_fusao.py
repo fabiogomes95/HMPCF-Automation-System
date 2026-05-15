@@ -15,7 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from logging_setup import logger
 
 
-def gerar_relatorio_txt():
+def gerar_relatorio_txt() -> None:
     """
     Gera um arquivo RELATORIO_FINAL_FAXINA.txt com todos
     os pacientes que restaram após a faxina.

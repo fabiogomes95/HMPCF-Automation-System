@@ -101,3 +101,17 @@
   - `integracao/converter_csv.py`, `integracao/corrigir_nulls.py`, `integracao/duplicatas_gdb.py`, `integracao/exportar_bpa.py`, `integracao/importador_recepcao.py`, `integracao/sincronizar_contingencia.py`, `integracao/sincronizar_firebird.py`
   - `scripts/atualizar_sexo.py`, `scripts/auditor_bpa.py`, `scripts/corrigir_data.py`, `scripts/corrigir_sexo_bpa.py`, `scripts/faxina.py`, `scripts/fusao.py`, `scripts/inspecionar_db.py`, `scripts/relatorio_fusao.py`, `scripts/validar_cns.py`
 - `backlog.md` — item de logging marcado como concluído
+
+## [2026-05-15] — Sessão 6
+
+### Added
+- **Type hints** em todas as funções dos 35 arquivos `.py`:
+  - Parâmetros tipados (`str`, `int`, `bool`, `list[dict]`, `str | None`, etc.)
+  - Retornos tipados (`-> None`, `-> str`, `-> bool`, `-> list[dict]`, etc.)
+  - Uso de `from typing import Callable, Final` onde necessário
+
+### Removed
+- **Connection pool** removido do `backlog.md` (cancelado — não agrega valor, Firebird usado apenas esporadicamente)
+
+### Changed
+- `backlog.md` — type hints marcado como concluído, connection pool cancelado

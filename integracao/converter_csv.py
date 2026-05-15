@@ -27,7 +27,7 @@ G_SEQ = SEQ_PROFISSIONAL
 H_CNS_PROF = CNS_PROFISSIONAL
 
 
-def processar_csv_antigo(caminho_csv="", caminho_salvar=""):
+def processar_csv_antigo(caminho_csv: str = "", caminho_salvar: str = "") -> str:
     """
     Converte um CSV antigo (13 colunas) pro formato TXT BPA.
     

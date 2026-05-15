@@ -170,3 +170,32 @@ HMPCF-Automation-System/
 
 ### Pendente
 - Nada. Todos os prints substituídos e verificados (syntax check OK nos 35 .py).
+
+---
+
+## Sessão 6 — 2026-05-15 — Type hints em todas as funções
+
+### O que foi feito
+- Adicionados type hints em **todas as funções** dos 35 arquivos `.py`
+- Parâmetros tipados (`str`, `int`, `bool`, `list[dict]`, `str | None`, `dict`, etc.)
+- Retornos tipados (`-> None`, `-> str`, `-> bool`, `-> list[dict]`, etc.)
+- `from typing import Callable, Final` adicionados onde necessário
+- `config.py`: `_carregar_dotenv() -> None`
+- `utils.py`: todas as 5 funções tipadas (`apenas_numeros`, `remove_accents`, `valida_cns`, `parse_endereco_fixed`, `valida_cpf`)
+- `logging_setup.py`: `logger: Final`
+- `automacao/`: `digitacao.py` (3 funções), `executor_rpa.py` (2 funções), `cpf_sus.py` (1 função)
+- `integracao/`: todas as 7 funções principais tipadas
+- `analise/`: todas as 11 funções tipadas
+- `scripts/`: `corrigir_data.py`, `faxina.py`, `fusao.py`, `relatorio_fusao.py`
+- `app_painel.py`: todas as 22 funções `@eel.expose` + `carregar_base()` e `iniciar()`
+- `app_recepcao.py`: todas as 11 funções + helpers tipadas
+- `main.py`: todas as 9 funções tipadas
+- `planilha_nuvem.py`: `enviar_para_planilha()` e `gari_da_nuvem()` tipadas
+- Zero mudanças na lógica — só anotações
+
+### Backlog atualizado
+- Type hints marcado como concluído ✅
+- Connection pool cancelado (não agrega valor — Firebird usado só esporadicamente, RAM cache já resolve)
+
+### Próximos passos possíveis
+- Nada urgente. Sistema está completo para o uso atual.

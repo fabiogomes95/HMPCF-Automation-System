@@ -1,5 +1,6 @@
 import logging
 import sys
+from typing import Final
 
 logging.basicConfig(
     level=logging.INFO,
@@ -8,4 +9,4 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 
-logger = logging.getLogger("hmpcf")
+logger: Final = logging.getLogger("hmpcf")

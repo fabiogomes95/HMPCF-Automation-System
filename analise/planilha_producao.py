@@ -20,7 +20,7 @@ from logging_setup import logger
 from utils import apenas_numeros, remove_accents
 
 
-def gerar_relatorio_mes(mes_ref=None):
+def gerar_relatorio_mes(mes_ref: str | None = None) -> str:
     """
     Gera o relatório Excel para um mês específico.
     mes_ref: string no formato "MM-AAAA" (ex: "04-2026").

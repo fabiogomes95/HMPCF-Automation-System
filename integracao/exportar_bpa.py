@@ -29,7 +29,7 @@ G_SEQ = SEQ_PROFISSIONAL
 H_CNS_PROF = CNS_PROFISSIONAL
 
 
-def exportar_dados(mes_ano="", caminho_salvar=""):
+def exportar_dados(mes_ano: str = "", caminho_salvar: str = "") -> str:
     """
     Função principal que exporta pacientes do SQLite pro TXT BPA.
     

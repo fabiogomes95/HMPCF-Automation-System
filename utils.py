@@ -20,7 +20,7 @@ import unicodedata
 # unicodedata — uso pra normalizar caracteres unicode (remover acentos)
 
 
-def apenas_numeros(valor):
+def apenas_numeros(valor: str | None) -> str:
     """
     Extrai APENAS os dígitos numéricos de qualquer bagunça.
     Exemplo: '123.456.789-00' vira '12345678900'
@@ -32,7 +32,7 @@ def apenas_numeros(valor):
     return re.sub(r'\D', '', str(valor))
 
 
-def remove_accents(input_str):
+def remove_accents(input_str: str | None) -> str:
     """
     Remove acentos, cecedilhas e caracteres especiais, devolvendo MAIÚSCULO.
     Exemplo: 'João Souza' vira 'JOAO SOUZA'
@@ -48,7 +48,7 @@ def remove_accents(input_str):
     return limpo.encode('ascii', 'replace').decode('ascii').replace('?', ' ')
 
 
-def valida_cns(cns):
+def valida_cns(cns: str | None) -> bool:
     """
     Valida Cartão Nacional de Saúde usando o algoritmo oficial.
     
@@ -93,7 +93,7 @@ def valida_cns(cns):
     return cns_l == resultado
 
 
-def parse_endereco_fixed(endereco):
+def parse_endereco_fixed(endereco: str | None) -> tuple[str, str, str]:
     """
     Fatia um endereço bagunçado em TRÊS partes: Rua, Número e Bairro.
     
@@ -131,7 +131,7 @@ def parse_endereco_fixed(endereco):
     return rua[:30], numero[:5], bairro[:30]
 
 
-def valida_cpf(cpf):
+def valida_cpf(cpf: str | None) -> bool:
     """
     Valida CPF usando o algoritmo oficial da Receita Federal (Módulo 11 duplo).
     

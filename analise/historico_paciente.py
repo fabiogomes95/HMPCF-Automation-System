@@ -28,7 +28,7 @@ except ImportError as e:
     logger.error(msg)
 
 
-def buscar_por_termo(termo_busca):
+def buscar_por_termo(termo_busca: str) -> str:
     """
     Busca histórico completo por NOME, CPF ou SUS.
     termo_busca: string com nome, CPF ou SUS.

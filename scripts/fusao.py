@@ -28,7 +28,7 @@ from logging_setup import logger
 from utils import apenas_numeros, valida_cpf, valida_cns
 
 
-def faxina_definitiva():
+def faxina_definitiva() -> None:
     """
     Executa a fusão inteligente de pacientes duplicados.
     

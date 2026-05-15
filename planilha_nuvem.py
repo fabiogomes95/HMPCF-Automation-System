@@ -32,7 +32,7 @@ from config import (
 from logging_setup import logger
 
 
-def enviar_para_planilha(dados):
+def enviar_para_planilha(dados: dict) -> bool:
     """
     Envia UM atendimento para a planilha Google.
     
@@ -204,7 +204,7 @@ def enviar_para_planilha(dados):
         return False
 
 
-def gari_da_nuvem():
+def gari_da_nuvem() -> None:
     """
     Robô de SEGUNDO PLANO: fica rodando pra sempre.
     

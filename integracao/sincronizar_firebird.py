@@ -25,7 +25,7 @@ from utils import apenas_numeros, remove_accents
 from config import FIREBIRD_USER, FIREBIRD_PASSWORD
 
 
-def sincronizar_sqlite_para_gdb(mes_ano="", caminho_gdb=""):
+def sincronizar_sqlite_para_gdb(mes_ano: str = "", caminho_gdb: str = "") -> str:
     """
     Sincroniza pacientes do SQLite pro Firebird.
     

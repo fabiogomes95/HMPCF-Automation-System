@@ -15,8 +15,8 @@
 - [x] **Estrutura de pacote Python** — Criado `pyproject.toml` para imports limpos
 - [x] **Config centralizada** — Firebird paths, Google Sheet ID, CNS_PROFISSIONAL movidos para `config.py`
 - [x] **Mover `corrigir_data.py`** para `scripts/` (concluído)
-- [ ] **Type hints** — Adicionar tipos nos arquivos Python
+- [x] **Type hints** — Adicionados em todas as funções dos 35 arquivos `.py`
 - [x] **Logging** — `print()` substituído por `logging_setup.logger` em 27 arquivos
 - [x] **Remover `requests`** das dependências (não era usado)
 - [x] **Renomear `archive/`** para `scripts/` (concluído)
-- [ ] **Connection pool** para Firebird nas integrações
+- ~~Connection pool~~ — **Cancelado.** Não agrega valor (uso do Firebird é esporádico, RAM cache já resolve)

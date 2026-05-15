@@ -27,7 +27,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from logging_setup import logger
 
 
-def gerar_dashboard():
+def gerar_dashboard() -> str:
     """
     Gera o dashboard PNG + relatório Top 20.
     Retorna uma string com o resultado (sucesso ou erro).
@@ -114,7 +114,7 @@ def gerar_dashboard():
     return resultado
 
 
-def _escrever_relatorio(df, buf):
+def _escrever_relatorio(df, buf) -> None:
     """Escreve o relatório Top 20 num buffer de string."""
     buf.write("\n" + "=" * 60 + "\n")
     buf.write("TOP 20 PACIENTES COM MAIS ENTRADAS NO MES\n")

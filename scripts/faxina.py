@@ -28,7 +28,7 @@ os.chdir(os.path.join(DIRETORIO_ATUAL, '..'))
 DB_NAME = 'hospital.db'
 
 
-def fazer_faxina():
+def fazer_faxina() -> None:
     """
     Executa a faxina completa no banco.
     

@@ -57,7 +57,7 @@ def erro(msg):    logger.error(f"{Cores.VERMELHO}[ERRO]{Cores.RESET} {msg}")
 # ──────────────────────────────────────────────────────────────────────
 # 1. VERIFICADOR DE VERSÃO (Auto-Update)
 # ──────────────────────────────────────────────────────────────────────
-def get_versao_local():
+def get_versao_local() -> str:
     """Lê a versão do version.json local."""
     caminho = os.path.join(PASTA_RAIZ, 'version.json')
     try:
@@ -66,7 +66,7 @@ def get_versao_local():
     except Exception:
         return VERSAO_LOCAL
 
-def get_versao_remota():
+def get_versao_remota() -> str | None:
     """Busca version.json no GitHub e retorna a versão remota."""
     try:
         req = urllib.request.Request(URL_VERSION, headers={
@@ -78,7 +78,7 @@ def get_versao_remota():
     except Exception as e:
         return None
 
-def tem_git_instalado():
+def tem_git_instalado() -> bool:
     """Verifica se o Git está disponível no PATH."""
     try:
         subprocess.run(['git', '--version'], capture_output=True, check=True)
@@ -86,7 +86,7 @@ def tem_git_instalado():
     except Exception:
         return False
 
-def fazer_update_git_pull():
+def fazer_update_git_pull() -> bool:
     """Executa git pull para atualizar o repositório."""
     info("Atualizando via git pull...")
     try:
@@ -105,7 +105,7 @@ def fazer_update_git_pull():
         erro(f"Erro ao executar git pull: {e}")
         return False
 
-def fazer_update_zip():
+def fazer_update_zip() -> bool:
     """Download do ZIP e extração manual (fallback sem Git)."""
     import zipfile
     import io
@@ -161,7 +161,7 @@ def fazer_update_zip():
         erro(f"Falha na atualização via ZIP: {e}")
         return False
 
-def verificar_atualizacao():
+def verificar_atualizacao() -> bool:
     """
     Verifica se há versão nova no GitHub.
     Retorna True se atualizou, False se já está atualizado.
@@ -221,7 +221,7 @@ def verificar_atualizacao():
 # ──────────────────────────────────────────────────────────────────────
 # 2. LANÇADOR DOS SERVIDORES
 # ──────────────────────────────────────────────────────────────────────
-def servidor_recepcao():
+def servidor_recepcao() -> None:
     """Inicia o servidor da Recepção (porta 8000)."""
     try:
         sys.path.insert(0, PASTA_RAIZ)
@@ -230,7 +230,7 @@ def servidor_recepcao():
     except Exception as e:
         erro(f"Falha ao iniciar Recepção: {e}")
 
-def servidor_painel():
+def servidor_painel() -> None:
     """Inicia o servidor do Painel de Gestão (porta 8001)."""
     try:
         sys.path.insert(0, PASTA_RAIZ)
@@ -242,7 +242,7 @@ def servidor_painel():
 # ──────────────────────────────────────────────────────────────────────
 # 3. MODO SERVIÇO (Threads)
 # ──────────────────────────────────────────────────────────────────────
-def modo_servico():
+def modo_servico() -> None:
     """
     Modo produção: sobe ambos os servidores em threads separadas.
     Como o Eel usa block=False no app_painel, conseguimos rodar ambos.

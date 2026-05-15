@@ -28,7 +28,7 @@ PASS = FIREBIRD_PASSWORD
 DATA_PADRAO = '19900101'
 
 
-def corrigir_banco():
+def corrigir_banco() -> None:
     """
     Função principal:
     - Conecta no Firebird

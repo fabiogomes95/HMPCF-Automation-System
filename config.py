@@ -12,7 +12,7 @@ Uso:
 
 import os
 
-def _carregar_dotenv():
+def _carregar_dotenv() -> None:
     env_path = os.path.join(os.path.dirname(__file__), '.env')
     if os.path.exists(env_path):
         with open(env_path, 'r', encoding='utf-8') as f:

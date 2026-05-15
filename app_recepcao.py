@@ -25,11 +25,11 @@ eel.init('web_recepcao')
 DB_NAME = 'hospital.db'
 
 
-def conectar_banco():
+def conectar_banco() -> sqlite3.Connection:
     return sqlite3.connect(DB_NAME, timeout=30.0, check_same_thread=False)
 
 
-def init_db():
+def init_db() -> None:
     conn = conectar_banco()
     cursor = conn.cursor()
 
@@ -67,7 +67,7 @@ def init_db():
     conn.close()
 
 
-def converter_data_para_db(data_br):
+def converter_data_para_db(data_br: str) -> str:
     try:
         if "/" in data_br:
             partes = data_br.split('/')
@@ -77,7 +77,7 @@ def converter_data_para_db(data_br):
         return data_br
 
 
-def converter_data_para_web(data_db):
+def converter_data_para_web(data_db: str) -> str:
     try:
         if "-" in data_db:
             partes = data_db.split('-')
@@ -92,7 +92,7 @@ def converter_data_para_web(data_db):
 # =====================================================================
 
 @eel.expose
-def buscar_paciente(id_procurado):
+def buscar_paciente(id_procurado: str) -> dict:
     """
     Busca paciente por CPF ou SUS.
     Retorna dict com dados, ou {"erro": "nulo"} se não achar.
@@ -124,7 +124,7 @@ def buscar_paciente(id_procurado):
 
 
 @eel.expose
-def buscar_por_nome(termo):
+def buscar_por_nome(termo: str) -> list[dict]:
     """
     Busca pacientes por nome (parcial, case insensitive).
     Retorna lista de pacientes encontrados.
@@ -160,7 +160,7 @@ def buscar_por_nome(termo):
 
 
 @eel.expose
-def buscar_historico(cpf_ou_sus):
+def buscar_historico(cpf_ou_sus: str) -> list[dict]:
     """
     Busca os últimos 3 atendimentos de um paciente.
     """
@@ -197,7 +197,7 @@ def buscar_historico(cpf_ou_sus):
 
 
 @eel.expose
-def verificar_duplicata(nome, dn):
+def verificar_duplicata(nome: str, dn: str) -> list[dict]:
     """
     Verifica se já existe paciente com mesmo nome + data de nascimento.
     Retorna lista de possíveis duplicatas.
@@ -229,7 +229,7 @@ def verificar_duplicata(nome, dn):
 
 
 @eel.expose
-def salvar(dados):
+def salvar(dados: dict) -> dict:
     """
     Salva paciente + atendimento no banco.
     Retorna {"status": "sucesso"} ou {"status": "erro"}.
@@ -297,7 +297,7 @@ def salvar(dados):
 # --- GARI DA NUVEM (THREAD PROTEGIDA) ---
 _status_gari = "desconhecido"
 
-def rodar_gari():
+def rodar_gari() -> None:
     global _status_gari
     try:
         _status_gari = "rodando"
@@ -307,7 +307,7 @@ def rodar_gari():
 
 
 @eel.expose
-def status_gari():
+def status_gari() -> str:
     """Retorna o status atual do Gari da Nuvem."""
     return _status_gari
 
@@ -315,7 +315,7 @@ def status_gari():
 # =====================================================================
 # INICIAR (usado pelo main.py)
 # =====================================================================
-def iniciar():
+def iniciar() -> None:
     init_db()
     threading.Thread(target=rodar_gari, daemon=True).start()
     logger.info("App Recepcao HMPCF Iniciado...")

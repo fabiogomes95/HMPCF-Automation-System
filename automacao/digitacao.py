@@ -22,7 +22,7 @@ from logging_setup import logger
 from utils import apenas_numeros
 
 
-def buscar_pacientes_memoria(termo, base_pacientes_ram):
+def buscar_pacientes_memoria(termo: str, base_pacientes_ram: list[dict]) -> list[dict]:
     """
     Busca pacientes na RAM (lista em memória) em vez de consultar o Firebird.
     
@@ -55,7 +55,7 @@ def buscar_pacientes_memoria(termo, base_pacientes_ram):
     return resultados
 
 
-def criar_cabecalho_producao(caminho_completo, medico, data):
+def criar_cabecalho_producao(caminho_completo: str, medico: str, data: str) -> bool:
     """
     Adiciona um cabeçalho de lote no arquivo de produção.
     
@@ -73,7 +73,7 @@ def criar_cabecalho_producao(caminho_completo, medico, data):
         return False
 
 
-def adicionar_ficha_producao(caminho_completo, documento):
+def adicionar_ficha_producao(caminho_completo: str, documento: str) -> bool:
     """
     Adiciona o documento (CPF/SUS) de um paciente no lote atual.
     

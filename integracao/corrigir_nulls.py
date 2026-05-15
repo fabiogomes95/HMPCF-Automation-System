@@ -23,7 +23,7 @@ from logging_setup import logger
 from config import FIREBIRD_USER, FIREBIRD_PASSWORD
 
 
-def aniquilar_nulls_bpa(caminho_gdb=""):
+def aniquilar_nulls_bpa(caminho_gdb: str = "") -> str:
     """
     Varre TODAS as colunas da tabela CADCNS e substitui NULLs.
     

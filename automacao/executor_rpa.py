@@ -22,6 +22,7 @@ import time
 import os
 import sys
 import keyboard
+from typing import Callable
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from logging_setup import logger
@@ -33,7 +34,7 @@ from logging_setup import logger
 pyautogui.FAILSAFE = True
 
 
-def preparar_lotes(arq_leitura, base_pacientes_ram=None):
+def preparar_lotes(arq_leitura: str, base_pacientes_ram: list[dict] | None = None) -> tuple[list[dict], str]:
     """
     Lê o arquivo de produção e organiza os lotes.
     
@@ -106,7 +107,7 @@ def preparar_lotes(arq_leitura, base_pacientes_ram=None):
     return lotes, ""
 
 
-def executar_pyautogui(medico, data_atend, procedimento, pacientes, callback=None):
+def executar_pyautogui(medico: str, data_atend: str, procedimento: str, pacientes: list[str], callback: Callable[[str], None] | None = None) -> None:
     """
     Executa a digitação automática no sistema BPA.
     
