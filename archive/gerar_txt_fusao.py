@@ -2,7 +2,7 @@ import sqlite3
 import os
 
 def gerar_relatorio_txt():
-    caminho_db = os.path.join(os.path.dirname(__file__), 'hospital.db')
+    caminho_db = os.path.join(os.path.dirname(__file__), '..', 'hospital.db')
     conn = sqlite3.connect(caminho_db)
     cursor = conn.cursor()
 

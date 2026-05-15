@@ -43,7 +43,7 @@ def enviar_para_planilha(dados):
         try:
             sheet = spreadsheet.worksheet(nome_aba)
         except gspread.exceptions.WorksheetNotFound:
-            sheet = spreadsheet.add_worksheet(title=nome_aba, rows="1000", cols="15")
+            sheet = spreadsheet.add_worksheet(title=nome_aba, rows=1000, cols=15)
             sheet.append_row(['REG','NOME','DN','IDADE','SEXO','RAÇA','CIDADE','HORA','CPF','SUS','OBS','ENDEREÇO','TEL'])
 
         # 4. PREPARAÇÃO E LIMPEZA DOS DADOS:
@@ -155,7 +155,7 @@ def gari_da_nuvem():
                         cursor.execute("UPDATE atendimentos SET enviado_nuvem = 0 WHERE id = ?", (id_atend,))
                     conn.commit()
             conn.close()
-        except: 
+        except Exception: 
             pass 
             
         time.sleep(10)

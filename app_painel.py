@@ -157,8 +157,6 @@ if __name__ == '__main__':
     print("🚀 Servidor HMPCF Iniciado e Persistente na porta 8001")
     carregar_base()
     
-    eel.init('web_painel')
-    
     # 1. Crie esta função minúscula para anular a "autodestruição" do Eel
     def manter_vivo(rota, websockets):
         pass 

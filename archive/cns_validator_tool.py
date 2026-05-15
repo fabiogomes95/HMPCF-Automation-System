@@ -12,8 +12,8 @@ import sqlite3
 import re
 import os
 
-# Garante que o Python está rodando na mesma pasta do script
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+# Garante que as referências partem da raiz do projeto
+PASTA_RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ==============================================================================
 # 1. FUNÇÕES DE VALIDAÇÃO (O ALGORITMO DO MINISTÉRIO DA SAÚDE)
@@ -26,9 +26,9 @@ def valida_cns(cns):
     # Lógica de validação do Módulo 11 (Padrão Ouro do DATASUS)
     cns = apenas_numeros(cns)
     if len(cns) != 15: return False
-    if cns not in ['1', '2', '7', '8', '9']: return False
+    if cns[0] not in '12789': return False
     
-    if cns in ['7', '8', '9']:
+    if cns[0] in '789':
         soma = sum(int(cns[i]) * (15 - i) for i in range(15))
         return soma % 11 == 0
     else:
@@ -52,7 +52,7 @@ print("🧹 Iniciando a FAXINA CIRÚRGICA (Focada APENAS em SUS Inválido)...")
 # 2. CONEXÃO E VARREDURA DO BANCO
 # ==============================================================================
 try:
-    conn = sqlite3.connect('hospital.db')
+    conn = sqlite3.connect(os.path.join(PASTA_RAIZ, 'hospital.db'))
     cursor = conn.cursor()
     
     # 'rowid' é o identificador numérico interno e secreto do SQLite. 
@@ -62,8 +62,8 @@ try:
     
     pacientes_apagados, fichas_apagadas, datas_limpas = 0, 0, 0
     
-    # Cria o arquivo de relatório físico da faxina
-    with open('relatorio_faxina.txt', 'w', encoding='utf-8') as f:
+    # Cria o arquivo de relatório físico da faxina na raiz do projeto
+    with open(os.path.join(PASTA_RAIZ, 'relatorio_faxina.txt'), 'w', encoding='utf-8') as f:
         f.write("=== RELATÓRIO DE FAXINA DE BANCO DE DADOS - HOSPITAL CAFÉ FILHO ===\n")
         f.write("-" * 80 + "\n\n")
         

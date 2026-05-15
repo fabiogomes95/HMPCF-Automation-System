@@ -62,7 +62,7 @@ def sincronizar_contingencia():
                 
                 # CAÇADOR DE CPF E SUS: Ignora a coluna que foi digitada e busca pela estrutura matemática
                 cpf_plan = apenas_numeros(next((re.search(r'\d{3}\.?\d{3}\.?\d{3}-?\d{2}', c).group(0) for c in row if re.search(r'\d{3}\.?\d{3}\.?\d{3}-?\d{2}', c)), ""))
-                sus_plan = apenas_numeros(next((c for c in row if len(apenas_numeros(c)) == 15 and apenas_numeros(c) in '12789'), ""))
+                sus_plan = apenas_numeros(next((c for c in row if len(apenas_numeros(c)) == 15 and apenas_numeros(c)[0] in '12789'), ""))
                 
                 id_paciente = f"NOME: {nome_raw[:30].ljust(30)} | CPF: {cpf_plan.ljust(11)}"
                 if not cpf_plan and not sus_plan: continue
