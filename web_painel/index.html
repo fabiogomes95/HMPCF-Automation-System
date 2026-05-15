@@ -36,19 +36,6 @@
             color: var(--text-muted);
             margin-top: 4px;
         }
-        .lembrete-banner {
-            background: linear-gradient(135deg, var(--hmpcf-red), #b71c1c);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 12px;
-            text-align: center;
-            font-weight: 600;
-            display: none;
-            margin-bottom: 20px;
-        }
-        .lembrete-banner.ok {
-            background: linear-gradient(135deg, #10B981, #059669);
-        }
         .log-container {
             max-height: 200px;
             overflow-y: auto;
@@ -84,8 +71,6 @@
 </div>
 
 <div class="container py-4">
-    <div id="lembreteBanner" class="lembrete-banner"></div>
-
     <div class="row g-3 mb-4" id="indicadoresRow">
         <div class="col-12 text-center text-muted py-4">Carregando indicadores...</div>
     </div>
@@ -201,16 +186,6 @@
                 </div>
             `;
 
-            const banner = document.getElementById('lembreteBanner');
-            if (d.bpa_mes_atual_exportado === 'nao') {
-                banner.className = 'lembrete-banner';
-                banner.innerHTML = `⚠️ ATENÇÃO: BPA de <strong>${d.mes_atual}</strong> ainda não foi exportado! Vá em Integração → Exportar BPA.`;
-                banner.style.display = 'block';
-            } else {
-                banner.className = 'lembrete-banner ok';
-                banner.innerHTML = `✅ BPA de <strong>${d.mes_atual}</strong> já exportado.`;
-                banner.style.display = 'block';
-            }
         } catch (e) {
             console.error('Erro indicadores:', e);
             document.getElementById('indicadoresRow').innerHTML = '<div class="col-12 text-center text-muted py-4">Erro ao carregar indicadores.</div>';

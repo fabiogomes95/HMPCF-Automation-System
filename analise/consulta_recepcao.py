@@ -101,52 +101,67 @@ def status() -> str:
 
 
 def consultar_atendimentos(data_inicio: str, data_fim: str) -> list[dict]:
-    if not _CARREGADO:
+    try:
+        if not _CARREGADO:
+            return []
+        resultado = []
+        for a in _ATENDIMENTOS:
+            if data_inicio <= (a.get("data_atendimento") or "") <= data_fim:
+                resultado.append(a)
+        return resultado
+    except Exception as e:
+        logger.error(f"Erro consultar_atendimentos: {e}")
         return []
-    resultado = []
-    for a in _ATENDIMENTOS:
-        if data_inicio <= (a.get("data_atendimento") or "") <= data_fim:
-            resultado.append(a)
-    logger.info(f"Consulta RAM: {len(resultado)} linhas")
-    return resultado
 
 
 def resumo_atendimentos(data_inicio: str, data_fim: str) -> dict:
-    if not _CARREGADO:
-        return {"total": 0, "por_procedencia": {}, "media_dia": 0}
+    try:
+        if not _CARREGADO:
+            return _resumo_vazio()
 
-    total = 0
-    por_procedencia: dict[str, int] = {}
-    dias: set[str] = set()
+        total = 0
+        por_procedencia: dict[str, int] = {}
+        dias: set[str] = set()
 
-    for a in _ATENDIMENTOS:
-        data = a.get("data_atendimento") or ""
-        if not (data_inicio <= data <= data_fim):
-            continue
-        total += 1
-        proc = a.get("procedencia") or "NORMAL"
-        por_procedencia[proc] = por_procedencia.get(proc, 0) + 1
-        dias.add(data)
+        for a in _ATENDIMENTOS:
+            data = a.get("data_atendimento") or ""
+            if not (data_inicio <= data <= data_fim):
+                continue
+            total += 1
+            proc = a.get("procedencia") or "NORMAL"
+            por_procedencia[proc] = por_procedencia.get(proc, 0) + 1
+            dias.add(data)
 
-    return {
-        "total": total,
-        "por_procedencia": por_procedencia,
-        "media_dia": round(total / max(len(dias), 1), 1),
-    }
+        return {
+            "total": total,
+            "por_procedencia": por_procedencia,
+            "media_dia": round(total / max(len(dias), 1), 1),
+        }
+    except Exception as e:
+        logger.error(f"Erro resumo_atendimentos: {e}")
+        return _resumo_vazio()
+
+
+def _resumo_vazio() -> dict:
+    return {"total": 0, "por_procedencia": {}, "media_dia": 0}
 
 
 def atendimentos_por_dia(data_inicio: str, data_fim: str) -> list[dict]:
-    if not _CARREGADO:
+    try:
+        if not _CARREGADO:
+            return []
+
+        dia_map: dict[str, int] = {}
+        for a in _ATENDIMENTOS:
+            data = a.get("data_atendimento") or ""
+            if not (data_inicio <= data <= data_fim):
+                continue
+            dia_map[data] = dia_map.get(data, 0) + 1
+
+        return sorted(
+            [{"data": d, "qtd": q} for d, q in dia_map.items()],
+            key=lambda x: x["data"],
+        )
+    except Exception as e:
+        logger.error(f"Erro atendimentos_por_dia: {e}")
         return []
-
-    dia_map: dict[str, int] = {}
-    for a in _ATENDIMENTOS:
-        data = a.get("data_atendimento") or ""
-        if not (data_inicio <= data <= data_fim):
-            continue
-        dia_map[data] = dia_map.get(data, 0) + 1
-
-    return sorted(
-        [{"data": d, "qtd": q} for d, q in dia_map.items()],
-        key=lambda x: x["data"],
-    )
