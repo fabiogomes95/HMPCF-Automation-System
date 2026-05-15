@@ -19,6 +19,7 @@ pra fazer buscas ultrarrápidas (sem consultar o banco toda hora).
 
 import os
 import glob
+import concurrent.futures
 import eel
 import firebirdsql
 import sys
@@ -400,37 +401,49 @@ def analise_buscar_historico(termo: str) -> str:
 
 
 # =====================================================================
-# 6. CONSULTA ATENDIMENTOS (RECEPÇÃO)
+# 6. CONSULTA ATENDIMENTOS (RECEPÇÃO) — Thread-safe
 # =====================================================================
+# Usa ThreadPoolExecutor pra não travar o loop principal do Eel.
+# Se a query demorar >30s, retorna vazio em vez de travar o painel.
 from analise.consulta_recepcao import (
     consultar_atendimentos,
     resumo_atendimentos,
     atendimentos_por_dia,
 )
+_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+_CONSULTA_TIMEOUT = 30
+
+
+def _executar(fn, *args):
+    future = _EXECUTOR.submit(fn, *args)
+    try:
+        return future.result(timeout=_CONSULTA_TIMEOUT)
+    except concurrent.futures.TimeoutError:
+        logger.error(f"Consulta timeout ({_CONSULTA_TIMEOUT}s): {fn.__name__}")
+        return None
+    except Exception as e:
+        logger.error(f"Erro na consulta {fn.__name__}: {e}")
+        return None
 
 
 @eel.expose
 def consulta_listar_atendimentos(data_inicio: str, data_fim: str) -> list[dict]:
-    try:
-        return consultar_atendimentos(data_inicio, data_fim)
-    except Exception as e:
-        return []
+    result = _executar(consultar_atendimentos, data_inicio, data_fim)
+    return result if isinstance(result, list) else []
 
 
 @eel.expose
 def consulta_resumo_atendimentos(data_inicio: str, data_fim: str) -> dict:
-    try:
-        return resumo_atendimentos(data_inicio, data_fim)
-    except Exception as e:
-        return {"total": 0, "por_procedencia": {}, "media_dia": 0}
+    result = _executar(resumo_atendimentos, data_inicio, data_fim)
+    if isinstance(result, dict):
+        return result
+    return {"total": 0, "por_procedencia": {}, "media_dia": 0}
 
 
 @eel.expose
 def consulta_atendimentos_por_dia(data_inicio: str, data_fim: str) -> list[dict]:
-    try:
-        return atendimentos_por_dia(data_inicio, data_fim)
-    except Exception as e:
-        return []
+    result = _executar(atendimentos_por_dia, data_inicio, data_fim)
+    return result if isinstance(result, list) else []
 
 
 # =====================================================================

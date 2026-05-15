@@ -7,7 +7,6 @@ Lê diretamente do SQLite da recepção (hospital.db).
 
 import os
 import sqlite3
-from datetime import datetime, timedelta
 from logging_setup import logger
 from config import DB_SQLITE
 
@@ -21,16 +20,31 @@ def _db_path() -> str:
     return path
 
 
+def _criar_indices(conn: sqlite3.Connection) -> None:
+    try:
+        conn.executescript("""
+            CREATE INDEX IF NOT EXISTS idx_atendimentos_cpf
+                ON atendimentos(cpf);
+            CREATE INDEX IF NOT EXISTS idx_atendimentos_sus
+                ON atendimentos(sus);
+            CREATE INDEX IF NOT EXISTS idx_atendimentos_data
+                ON atendimentos(data_atendimento);
+        """)
+    except Exception as e:
+        logger.warning(f"Nao foi possivel criar indices: {e}")
+
+
 def _conectar() -> sqlite3.Connection | None:
     path = _db_path()
     if not os.path.exists(path):
-        logger.warning(f"hospital.db não encontrado em: {path}")
+        logger.warning(f"hospital.db nao encontrado em: {path}")
         return None
     try:
-        conn = sqlite3.connect(path, timeout=15.0)
-        conn.row_factory = sqlite3.Row
+        conn = sqlite3.connect(path, timeout=5.0)
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
+        conn.row_factory = sqlite3.Row
+        _criar_indices(conn)
         return conn
     except Exception as e:
         logger.error(f"Erro ao conectar hospital.db: {e}")
@@ -73,13 +87,12 @@ def resumo_atendimentos(data_inicio: str, data_fim: str) -> dict:
 
     try:
         cursor = conn.cursor()
-        dados = {}
 
         cursor.execute("""
             SELECT COUNT(*) FROM atendimentos
             WHERE data_atendimento BETWEEN ? AND ?
         """, (data_inicio, data_fim))
-        dados["total"] = cursor.fetchone()[0]
+        total = cursor.fetchone()[0]
 
         cursor.execute("""
             SELECT COALESCE(procedencia, 'NORMAL') as proc, COUNT(*) as qtd
@@ -87,16 +100,20 @@ def resumo_atendimentos(data_inicio: str, data_fim: str) -> dict:
             WHERE data_atendimento BETWEEN ? AND ?
             GROUP BY proc ORDER BY qtd DESC
         """, (data_inicio, data_fim))
-        dados["por_procedencia"] = {row[0]: row[1] for row in cursor.fetchall()}
+        por_procedencia = {row[0]: row[1] for row in cursor.fetchall()}
 
         cursor.execute("""
             SELECT COUNT(DISTINCT data_atendimento) FROM atendimentos
             WHERE data_atendimento BETWEEN ? AND ?
         """, (data_inicio, data_fim))
         dias = cursor.fetchone()[0] or 1
-        dados["media_dia"] = round(dados["total"] / dias, 1)
+        media_dia = round(total / dias, 1)
 
-        return dados
+        return {
+            "total": total,
+            "por_procedencia": por_procedencia,
+            "media_dia": media_dia,
+        }
     except Exception as e:
         logger.error(f"Erro no resumo: {e}")
         return {"total": 0, "por_procedencia": {}, "media_dia": 0}
