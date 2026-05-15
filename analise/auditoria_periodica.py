@@ -13,7 +13,7 @@
 import os           # Permite que o Python interaja com as pastas do Windows
 import sqlite3      # O motor de banco de dados nativo do Python
 import pandas as pd # Ferramenta avançada para tratar tabelas na memória (como um Excel invisível)
-import sys          # Permite manipular as rotas do sistema operacional
+
 from weasyprint import HTML # O "motor gráfico" que converte nosso código web em PDF
 from datetime import datetime, timedelta # Ferramentas para fazer cálculos com datas e horas
 

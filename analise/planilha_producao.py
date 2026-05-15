@@ -194,7 +194,7 @@ def gerar_relatorio_final():
                 c = ws.cell(row=row, column=col)
                 c.border = border
                 # Centraliza textos menores como Idade(Col 5), Hora(Col 8), etc.
-                if col in [6-8]: c.alignment = center
+                if col in [6, 7, 8]: c.alignment = center
 
     # Configuração da largura das colunas do Excel para não cortar o nome de ninguém
     dims = {'A':6, 'B':35, 'C':12, 'D':6, 'E':6, 'F':12, 'G':15, 'H':8, 

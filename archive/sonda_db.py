@@ -11,8 +11,8 @@ import sqlite3
 import os
 
 # Mapeia a localização do banco
-pasta_atual = os.path.dirname(os.path.abspath(__file__))
-caminho_db = os.path.join(pasta_atual, 'hospital.db')
+pasta_raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+caminho_db = os.path.join(pasta_raiz, 'hospital.db')
 
 print("=========================================")
 print("🔍 NOVA BUSCA: PROCURANDO POR NOME...")

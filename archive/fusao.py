@@ -15,7 +15,7 @@ def faxina_definitiva():
     print("🛡️ FAXINA V3 - MÁXIMA SEGURANÇA E PREVENÇÃO DE ERROS")
     print("==================================================\n")
 
-    caminho_db = os.path.join(os.path.dirname(__file__), 'hospital.db')
+    caminho_db = os.path.join(os.path.dirname(__file__), '..', 'hospital.db')
     
     confirmar = input("⚠️ ATENÇÃO: Você RESTAUROU O BACKUP original de novo? (S/N): ").strip().upper()
     if confirmar != 'S':
