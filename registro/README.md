@@ -277,3 +277,22 @@ HMPCF-Automation-System/
 - `web_painel/index.html` (reescrito)
 - `web_painel/style.css` (+ dark mode)
 - `web_painel/analise.html` (+ card exportação)
+
+---
+
+## Sessão 9 — 2026-05-15 — Remove BPA + card Atendimentos + paginação server-side
+
+### Banner e card BPA removidos
+- Banner vermelho/verde de lembrete de exportação removido do index.html
+- Card indicador de BPA removido (também mandado embora a pedido)
+- `dashboard_indicadores()` simplificado em app_painel.py
+
+### Card Atendimentos (RAM) removido
+- Usuário apontou que hospital.db não reflete em tempo real a recepção
+- Agora só 2 cards: Pacientes BPA (RAM) e Backups Disponíveis
+
+### Paginação server-side na consulta
+- `consulta_recepcao.py`: nova `consultar_atendimentos_paginado()` retorna dict com `atendimentos` (100 registros), `total`, `pagina`, `total_paginas`
+- `app_painel.py`: Eel expose `consulta_listar_atendimentos` agora aceita `pagina` param
+- `consulta.html`: `mudarPagina()` chama servidor (nova função `consultar(pagina)`). Cada troca de página faz uma chamada Eel nova
+- Resolve o timeout de 60s — antes enviava 30k+ registros pelo Eel, agora só 100 por vez
