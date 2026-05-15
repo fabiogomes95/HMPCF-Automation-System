@@ -293,7 +293,7 @@
                     eel.consulta_resumo_atendimentos(inicio, fim)(),
                     eel.consulta_atendimentos_por_dia(inicio, fim)()
                 ]),
-                consultaTimeout(15000)
+                consultaTimeout(60000)
             ]);
 
             if (!result) throw new Error('Sem resposta do servidor');

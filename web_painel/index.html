@@ -152,36 +152,25 @@
         try {
             const d = await eel.dashboard_indicadores()();
 
-            const cores = { sim: '#10B981', nao: '#dc3545' };
-            const bpaCor = cores[d.bpa_mes_atual_exportado] || '#6c757d';
-            const bpaIcon = d.bpa_mes_atual_exportado === 'sim' ? '✅' : '❌';
-
             document.getElementById('indicadoresRow').innerHTML = `
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="indicador-card">
                         <div class="numero">${d.pacientes_firebird_ram}</div>
                         <div class="rotulo">Pacientes BPA (RAM)</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="indicador-card">
                         <div class="numero">${d.atendimentos_recepcao_ram}</div>
                         <div class="rotulo">Atendimentos (RAM)</div>
                         <div class="sub">${d.cache_hospital_db.split(',')[0] || d.cache_hospital_db}</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="indicador-card">
                         <div class="numero">${d.total_backups}</div>
                         <div class="rotulo">Backups Disponíveis</div>
                         <div class="sub">Último: ${d.ultimo_backup.slice(0, 10) || '---'}</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="indicador-card">
-                        <div class="numero" style="color: ${bpaCor};">${bpaIcon}</div>
-                        <div class="rotulo">BPA ${d.mes_atual}</div>
-                        <div class="sub">${d.bpa_mes_atual_exportado === 'sim' ? 'Exportado' : 'Não exportado'}</div>
                     </div>
                 </div>
             `;

@@ -513,26 +513,12 @@ def dashboard_indicadores() -> dict:
     total_backups = len(backups)
     ultimo_backup = backups[0]["data"] if backups else "Nunca"
 
-    mes_atual = datetime.now().strftime("%m-%Y")
-    bpa_exportado = "nao"
-    for f in os.listdir(PASTA_AUTOMACAO):
-        if f.endswith(".txt") and mes_atual.replace("-", "") in f:
-            bpa_exportado = "sim"
-            break
-    if bpa_exportado == "nao":
-        for f in os.listdir(PASTA_ATUAL):
-            if f.endswith(("_BPA.txt", ".txt")) and mes_atual[:2] in f:
-                bpa_exportado = "sim"
-                break
-
     return {
         "pacientes_firebird_ram": qtd_fb,
         "atendimentos_recepcao_ram": qtd_atendimentos,
         "cache_hospital_db": status_db,
         "total_backups": total_backups,
         "ultimo_backup": ultimo_backup,
-        "bpa_mes_atual_exportado": bpa_exportado,
-        "mes_atual": mes_atual,
     }
 
 
