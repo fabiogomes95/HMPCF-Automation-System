@@ -43,7 +43,7 @@ python -m PyInstaller ^
     --name "HMPCF" ^
     --onefile ^
     --console ^
-    --icon "web_recepcao\logo.png" ^
+    --icon "assets\robo-icon.ico" ^
     --add-data "web_recepcao/index.html;web_recepcao" ^
     --add-data "web_recepcao/style.css;web_recepcao" ^
     --add-data "web_recepcao/script.js;web_recepcao" ^
