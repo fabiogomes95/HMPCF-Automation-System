@@ -118,30 +118,30 @@
         </div>
 
         <div class="row">
-            <div class="field" style="flex: 2;">
+            <div class="field" style="grid-column: span 6;">
                 <label> NATURALIDADE: </label>
                 <input type="text" id="db_naturalidade" oninput="this.value = this.value.toUpperCase()">
             </div>
-            <div class="field" style="flex: 1.2;">
+            <div class="field" style="grid-column: span 4;">
                 <label> DN: </label>
                 <input type="text" id="db_dn" maxlength="10" placeholder="DD/MM/AAAA" onblur="calcularIdade()">
             </div>
-            <div class="field" style="flex: 0.8;">
+            <div class="field" style="grid-column: span 2;">
                 <label> IDADE: </label>
                 <input type="text" id="db_idade" readonly style="color: var(--text-primary);">
             </div>
         </div>
 
         <div class="row">
-            <div class="field" style="flex: 1.5;">
+            <div class="field" style="grid-column: span 5;">
                 <label> CPF: </label>
                 <input type="text" id="db_cpf" placeholder="000.000.000-00" maxlength="14" oninput="executarCpf(this)" onblur="validarCpfFinal(this)" autocomplete="off">
             </div>
-            <div class="field" style="flex: 1.5;">
+            <div class="field" style="grid-column: span 5;">
                 <label> CARTÃO SUS: </label>
                 <input type="text" id="db_sus" placeholder="000 0000 0000 0000" maxlength="18" oninput="soNumerosSus(this)" onblur="validarSusFinal(this)" autocomplete="off">
             </div>
-            <div class="field" style="flex: 1;">
+            <div class="field" style="grid-column: span 2;">
                 <label> SEXO: </label>
                 <label> M <input type="radio" name="sexo" id="db_sexo_m" value="M"> </label>
                 <label> F <input type="radio" name="sexo" id="db_sexo_f" value="F"> </label>
@@ -162,7 +162,7 @@
         </div>
 
         <div class="row">
-            <div class="field" style="flex: 2.5;">
+            <div class="field" style="grid-column: span 7;">
                 <label> RAÇA/COR: </label>
                 <div class="checkbox-group" id="db_raca_group">
                     <label> BRANCA <input type="radio" name="cor" value="BRANCA"></label>
@@ -171,7 +171,7 @@
                     <label> INDÍGENA <input type="radio" name="cor" value="INDÍGENA"></label>
                 </div>
             </div>
-            <div class="field" style="flex: 1.5;">
+            <div class="field" style="grid-column: span 5;">
                 <label> OCUPAÇÃO: </label>
                 <input type="text" id="db_ocupacao" oninput="this.value = this.value.toUpperCase()">
             </div>
@@ -185,37 +185,37 @@
         </div>
 
         <div class="row">
-            <div class="field" style="flex: 2.5;">
+            <div class="field" style="grid-column: span 7;">
                 <label> RESPONSÁVEL: </label>
                 <input type="text" id="db_responsavel" oninput="this.value = this.value.toUpperCase()">
             </div>
-            <div class="field" style="flex: 1.5;">
+            <div class="field" style="grid-column: span 5;">
                 <label> TEL: </label>
                 <input type="text" id="db_tel" placeholder="(00) 00000-0000" maxlength="15" oninput="mascaraTel(this)">
             </div>
         </div>
 
         <div class="row">
-            <div class="field" style="flex: 3.2;">
+            <div class="field" style="grid-column: span 8;">
                 <label> ENDEREÇO: </label>
                 <input type="text" id="db_endereco" oninput="this.value = this.value.toUpperCase()">
             </div>
-            <div class="field" style="flex: 0.8;">
+            <div class="field" style="grid-column: span 4;">
                 <label> Nº: </label>
                 <input type="text" id="db_numero">
             </div>
         </div>
 
         <div class="row spacer-row">
-            <div class="field" style="flex: 1.5;">
+            <div class="field" style="grid-column: span 5;">
                 <label> BAIRRO: </label>
                 <input type="text" id="db_bairro" oninput="this.value = this.value.toUpperCase()">
             </div>
-            <div class="field" style="flex: 1.5;">
+            <div class="field" style="grid-column: span 5;">
                 <label> CIDADE: </label>
                 <input type="text" id="db_cidade" value="EXTREMOZ" oninput="this.value = this.value.toUpperCase()">
             </div>
-            <div class="field" style="flex: 0.5;">
+            <div class="field" style="grid-column: span 2;">
                 <label> UF: </label>
                 <input type="text" id="db_estado" value="RN" maxlength="2" style="width: 30px; border-bottom:none;" oninput="this.value = this.value.toUpperCase()">
             </div>
