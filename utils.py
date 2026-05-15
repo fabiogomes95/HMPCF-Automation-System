@@ -31,14 +31,28 @@ def remove_accents(input_str):
 # 3. VALIDAÇÃO MATEMÁTICA DO DATASUS (MÓDULO 11)
 # ==============================================================================
 def valida_cns(cns):
-    """Executa o algoritmo oficial do Ministério da Saúde para validar o Cartão SUS."""
+    """Executa o algoritmo oficial do Ministério da Saúde para validar o Cartão SUS.
+    Suporta CNS definitivo (início 1, 2) e provisório (início 7, 8, 9)."""
     cns_l = apenas_numeros(cns)
-    
-    # O SUS precisa ter 15 números e começar com 1, 2, 7, 8 ou 9.
-    if not cns_l or len(cns_l) != 15 or cns_l[0] not in '12789': return False
-    
-    soma = sum(int(cns_l[i]) * (15 - i) for i in range(15))
-    return soma % 11 == 0
+    if len(cns_l) != 15 or cns_l[0] not in '12789': return False
+
+    if cns_l[0] in '789':
+        soma = sum(int(cns_l[i]) * (15 - i) for i in range(15))
+        return soma % 11 == 0
+    else:
+        pis = cns_l[:11]
+        soma = sum(int(pis[i]) * (15 - i) for i in range(11))
+        resto = soma % 11
+        dv = 11 - resto
+        if dv == 11: dv = 0
+        if dv == 10:
+            soma += 2
+            resto = soma % 11
+            dv = 11 - resto
+            resultado = pis + "001" + str(dv)
+        else:
+            resultado = pis + "000" + str(dv)
+        return cns_l == resultado
 
 # ==============================================================================
 # 4. MINERAÇÃO E FATIAMENTO ESPACIAL (DATA MINING)

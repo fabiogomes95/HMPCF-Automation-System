@@ -1,10 +1,12 @@
 import os
-import re
 import csv
 from io import StringIO
 import pandas as pd
 from datetime import datetime
 from weasyprint import HTML
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils import apenas_numeros
 
 print("==================================================")
 print("🔍 ANALISADOR DE FREQUÊNCIA DE PACIENTES (.CSV)")
@@ -19,32 +21,29 @@ if not arquivos_csv:
     print("🛑 ERRO: Nenhum arquivo .csv encontrado na pasta.")
     exit()
 
-# 2. FUNÇÕES DE LIMPEZA E FORMATAÇÃO
-def limpar_numeros(texto):
-    return re.sub(r'\D', '', str(texto))
-
+# 2. FUNÇÕES DE FORMATAÇÃO
 def formatar_cpf(cpf):
-    c = limpar_numeros(cpf)
+    c = apenas_numeros(cpf)
     if len(c) == 11:
         return f"{c[:3]}.{c[3:6]}.{c[6:9]}-{c[9:]}"
     return "NÃO INFORMADO"
 
 def formatar_sus(sus):
-    s = limpar_numeros(sus)
+    s = apenas_numeros(sus)
     if len(s) == 15:
         return f"{s[:3]} {s[3:7]} {s[7:11]} {s[11:]}"
     return "NÃO INFORMADO"
 
 def gerar_id_unico(row):
-    cpf = limpar_numeros(row.get('cpf', ''))
+    cpf = apenas_numeros(row.get('cpf', ''))
     if len(cpf) == 11: return f"CPF_{cpf}"
     
-    sus = limpar_numeros(row.get('sus', ''))
+    sus = apenas_numeros(row.get('sus', ''))
     if len(sus) == 15: return f"SUS_{sus}"
     
     nome_cru = str(row.get('nome', '')).upper().strip()
-    nome = re.sub(r'[^A-Z0-9]', '', nome_cru)
-    dn = limpar_numeros(row.get('dn', ''))
+    nome = ''.join(c for c in nome_cru if c.isalnum())
+    dn = apenas_numeros(row.get('dn', ''))
     
     if not nome or nome == 'NAN' or 'PLANTAO' in nome_cru or nome == 'NOME':
         return "IGNORAR"

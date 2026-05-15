@@ -3,7 +3,9 @@
 # ==============================================================================
 
 import os
-import re
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils import apenas_numeros
 
 def buscar_pacientes_memoria(termo, base_pacientes_ram):
     """
@@ -41,7 +43,7 @@ def adicionar_ficha_producao(caminho_completo, documento):
     """
     Limpa o documento (garantia extra) e faz a quebra automática a cada 99 pacientes.
     """
-    doc_limpo = re.sub(r'\D', '', str(documento)).strip()
+    doc_limpo = apenas_numeros(documento).strip()
     
     try:
         pacientes_no_lote = 0

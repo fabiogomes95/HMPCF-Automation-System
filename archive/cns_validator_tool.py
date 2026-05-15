@@ -9,42 +9,13 @@
 # ==============================================================================
 
 import sqlite3
-import re
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils import apenas_numeros, valida_cns
 
 # Garante que as referências partem da raiz do projeto
 PASTA_RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# ==============================================================================
-# 1. FUNÇÕES DE VALIDAÇÃO (O ALGORITMO DO MINISTÉRIO DA SAÚDE)
-# ==============================================================================
-def apenas_numeros(v):
-    # Usa Regex (\D) para arrancar letras, traços e espaços
-    return re.sub(r'\D', '', str(v)) if v else ""
-
-def valida_cns(cns):
-    # Lógica de validação do Módulo 11 (Padrão Ouro do DATASUS)
-    cns = apenas_numeros(cns)
-    if len(cns) != 15: return False
-    if cns[0] not in '12789': return False
-    
-    if cns[0] in '789':
-        soma = sum(int(cns[i]) * (15 - i) for i in range(15))
-        return soma % 11 == 0
-    else:
-        pis = cns[:11]
-        soma = sum(int(pis[i]) * (15 - i) for i in range(11))
-        resto = soma % 11
-        dv = 11 - resto
-        if dv == 11: dv = 0
-        if dv == 10:
-            soma += 2
-            resto = soma % 11
-            dv = 11 - resto
-            resultado = pis + "001" + str(dv)
-        else:
-            resultado = pis + "000" + str(dv)
-        return cns == resultado
 
 print("🧹 Iniciando a FAXINA CIRÚRGICA (Focada APENAS em SUS Inválido)...")
 

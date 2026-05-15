@@ -15,26 +15,12 @@
 # ==============================================================================
 
 import pandas as pd
-import re
 import tkinter as tk
 from tkinter import filedialog, messagebox
-import unicodedata
-
-# ------------------------------------------------------------------------------
-# 🛠️ FUNÇÕES DE LIMPEZA
-# ------------------------------------------------------------------------------
-def apenas_numeros(texto):
-    '''Deixa apenas os números limpos'''
-    return re.sub(r'\D', '', str(texto))
-
-def remove_accents(texto):
-    '''Remove acentos e deixa em MAIÚSCULO'''
-    try:
-        texto = str(texto)
-        texto = unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('utf-8')
-        return texto.upper().strip()
-    except:
-        return ""
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils import apenas_numeros, remove_accents
 
 # ------------------------------------------------------------------------------
 # ⚙️ MOTOR PRINCIPAL

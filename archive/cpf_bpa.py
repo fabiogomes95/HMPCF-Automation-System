@@ -1,6 +1,9 @@
 import sqlite3
 import firebirdsql
 from datetime import datetime
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils import apenas_numeros
 
 # ==============================================================================
 # SISTEMA GESTÃO BPA - SINCRONIZADOR COM CO_LOGRAD E PROTEÇÃO DE DADOS
@@ -53,8 +56,8 @@ def sincronizar():
             try:
                 # --- Tratamento de Dados ---
                 nome_bpa = str(p['nome']).upper().strip()[:30].strip()
-                cpf_limpo = ''.join(filter(str.isdigit, str(p['cpf'])))[:11]
-                sus_limpo = ''.join(filter(str.isdigit, str(p['sus'] or '')))[:15]
+                cpf_limpo = apenas_numeros(p['cpf'])[:11]
+                sus_limpo = apenas_numeros(p['sus'])[:15]
                 
                 # Formatação YYYYMMDD para chave de busca
                 dt_nasc_orig = str(p['dn']).strip()
@@ -64,7 +67,7 @@ def sincronizar():
                     else:
                         dt_nasc = datetime.strptime(dt_nasc_orig, '%Y-%m-%d').strftime('%Y%m%d')
                 except:
-                    dt_nasc = '19000101'
+                    dt_nasc = '19900101'
 
                 # --- BUSCA POR CHAVE COMPOSTA (NOME + DATA NASC) ---
                 cur_fb.execute("SELECT NOME FROM CADCNS WHERE NOME = ? AND DTNASC = ?", (nome_bpa, dt_nasc))
@@ -74,7 +77,7 @@ def sincronizar():
                 end = str(p['endereco'] or '').upper().strip()[:25]
                 num = str(p['numero'] or '').strip()[:5]
                 bairro = str(p['bairro'] or '').upper().strip()[:15]
-                tel_full = ''.join(filter(str.isdigit, str(p['tel'] or '')))
+                tel_full = apenas_numeros(p['tel'])
                 ddd = tel_full[:2] if len(tel_full) >= 10 else ''
                 tel = tel_full[-8:] if len(tel_full) >= 8 else tel_full
                 sexo = str(p['sexo'] or 'M').upper()[:1]

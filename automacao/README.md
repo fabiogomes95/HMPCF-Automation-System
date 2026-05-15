@@ -1,36 +1,83 @@
-# 🤖 Módulo de Automação e Digitação (RPA)
+# 🤖 Módulo de Automação RPA
 
-Este diretório contém os scripts responsáveis pela "Automação de Saída" do Ecossistema H.M.P.C.F. O módulo foi desenhado para eliminar a digitação manual, unindo uma interface ágil de separação de lotes a um robô de digitação de alta velocidade.
-
-## ⚙️ Scripts e Funcionalidades
-
-### 1. `digitacao.py` (Assistente Visual BPA)
-* **Objetivo:** Interface gráfica (GUI) rápida e ergonômica para selecionar os pacientes do dia e montar o lote de produção de faturamento.
-* **Como funciona:** Carrega a base inteira do BPA (`ExpPaciente.txt`) na memória RAM, permitindo buscas instantâneas por Nome, CPF ou Cartão SUS (Data Mapping).
-* **Destaques Operacionais:**
-  * Organização automática de múltiplos médicos/enfermeiros em um único arquivo de saída (`PRODUCAO_data.txt`).
-  * Foco total na ergonomia: o programa pode ser operado 100% pelo teclado (utilizando setas, TAB e Enter) para agilizar ao máximo a montagem do lote.
-
-### 2. `executor_rpa.py` (O Robô de Digitação)
-* **Objetivo:** Assumir o controle do mouse/teclado e injetar os dados diretamente no software oficial governamental do BPA.
-* **Blindagem e Travas de Segurança (Filtro Triplo):** Antes de digitar qualquer coisa, o robô atua como um inspetor severo. Ele verifica:
-  1. *Matemática:* Valida se o CNS atende à regra do Módulo 11 (via `utils.py`).
-  2. *Cruzamento de Dados:* Só permite a digitação se o paciente realmente existir dentro da base `ExpPaciente.txt`.
-  3. *Sanidade de Data:* Bloqueia datas corrompidas, idades no futuro ou nascimentos anteriores a 1900.
-* **Gestão de Lotes de Produção:** O robô fatia automaticamente listas gigantes em blocos limitados a **99 pacientes**, respeitando a limitação técnica de cada "folha" dentro do sistema BPA.
-* **Log de Auditoria:** Pacientes reprovados nas travas de segurança geram um log detalhado apontando a linha e o motivo da falha no arquivo `historico_rejeitados.txt` para inserir manualmente no BPA.
-
-## 🛠️ Tecnologias e Bibliotecas Utilizadas
-* **PyAutoGUI:** Motor principal de RPA, responsável por simular cliques e teclas e gerenciar as pausas estratégicas.
-* **Tkinter:** Utilizado para a criação da interface gráfica intuitiva do `digitacao.py`.
-* **Expressões Regulares (Regex):** Aplicadas para a extração cirúrgica de números de Cartão SUS e CPFs, driblando qualquer "sujeira" nos textos brutos.
-
-## 🚀 Como Utilizar a Automação
-1. Utilize o `digitacao.py` ou a sua planilha gerada para criar sua lista/lote de pacientes do dia.
-2. Execute o `executor_rpa.py` e digite os parâmetros no terminal (data, médico ou enfermeiro).
-3. Abra o sistema BPA em uma folha em branco, preencha o cabeçalho e confirme o início pressionando `Enter` na tela do robô.
-4. Após o *delay* de 5 segundos, tire as mãos do computador. O robô vai começar a preencher e salvar as fichas em lotes.
-⚠️ **Mecanismo de Defesa (Fail-Safe):** Caso você precise interromper a digitação do robô no meio do processo, mova o cursor do mouse rapidamente para qualquer um dos 4 cantos extremos do seu monitor.
+Este diretório contém o coração da automação do sistema HMPCF. Aqui moram o **robô digitador** (RPA), o **assistente de digitação manual** e o **extrator de documentos** — responsáveis por eliminar a digitação manual no sistema BPA governamental.
 
 ---
-*Módulo de Análise desenvolvido por **Fábio Gomes da Silva** em parceria com a IA (NotebookLM / Gemini) para o Hospital Municipal Presidente Café Filho.*
+
+## 📋 Scripts
+
+### 1. `cpf_sus.py` — Extrator e Validador de Documentos
+
+Lê um arquivo texto bagunçado (rascunho da triagem), **caça CPFs e Cartões SUS** usando regex, valida matematicamente (Módulo 11) e devolve uma lista limpa.
+
+**Regra de prioridade:** Se encontrar SUS e CPF na mesma linha, fica com o SUS.
+
+**Como funciona por dentro:**
+- Recebe: texto sujo tipo `"paciente 123.456.789-00 898004532690001 joão"`
+- Aplica `apenas_numeros()` em cada palavra
+- Testa se tem 11 dígitos (CPF) ou 15 dígitos (SUS)
+- Valida matematicamente
+- Retorna: `["898004532690001"]`
+
+**Importante:** Usa as funções do `utils.py` central — sem duplicação de código.
+
+---
+
+### 2. `digitacao.py` — Assistente de Digitação Manual
+
+Auxilia a montagem de lotes de produção para o BPA, rodando por trás do **Painel de Gestão** (Eel).
+
+**Funções:**
+- **`buscar_pacientes_memoria()`** — filtra a base RAM do Firebird por nome/SUS/CPF na velocidade da luz (retorna até 50 resultados)
+- **`criar_cabecalho_producao()`** — escreve o cabeçalho `PROFISSIONAL: NOME | DATA: DD/MM/AAAA` no arquivo de lote
+- **`adicionar_ficha_producao()`** — adiciona um documento ao lote com **quebra automática a cada 99 pacientes** (limite do BPA)
+
+---
+
+### 3. `executor_rpa.py` — Robô de Digitação (PyAutoGUI)
+
+**O cérebro da automação.** Assume o controle do teclado e digita os dados diretamente no software governamental do BPA.
+
+**Fluxo de execução:**
+1. `preparar_lotes()` — lê o arquivo de produção e valida cada documento contra a base RAM do Firebird
+2. `executar_pyautogui()` — para cada paciente:
+   - Digita o documento → aperta F7 (busca no BPA)
+   - Digita a data → TAB → digita o procedimento → "1" (quantidade)
+   - TAB → TAB → TAB → digita "2" → TAB → TAB → ENTER (salva)
+
+**Segurança:**
+- **Fail-safe:** mouse no canto da tela = parada imediata
+- **ESC:** interrompe o robô a qualquer momento
+- **Validação tripla:** só digita se o documento existir na base do governo
+
+---
+
+## 🛠️ Tecnologias
+
+| Biblioteca | Para que serve |
+|------------|----------------|
+| **PyAutoGUI** | Automação de teclado e mouse (RPA) |
+| **keyboard** | Detecção da tecla ESC para interrupção |
+| **re** | Extração de dígitos dos documentos |
+
+---
+
+## 🚀 Fluxo de Uso
+
+```
+Painel de Gestão (app_painel.py)
+  │
+  ├── Triagem (cpf_sus.py) → extrai documentos válidos
+  │
+  ├── Digitação (digitacao.py) → monta lotes de 99
+  │
+  └── Robô (executor_rpa.py) → digita no sistema BPA
+```
+
+1. Cole os dados sujos na tela de **Triagem** → `cpf_sus.py` limpa
+2. Associe enfermeiros e datas → `digitacao.py` monta os lotes
+3. Inicie o **Robô** → `executor_rpa.py` assume o controle
+
+---
+
+*Módulo de Automação desenvolvido por **Fábio Gomes da Silva** para o Hospital Municipal Presidente Café Filho.*

@@ -36,7 +36,7 @@ def sincronizar_contingencia():
         
         # Mapeamento prévio: Guarda quem já está no banco para evitar duplicações.
         cursor.execute("SELECT cpf, sus FROM pacientes")
-        mapa_banco = {apenas_numeros(row): (row, apenas_numeros(row[1])) for row in cursor.fetchall() if row}
+        mapa_banco = {apenas_numeros(row[0]): (row, apenas_numeros(row[1])) for row in cursor.fetchall() if row}
         
         adicionados, atualizados, ignorados = 0, 0, 0
         processados_log, erros_log = [], []
