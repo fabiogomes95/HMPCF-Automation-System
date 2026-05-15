@@ -199,3 +199,41 @@ HMPCF-Automation-System/
 
 ### Próximos passos possíveis
 - Nada urgente. Sistema está completo para o uso atual.
+
+---
+
+## Sessão 7 — 2026-05-15 — Consulta Atendimentos + IBGE raça
+
+### O que foi feito
+- **`analise/consulta_recepcao.py`** — Novo módulo com 3 funções:
+  - `consultar_atendimentos(data_inicio, data_fim)` → lista completa com JOIN em pacientes
+  - `resumo_atendimentos(...)` → total, por procedência, média/dia
+  - `atendimentos_por_dia(...)` → daily counts para gráfico
+  - Lê do `hospital.db` (SQLite), caminho configurável via `DB_SQLITE` no `.env`
+- **`web_painel/consulta.html`** — Página nova (435 linhas) no padrão do painel:
+  - Topbar azul igual às outras páginas, link "⬅️ Análise"
+  - Filtros de data com atalhos: Hoje, Esta Semana, Este Mês
+  - Stats cards: Total, Média/dia, por Procedência, Tipos
+  - Gráfico doughnut (Chart.js) — distribuição por procedência
+  - Gráfico de barras — atendimentos por dia no período
+  - Tabela rolável com sticky header (registro, paciente, CPF, DN, tel)
+  - Loading spinner durante a consulta
+  - 3 chamadas Eel em paralelo via `Promise.all`
+- **`web_painel/analise.html`** — Card "Consulta Atendimentos" adicionado (primeiro da grade)
+- **`app_painel.py`** — 3 novos `@eel.expose`:
+  - `consulta_listar_atendimentos`
+  - `consulta_resumo_atendimentos`
+  - `consulta_atendimentos_por_dia`
+- **`web_recepcao/index.html`** — Opção "AMARELA" adicionada ao campo Raça/Cor (IBGE 5 categorias: Branca, Preta, Parda, Amarela, Indígena). Layout ajustado naturalmente, empurrando "Ocupação" ligeiramente.
+- **`.env.example`** — Documentado `DB_SQLITE` com exemplo de caminho de rede
+
+### Como usar
+1. Abrir `app_painel.py` (porta 8001)
+2. Navegar para Análise / BI → Consulta Atendimentos
+3. Selecionar período (ou usar atalhos) e clicar Consultar
+4. Ver cards, gráficos e tabela
+
+### Notas
+- `hospital.db` precisa estar acessível de onde o `app_painel.py` roda
+- Se for em outra máquina, configurar `DB_SQLITE=\servidor\compartilhado\hospital.db` no `.env`
+- Gráficos usam Chart.js 4.4.7 via CDN
