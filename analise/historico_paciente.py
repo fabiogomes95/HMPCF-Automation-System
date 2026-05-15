@@ -13,7 +13,6 @@ from datetime import datetime
 pasta_atual = os.path.dirname(os.path.abspath(__file__))
 pasta_pai = os.path.abspath(os.path.join(pasta_atual, '..'))
 
-if pasta_atual not in sys.path: sys.path.append(pasta_atual)
 if pasta_pai not in sys.path: sys.path.append(pasta_pai)
 
 try:

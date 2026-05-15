@@ -1,106 +1,153 @@
-# 🏥 HMPCF-Automation-System (Ecossistema Hospitalar H.M.P.C.F)
+# 🏥 HMPCF-Automation-System — Ecossistema Hospitalar H.M.P.C.F
 
-> Este ecossistema foi desenvolvido para modernizar e automatizar o fluxo completo de dados do **Hospital Municipal Presidente Café Filho**. O projeto resolve o gargalo histórico entre a recepção física e o faturamento governamental, transformando processos manuais em uma operação totalmente otimizada, digital e à prova de falhas.
-
----
-
-## 🚀 Impacto e Produtividade
-
-A integração entre a **Recepção Automatizada**, o **Business Intelligence** e o **Robô RPA** trouxe resultados imediatos e mensuráveis para a instituição:
-
-* ⏳ **Cenário Anterior:** Recepção baseada em fichas de papel e digitação manual lenta (24h para processar 1 dia de produção).
-* ⚡ **Cenário Atual:** Cadastro digital inteligente e processamento de **4 dias de produção por turno/máquina**.
-* 📈 **Capacidade Total:** Entrega de **8 dias de produção por dia útil**, eliminando meses de backlog acumulado em tempo recorde.
-* 🏆 **Ganho Real:** **+400% de velocidade operacional** com margem de erro humano zero na entrada de faturamento.
+Sistema completo de automação hospitalar desenvolvido para modernizar o fluxo de dados do **Hospital Municipal Presidente Café Filho** (Extremoz/RN). Substitui fichas de papel por um fluxo digital integrado com **RPA**, **Business Intelligence** e **sincronização em nuvem**, resolvendo o gargalo entre a recepção física e o faturamento governamental (SUS/BPA).
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## 📈 Impacto Operacional
 
-Stack moderna, Full-Stack e robusta, com foco em **RPA (Robotic Process Automation)** e **Ciência de Dados**:
-
-<p align="left">
-  <img src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" alt="Python" />
-  <img src="https://img.shields.io/badge/flask-%23000.svg?style=for-the-badge&logo=flask&logoColor=white" alt="Flask" />
-  <img src="https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
-  <img src="https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5" />
-  <img src="https://img.shields.io/badge/css3-%231572B6.svg?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3" />
-  <img src="https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E" alt="JavaScript" />
-  <img src="https://img.shields.io/badge/pandas-%23150458.svg?style=for-the-badge&logo=pandas&logoColor=white" alt="Pandas" />
-  <img src="https://img.shields.io/badge/Google%20Drive-4285F4?style=for-the-badge&logo=googledrive&logoColor=white" alt="Google Drive" />
-</p>
-
-* 💻 **Linguagem Core:** Python
-* 🌐 **Web Framework (Backend):** Flask
-* 🖥️ **Frontend:** HTML5, CSS3 (`@media print`) e Vanilla JavaScript (ES6+ assíncrono)
-* 🗄️ **Banco de Dados:** SQLite3 (`hospital.db`) com consultas parametrizadas
-* 🤖 **Automação RPA:** PyAutoGUI e Tkinter (Interfaces Gráficas e Simulação Humana)
-* 📊 **Ciência de Dados & BI:** Pandas, Matplotlib, Seaborn e OpenPyXL
-* ☁️ **Integração Cloud:** Google Drive & Sheets API (Multithreading)
+| Indicador | Antes | Agora |
+|-----------|-------|-------|
+| Processamento | 24h para 1 dia de produção | 4 dias de produção por turno/máquina |
+| Capacidade | Backlog crescente | 8 dias de produção por dia útil |
+| Velocidade | — | **+400%** com margem de erro zero |
 
 ---
 
-## 📂 Arquitetura do Sistema e Módulos
+## 🧱 Arquitetura
 
-O projeto foi estruturado seguindo rigorosos padrões de modularização de software. Cada pasta possui o seu próprio `README.md` detalhado. Abaixo, a árvore principal do ecossistema:
-
-```text
+```
 📦 HMPCF-Automation-System
- ┣ 📂 analise       # Business Intelligence: Dashboards e relatórios automáticos.
- ┣ 📂 automacao     # Módulo RPA: O "robô" digitador e sua fila de dados (.csv).
- ┣ 📂 faturamento   # Integração: Conversores para .TXT (SUS) e sincronizadores.
- ┣ 📂 static        # Assets: Estilos CSS (Layout A4) e scripts Front-end.
- ┣ 📂 templates     # View: Interface Web da Recepção em HTML/Jinja2.
- ┣ 📜 app.py        # Core: Servidor central e o motor do "Gari da Nuvem".
- ┣ 📜 utils.py      # Cérebro: Motor de validações matemáticas e limpeza de dados.
- ┗ 📜 hospital.db   # Persistência: Banco de dados local SQLite.
+ ┣ 📂 analise/          # BI — Dashboards, relatórios Excel e PDF
+ ┣ 📂 automacao/        # RPA — Robô digitador, triagem e fila de lotes
+ ┣ 📂 faturamento/      # Integração SUS — conversores TXT e sincronizadores
+ ┣ 📂 web_recepcao/     # Frontend da Recepção (Eel)
+ ┣ 📂 web_painel/       # Frontend do Painel de Gestão (Eel)
+ ┣ 📂 archive/          # Ferramentas de manutenção DBA
+ ┣ 📂 assets/           # Recursos estáticos (ícones)
+ ┣ 📜 app_recepcao.py   # Servidor da Recepção (Eel, porta 8000)
+ ┣ 📜 app_painel.py     # Servidor do Painel de Gestão (Eel, porta 8001)
+ ┣ 📜 planilha_nuvem.py # "Gari da Nuvem" — sincronizador Google Sheets
+ ┣ 📜 utils.py          # Motor de validações (CPF, CNS, regex)
+ ┣ 📜 corrigir_data.py  # Correção de datas impossíveis no Firebird
+ ┣ 📜 hospital.db       # Banco SQLite local
+ ┣ 📜 credentials.json  # Chave de API Google Cloud
+ ┗ 📜 requirements.txt  # Dependências
 ```
 
-* **`/ (Raiz)` - O Núcleo do Servidor:** Contém o `app.py` (motor do servidor e a fila em segundo plano "Gari da Nuvem"), o `utils.py` (canivete suíço com validações matemáticas via Regex e Módulo 11) e o `start.vbs` (lançador silencioso).
-* **`/templates` e `/static` - Frontend Inteligente:** A interface de usuário. Converte o navegador numa folha A4 virtual para impressão e possui um cérebro em JavaScript que trava cliques duplos ("Efeito Metralhadora") e calcula idades pediátricas em tempo real.
-* **`/automacao` - Módulo RPA (Saída):** Une uma interface gráfica rápida de montagem de lotes a um robô injetor. O robô aplica um "Filtro Triplo" de segurança antes de digitar os dados em altíssima velocidade no sistema BPA governamental.
-* **`/faturamento` - Integração Oficial (SUS):** Scripts responsáveis por traduzir o banco de dados em Layout Posicional (TXT) do Datasus. Conta também com o "Smart Update" para sincronização de arquivos CSV legados e correção em contingência.
-* **`/analise` - Business Intelligence (BI):** O Cientista de Dados do hospital. Gera dashboards visuais de mapas de calor, fluxo etário e picos de atendimento, além de exportar relatórios gerenciais em Excel respeitando a "Regra da Madrugada" dos plantões.
-* **`/archive` - Caixa de Ferramentas (DBA):** Ferramentas de manutenção para limpar, auditar e corrigir registros do banco de dados (ex: exclusão em massa de CPFs corrompidos e injeção corretiva de dados no faturamento).
+---
+
+## ⚙️ Módulos
+
+### 🏪 Recepção (`app_recepcao.py` + `web_recepcao/`)
+Formulário web A4 com cadastro inteligente de pacientes, busca automática por CPF/SUS, classificação de risco, sinais vitais, comorbidades e impressão do boletim. Atalho F2 para salvar. Validação matemática de CPF e SUS em tempo real no frontend.
+
+### 📊 Painel de Gestão (`app_painel.py` + `web_painel/`)
+Central de controle com 3 módulos:
+- **Digitação** — busca pacientes na base BPA (Firebird em RAM), monta lotes de 99 com quebra automática
+- **Triagem** — extrai CPF/SUS de dados sujos, divide em lotes por enfermeiro
+- **Robô RPA** — executa digitação automática no sistema BPA governamental com PyAutoGUI
+
+### ☁️ Gari da Nuvem (`planilha_nuvem.py`)
+Thread em background sincroniza atendimentos do SQLite para uma planilha Google Sheets em tempo real, respeitando a regra de plantão (07h).
+
+### 🤖 Automação / RPA (`automacao/`)
+- **`executor_rpa.py`** — robô digitador com validação tripla e fail-safe (mouse no canto para parar)
+- **`digitacao.py`** — assistente de digitação manual com montagem de lotes
+- **`cpf_sus.py`** — extrator/validador de CPF e SUS via regex + Módulo 11
+
+### 📋 Faturamento / SUS (`faturamento/`)
+- `gerador_arquivo_bpa.py` — exporta SQLite → TXT posicional Datasus
+- `gerador.csv.py` — converte CSVs antigos para TXT BPA
+- `banco_de_dados_hospital_bpa.py` — sincronizador SQLite ↔ Firebird (Tkinter)
+- `importador_recepcao.py` — importa CSV com Smart Update (enriquece campos vazios)
+- `sincronizar_contingencia.py` — processa planilhas offline com regex inteligente
+- `nacionalidade_gdb.py` — aniquila NULLs no Firebird
+- `duplicatas_gdb.py` — caça e remove duplicatas por pontuação
+
+### 📈 Business Intelligence (`analise/`)
+- `dashboard_visual.py` — dashboard PNG (idade x sexo, top bairros, picos, volume)
+- `planilha_producao.py` — relatório Excel com separação DIURNO/NOTURNO e regra da madrugada
+- `auditoria_periodica.py` — PDF de auditoria mensal/trimestral/semestral (WeasyPrint)
+- `analise_anual_csv.py` — relatório Top 20 a partir de CSVs
+- `historico_paciente.py` — "Lupa do Auditor" — busca interativa por nome/CPF/SUS
+
+### 🛠️ Manutenção / DBA (`archive/`)
+- `faxina.py` — faxina geral do banco SQLite (valida CPF/SUS, mescla duplicados, recria estrutura)
+- `cns_validator_tool.py` — faxina cirúrgica de CNS inválidos
+- `fusao.py` — deduplicação inteligente com fusão de clones
+- `auditor_bpa.py` — auditor de sexo em TXT BPA
+- `corrigir_sexo_bpa.py` — RPA corretor de sexo no sistema BPA
+- `att_sexo.py` — atualização em massa de sexo no SQLite
+- `sonda_db.py` — debug de registros no banco
+- `cpf_bpa.py` — sincronizador alternativo por nome + data de nascimento
+- `gerar_txt_fusao.py` — relatório pós-faxina
 
 ---
 
-## 🚀 Instalação e Execução
+## 🛠️ Tecnologias
 
-### 🧪 1. Ambiente Virtual
-Clone o repositório e crie um ambiente virtual isolado para evitar conflito de bibliotecas no seu sistema:
+<p align="left">
+  <img src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" />
+  <img src="https://img.shields.io/badge/eel-2E8B57?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white" />
+  <img src="https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white" />
+  <img src="https://img.shields.io/badge/css3-%231572B6.svg?style=for-the-badge&logo=css3&logoColor=white" />
+  <img src="https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E" />
+  <img src="https://img.shields.io/badge/pandas-%23150458.svg?style=for-the-badge&logo=pandas&logoColor=white" />
+  <img src="https://img.shields.io/badge/firebird-CC2927?style=for-the-badge&logo=firebird&logoColor=white" />
+  <img src="https://img.shields.io/badge/Google%20Sheets-34A853?style=for-the-badge&logo=googlesheets&logoColor=white" />
+</p>
+
+- **Backend:** Python 3.11+, Eel (Desktop WebView), Firebird SQL
+- **Frontend:** HTML5, CSS3 (`@media print`), JavaScript ES6+, Bootstrap 5
+- **RPA:** PyAutoGUI
+- **BI:** Pandas, Matplotlib, Seaborn, OpenPyXL, WeasyPrint
+- **Cloud:** Google Sheets & Drive API (gspread, google-auth)
+- **Banco:** SQLite3, Firebird (BPAMAG.GDB)
+
+---
+
+## 🚀 Instalação
 
 ```bash
-git clone [https://github.com/fabiogomes95/HMPCF-Automation-System.git](https://github.com/fabiogomes95/HMPCF-Automation-System.git)
+git clone https://github.com/fabiogomes95/HMPCF-Automation-System.git
 cd HMPCF-Automation-System
 python -m venv venv
 
-# Ativar no Windows:
+# Windows:
 venv\Scripts\activate
-
-# Ativar no Linux/Mac:
+# Linux/Mac:
 source venv/bin/activate
-```
 
-### 📦 2. Dependências
-
-Com o ambiente ativado, instale as bibliotecas exigidas:
-```bash
-Bash
 pip install -r requirements.txt
 ```
 
-### ⚙️ 3. Configuração (Integração em Nuvem)
+### ⚙️ Configuração Google Sheets
+Coloque o arquivo `credentials.json` (Google Cloud Console) na raiz do projeto para ativar o Gari da Nuvem.
 
-O sistema possui uma integração assíncrona com o Google Sheets ("Gari da Nuvem").
-Para que funcione, coloque o seu arquivo de chave de API chamado credentials.json (gerado no Google Cloud Console) diretamente na pasta raiz do projeto.
+### ▶️ Execução
 
-### ▶️ 4. Execução
-Para abrir a recepção inteligente, você tem duas opções:
+| Módulo | Comando | Porta |
+|--------|---------|-------|
+| Recepção | `python app_recepcao.py` | 8000 |
+| Painel de Gestão | `python app_painel.py` | 8001 |
+| Gari da Nuvem | Inicia automaticamente com a Recepção | — |
 
-Modo Desenvolvedor: Execute python app.py no terminal e acesse http://127.0.0.1:5000 no navegador.
+**Produção (Windows):** execute `start.vbs` — sobe o servidor oculto e abre o navegador.
 
-Modo Produção (Windows): Dê dois cliques no arquivo start.vbs. Ele subirá o servidor de forma oculta e abrirá a janela do navegador automaticamente.
+---
 
---------------------------------------------------------------------------------
-Desenvolvido por **Fábio Gomes da Silva** em parceria com a IA **(NotebookLM / Gemini)** para o **Hospital Municipal Presidente Café Filho.**
+## 📌 Fluxo de Trabalho
+
+1. **Recepção** cadastra pacientes no formulário web → SQLite
+2. **Gari da Nuvem** sincroniza com Google Sheets em background
+3. **Painel de Gestão** carrega base BPA do Firebird
+4. **Digitação/Triagem** prepara lotes de 99 pacientes
+5. **Robô RPA** digita automaticamente no sistema governamental
+6. **Faturamento** exporta para TXT Datasus / sincroniza sistemas
+7. **BI** gera dashboards, relatórios Excel e PDFs de auditoria
+
+---
+
+Desenvolvido por **Fábio Gomes da Silva** • <fabiogsilva@disroot.org>

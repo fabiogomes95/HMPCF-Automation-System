@@ -13,11 +13,7 @@ import re
 
 # Sobe um nível de pasta para importar a trava de validação do arquivo utils.py
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-try:
-    from utils import valida_cns
-except ImportError:
-    from utils import valida_cns # Caso o script rode de outro local
+from utils import valida_cns
 
 print("==================================================")
 print("🎯 AUDITORIA BPA: POSIÇÃO 53 + VALIDAÇÃO CNS")

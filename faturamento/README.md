@@ -1,34 +1,163 @@
-# 💰 Módulo de Faturamento e Integração BPA
+# 💰 Módulo de Faturamento e Integração SUS
 
-Este diretório contém os scripts responsáveis pela etapa final do Ecossistema H.M.P.C.F: a comunicação com o Ministério da Saúde. 
-
-Eles pegam todos os atendimentos salvos, aplicam rigorosas regras de validação (para evitar rejeição e perda de receita) e geram lotes, planilhas e arquivos posicionais prontos para envio ao Governo.
-
-## ⚙️ Scripts e Funcionalidades
-
-### 1. `gerador_arquivo_bpa.py` (O Motor de Exportação)
-* **Objetivo:** Puxar os cadastros do banco local e transformá-los no exato arquivo `TXT` que o software governamental do BPA exige.
-* **Como funciona:** Varre o banco de dados (por mês ou geral) e formata os dados em um **Layout Posicional** rigoroso (ex: o Nome sempre tem 30 caracteres preenchidos com espaços; o Sexo sempre na mesma posição).
-* **Prevenção de Glosa:** Durante a exportação, aplica a trava de validação do Cartão SUS. Se o SUS for falso, o paciente não entra no arquivo final e o sistema gera um `log_erros.txt` para aviso à gestão.
-
-### 2. `importador_recepcao.py` (O Importador Inteligente em Lote)
-* **Objetivo:** Processar e centralizar lotes de arquivos `.csv` gerados diariamente pela recepção.
-* **Smart Update (Atualização Cirúrgica):** Ele não apenas insere pacientes novos. Se o paciente já existir no banco, ele lê campo a campo. Se o banco estiver sem CPF, mas a recepção conseguiu o CPF hoje, o script atualiza apenas esse campo, enriquecendo o banco de dados sem apagar o histórico.
-
-### 3. `sincronizar_contingencia.py` (O Salva-Vidas de Planilhas Manuais)
-* **Objetivo:** Sincronizar dados quando a recepção trabalha offline ou anota em planilhas secundárias.
-* **Como funciona:** Utiliza *Expressões Regulares (Regex)* como "caçadores de dados". O script procura onde está o nome, o CPF e o SUS independentemente da coluna em que a recepcionista digitou, limpando toda a sujeira de formatação.
-* **Auditoria:** Gera dois relatórios físicos no final: `PROCESSADOS` (quem deu certo) e `ERROS` (quem ficou de fora e o motivo exato).
-
-## 🛠️ Tecnologias Utilizadas
-* **Tkinter:** Criação de janelas flutuantes e exploradores de arquivos para uso simplificado pela equipe administrativa.
-* **SQLite3:** Leitura em massa dos dados utilizando a cláusula `JOIN` para unir os atendimentos ao cadastro.
-* **Regex (re):** Algoritmos de caça a padrões para identificar CPFs e Cartões SUS perdidos no meio de textos sujos.
-
-## 🚀 Como Utilizar
-1. Execute o script desejado com dois cliques ou pelo terminal.
-2. Interaja com a janela suspensa (Pop-up) para escolher o mês desejado ou a planilha de entrada.
-3. Aguarde o processamento. Os arquivos de saída e os relatórios de erros serão salvos automaticamente na mesma pasta de origem.
+Este diretório contém os scripts responsáveis por **traduzir os dados do sistema para a linguagem do Governo**. Eles convertem cadastros do SQLite para o formato BPA (Datasus), sincronizam com o Firebird oficial, importam planilhas legadas e garantem que nenhum paciente seja perdido — mesmo em contingência.
 
 ---
-*Desenvolvido por **Fábio Gomes da Silva** em parceria com a IA (NotebookLM / Gemini) para o Hospital Municipal Presidente Café Filho.*
+
+## 📋 Scripts
+
+### 1. `gerador_arquivo_bpa.py` — Exportador SQLite → TXT BPA
+
+Gera o arquivo **TXT posicional** que o sistema BPA do governo importa.
+
+**Regras de negócio:**
+- Sexo vazio/inválido → `I` (Indefinido)
+- Data de nascimento inválida → `19900101` (01/01/1990)
+- SUS com menos de 15 dígitos → paciente **barrado** com registro no log de erros
+
+**Formato de saída:** Layout posicional do Datasus (nome com 30 caracteres, posições fixas para cada campo).
+
+**Como usar:**
+```bash
+python gerador_arquivo_bpa.py
+# Escolha o mês (opcional) e onde salvar o .txt
+```
+
+---
+
+### 2. `gerador.csv.py` — Conversor de CSVs Antigos para TXT BPA
+
+Lê o formato CSV usado antes do sistema atual (13 colunas: REGISTRO, NOME, DN, IDADE, SEXO, RAÇA, CIDADE, HORARIO, CPF, SUS, OBS, ENDERECO, TEL) e converte para o layout posicional do BPA.
+
+**Diferenciais:**
+- Faz **parse inteligente do endereço** no formato `"R. EXEMPLO, 123. CENTRO"` → separa Rua, Número e Bairro
+- Data quebrada → `19900101`
+- Sexo inválido → `I`
+- Gera log de pacientes barrados (SUS inválido)
+
+**Como usar:**
+```bash
+python gerador.csv.py
+# Selecione o CSV antigo
+```
+
+---
+
+### 3. `importador_recepcao.py` — Importador em Lote com Smart Update
+
+Varre a pasta atual em busca de arquivos `.csv` da recepção e os importa para o SQLite com **inteligência cirúrgica**.
+
+**Smart Update:** Se o paciente já existe, enriquece **apenas os campos vazios** — nunca sobrescreve dados preenchidos.
+
+**Regras:**
+- Detecta automaticamente se o separador é `,` ou `;`
+- Ignora pacientes com SUS inválido (valida CNS)
+- Gera relatório de auditoria em `.txt` com todos os novos cadastros
+
+**Como usar:**
+```bash
+python importador_recepcao.py
+```
+
+---
+
+### 4. `banco_de_dados_hospital_bpa.py` — Sincronizador SQLite → Firebird
+
+Integra os pacientes do `hospital.db` (SQLite) com o banco oficial do BPA (`BPAMAG.GDB` / Firebird).
+
+**Fluxo:**
+- Busca paciente por **NOME + DATA DE NASCIMENTO** no Firebird
+- Se existe → **UPDATE** (atualiza endereço, telefone, CPF, SUS)
+- Se não existe → **INSERT** (cadastro completo)
+
+**Como usar:**
+```bash
+python banco_de_dados_hospital_bpa.py
+# Selecione o arquivo .gdb e informe o mês (opcional)
+```
+
+---
+
+### 5. `sincronizar_contingencia.py` — Sincronizador de Planilhas Offline
+
+**O salva-vidas do sistema.** Quando a recepção fica offline (falta de energia/internet) e anota em planilhas manuais, este script consegue ler esses dados bagunçados.
+
+**Como faz:**
+- Usa **regex inteligente** para "caçar" CPF, SUS, Nome e Data de Nascimento — independente da coluna onde foram digitados
+- Detecta automaticamente se o CSV usa `,` ou `;`
+- Se o paciente já existe no banco com SUS corrompido, atualiza com o SUS válido da planilha
+- Gera dois logs: `PROCESSADOS` e `ERROS`
+
+**Como usar:**
+```bash
+python sincronizar_contingencia.py
+# Selecione a planilha CSV manual
+```
+
+---
+
+### 6. `nacionalidade_gdb.py` — Aniquilador de NULLs no Firebird
+
+Varre **todas as colunas** da tabela `CADCNS` no Firebird e substitui valores `NULL` por `''` (texto) ou `0` (número).
+
+**Por que existe:** O sistema BPA do governo **travava** quando encontrava campos NULL, gerando o erro `UDFLIB`. Este script resolve isso de uma vez.
+
+**Como usar:**
+```bash
+python nacionalidade_gdb.py
+# Selecione o arquivo .gdb
+```
+
+---
+
+### 7. `duplicatas_gdb.py` — Caçador de Duplicatas no Firebird
+
+Agrupa pacientes pelo **Cartão SUS**, avalia cada ficha por um **sistema de pontuação** (CPF preenchido = 5pts, endereço = 1pt, telefone = 1pt), mantém a melhor e deleta as inferiores.
+
+**Como usar:**
+```bash
+python duplicatas_gdb.py
+# Selecione o arquivo .gdb
+```
+
+---
+
+## 🛠️ Tecnologias
+
+| Biblioteca | Para que serve |
+|------------|----------------|
+| **SQLite3** | Conexão com o banco local hospital.db |
+| **Firebird SQL** | Conexão com o banco oficial BPAMAG.GDB |
+| **Pandas** | Leitura e processamento de CSVs |
+| **Tkinter** | Janelas de seleção de arquivos e diálogos |
+| **Regex (re)** | Extração de documentos de textos sujos |
+
+---
+
+## 📂 Fluxo dos Dados
+
+```
+CSVs da Recepção
+  │
+  ├── importador_recepcao.py  →  SQLite (Smart Update)
+  │
+  ├── sincronizar_contingencia.py  →  SQLite (modo offline)
+  │
+  └── gerador.csv.py  →  TXT BPA (CSVs antigos)
+  
+SQLite
+  │
+  ├── gerador_arquivo_bpa.py  →  TXT BPA (Datasus)
+  │
+  └── banco_de_dados_hospital_bpa.py  →  Firebird (BPAMAG.GDB)
+
+Firebird
+  │
+  ├── nacionalidade_gdb.py  →  Aniquila NULLs
+  │
+  └── duplicatas_gdb.py  →  Remove duplicatas
+```
+
+---
+
+*Módulo de Faturamento desenvolvido por **Fábio Gomes da Silva** para o Hospital Municipal Presidente Café Filho.*

@@ -3,12 +3,9 @@
 # ==============================================================================
 import sqlite3
 import os
-
-try:
-    from utils import apenas_numeros, valida_cpf, valida_cns
-except ImportError:
-    print("❌ ERRO: Arquivo 'utils.py' não encontrado.")
-    exit()
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils import apenas_numeros, valida_cpf, valida_cns
 
 def faxina_definitiva():
     print("==================================================")

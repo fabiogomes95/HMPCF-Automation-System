@@ -8,7 +8,6 @@
 # ==============================================================================
 
 import sqlite3
-import re
 import os
 import sys
 import tkinter as tk

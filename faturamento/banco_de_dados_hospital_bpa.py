@@ -7,25 +7,12 @@
 
 import sqlite3
 import firebirdsql
-import re
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
-import unicodedata
-
-# ------------------------------------------------------------------------------
-# 🛠️ FERRAMENTAS DE LIMPEZA
-# ------------------------------------------------------------------------------
-def apenas_numeros(texto):
-    return re.sub(r'\D', '', str(texto))
-
-def remove_accents(texto):
-    try:
-        texto = str(texto)
-        texto = unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('utf-8')
-        return texto.upper().strip()
-    except:
-        return ""
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils import apenas_numeros, remove_accents
 
 # ------------------------------------------------------------------------------
 # ⚙️ MOTOR DE INTEGRAÇÃO
@@ -119,14 +106,14 @@ def sincronizar_sqlite_para_gdb():
 
             # --- DATA DE NASCIMENTO (Injeção de 1990) ---
             dn_raw = str(p['dn']).strip() if 'dn' in p.keys() and p['dn'] else ""
-            dt_nasc = '19000101'
+            dt_nasc = '19900101'
             if '-' in dn_raw:
                 parts = dn_raw.split('-')
                 if len(parts) >= 3: dt_nasc = f"{parts[0][:4].zfill(4)}{parts[1][:2].zfill(2)}{parts[2][:2].zfill(2)}"
             elif '/' in dn_raw:
                 parts = dn_raw.split('/')
                 if len(parts) >= 3: dt_nasc = f"{parts[2][:4].zfill(4)}{parts[1][:2].zfill(2)}{parts[0][:2].zfill(2)}"
-            if len(dt_nasc) != 8: dt_nasc = '19000101'
+            if len(dt_nasc) != 8: dt_nasc = '19900101'
 
             # --- SEXO (Regra do I) ---
             sexo_raw = str(p['sexo']).strip().upper() if 'sexo' in p.keys() and p['sexo'] else ""

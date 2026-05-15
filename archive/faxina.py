@@ -1,36 +1,13 @@
 import sqlite3
-import re
 import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils import apenas_numeros, valida_cns, valida_cpf
 
 # Garante que vai achar o banco na pasta certa
 DIRETORIO_ATUAL = os.path.dirname(os.path.abspath(__file__))
-os.chdir(DIRETORIO_ATUAL)
+os.chdir(os.path.join(DIRETORIO_ATUAL, '..'))
 DB_NAME = 'hospital.db'
-
-# ==============================================================================
-# 🛡️ FUNÇÕES DE VALIDAÇÃO (O Inspetor Implacável)
-# ==============================================================================
-def limpar_numero(valor):
-    """Remove pontuações mantendo os zeros à esquerda"""
-    if not valor: return ""
-    return re.sub(r'\D', '', str(valor)).strip()
-
-def valida_cns(cns):
-    """Matemática oficial do DATASUS"""
-    if not cns or len(cns) != 15 or cns[0] not in '12789': 
-        return False
-    soma = sum(int(cns[i]) * (15 - i) for i in range(15))
-    return soma % 11 == 0
-
-def valida_cpf(cpf):
-    """Matemática oficial da Receita Federal"""
-    if not cpf or len(cpf) != 11 or len(set(cpf)) == 1: 
-        return False
-    soma_1 = sum(int(cpf[i]) * (10 - i) for i in range(9))
-    digito_1 = (soma_1 * 10 % 11) % 10
-    soma_2 = sum(int(cpf[i]) * (11 - i) for i in range(10))
-    digito_2 = (soma_2 * 10 % 11) % 10
-    return str(digito_1) == cpf[9] and str(digito_2) == cpf[10]
 
 # ==============================================================================
 # 🧹 A GRANDE FAXINA COM AUDITORIA E REESTRUTURAÇÃO
@@ -50,8 +27,8 @@ def fazer_faxina():
     
     for p in pacientes_sujos:
         dados = dict(p)
-        cpf_bruto = limpar_numero(dados.get('cpf', ''))
-        sus_bruto = limpar_numero(dados.get('sus', ''))
+        cpf_bruto = apenas_numeros(dados.get('cpf', ''))
+        sus_bruto = apenas_numeros(dados.get('sus', ''))
         
         # 1. PASSA PELA AUDITORIA: Se o documento for falso, ele vira vazio ("")
         cpf_puro = cpf_bruto if valida_cpf(cpf_bruto) else ""
@@ -107,8 +84,8 @@ def fazer_faxina():
     cursor.execute("SELECT id, cpf, sus FROM atendimentos")
     for a in cursor.fetchall():
         id_atend = a['id']
-        a_cpf = limpar_numero(a['cpf'])
-        a_sus = limpar_numero(a['sus'])
+        a_cpf = apenas_numeros(a['cpf'])
+        a_sus = apenas_numeros(a['sus'])
         
         # Valida os dados históricos
         a_cpf_ok = a_cpf if valida_cpf(a_cpf) else ""
