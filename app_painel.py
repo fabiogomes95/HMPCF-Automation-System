@@ -19,12 +19,12 @@ pra fazer buscas ultrarrápidas (sem consultar o banco toda hora).
 
 import os
 import glob
-from datetime import datetime
+from datetime import datetime, timedelta
 import eel
 import firebirdsql
 import sys
 from logging_setup import logger
-from config import FIREBIRD_PATH, FIREBIRD_USER, FIREBIRD_PASSWORD
+from config import FIREBIRD_PATH, FIREBIRD_USER, FIREBIRD_PASSWORD, ADMIN_PASSWORD, ADMIN_SESSION_MINUTES
 from auditoria_log import registrar as log_auditoria
 from integracao.backup_utils import fazer_backup, listar_backups
 
@@ -71,6 +71,97 @@ from analise import historico_paciente
 # =====================================================================
 # Lista global que vai segurar todos os pacientes do BPAMAG.GDB
 BASE_PACIENTES = []
+
+# Admin session management (expiry timestamp or None for no session)
+# If `ADMIN_PASSWORD` is empty, enabling admin will create an unlimited session (legacy behavior).
+ADMIN_SESSION_EXPIRY = None  # type: datetime | None
+
+
+def _is_admin_active() -> bool:
+    global ADMIN_SESSION_EXPIRY
+    if ADMIN_SESSION_EXPIRY is None:
+        return False
+    # special value: string 'unlimited' used when no password configured
+    if isinstance(ADMIN_SESSION_EXPIRY, str) and ADMIN_SESSION_EXPIRY == 'unlimited':
+        return True
+    try:
+        return ADMIN_SESSION_EXPIRY > datetime.now()
+    except Exception:
+        return False
+
+
+@eel.expose
+def set_admin(password: str) -> str:
+    """Set admin mode if password matches config.ADMIN_PASSWORD.
+
+    Returns a status message.
+    """
+    global IS_ADMIN
+    try:
+        global ADMIN_SESSION_EXPIRY
+        if ADMIN_PASSWORD == "":
+            # Legacy: allow admin without password -> unlimited session
+            ADMIN_SESSION_EXPIRY = 'unlimited'
+            logger.info("Admin mode enabled (no password configured)")
+            log_auditoria("admin_auth", "status=enabled_no_password")
+            return "Admin mode enabled (no password configured)."
+        if password == ADMIN_PASSWORD:
+            expiry = datetime.now() + timedelta(minutes=ADMIN_SESSION_MINUTES)
+            ADMIN_SESSION_EXPIRY = expiry
+            logger.info("Admin mode enabled by correct password (expires %s)", expiry.isoformat())
+            log_auditoria("admin_auth", "status=success")
+            return f"Admin mode enabled for {ADMIN_SESSION_MINUTES} minute(s)."
+        # failed
+        ADMIN_SESSION_EXPIRY = None
+        logger.warning("Admin authentication failed")
+        log_auditoria("admin_auth", "status=failure")
+        return "Senha inválida."
+    except Exception as e:
+        logger.error(f"Erro ao definir admin: {e}")
+        try:
+            log_auditoria("admin_auth", f"status=error details={str(e)[:120]}")
+        except Exception:
+            pass
+        return f"Erro: {e}"
+
+
+@eel.expose
+def is_admin() -> bool:
+    """Returns True if an admin session is active. If the session expired, logs an event."""
+    global ADMIN_SESSION_EXPIRY
+    try:
+        if ADMIN_SESSION_EXPIRY is None:
+            return False
+        if isinstance(ADMIN_SESSION_EXPIRY, str) and ADMIN_SESSION_EXPIRY == 'unlimited':
+            return True
+        if ADMIN_SESSION_EXPIRY > datetime.now():
+            return True
+        # expired
+        ADMIN_SESSION_EXPIRY = None
+        logger.info("Admin session expired")
+        log_auditoria("admin_auth", "status=expired")
+        return False
+    except Exception as e:
+        logger.error(f"Erro ao checar admin: {e}")
+        return False
+
+
+@eel.expose
+def logout_admin() -> str:
+    """Invalidate current admin session (logout)."""
+    global ADMIN_SESSION_EXPIRY
+    try:
+        ADMIN_SESSION_EXPIRY = None
+        logger.info("Admin logged out")
+        log_auditoria("admin_auth", "status=logout")
+        return "Admin logged out."
+    except Exception as e:
+        logger.error(f"Erro ao deslogar admin: {e}")
+        try:
+            log_auditoria("admin_auth", f"status=error details={str(e)[:120]}")
+        except Exception:
+            pass
+        return f"Erro: {e}"
 
 
 def carregar_base() -> None:
@@ -310,6 +401,8 @@ def integracao_importar_lote(separador: str = ";") -> str:
 @eel.expose
 def integracao_sincronizar_firebird(mes_ano: str = "", caminho_gdb: str = "") -> str:
     """Sincroniza SQLite → Firebird (com backup automático)."""
+    if not IS_ADMIN:
+        return "Erro: operação restrita a administradores."
     gdb = caminho_gdb or FIREBIRD_PATH
     fazer_backup(gdb, "pre_sincronizar")
     log_auditoria("sincronizar_firebird", f"mes={mes_ano} gdb={gdb}")
@@ -333,6 +426,8 @@ def integracao_sincronizar_contingencia(caminho_csv: str = "") -> str:
 @eel.expose
 def integracao_aniquilar_nulls(caminho_gdb: str = "") -> str:
     """Remove NULLs do Firebird (com backup automático)."""
+    if not IS_ADMIN:
+        return "Erro: operação restrita a administradores."
     gdb = caminho_gdb or FIREBIRD_PATH
     fazer_backup(gdb, "pre_aniquilar_nulls")
     log_auditoria("aniquilar_nulls", f"gdb={gdb}")
@@ -345,6 +440,8 @@ def integracao_aniquilar_nulls(caminho_gdb: str = "") -> str:
 @eel.expose
 def integracao_limpar_duplicatas(caminho_gdb: str = "") -> str:
     """Remove duplicatas do Firebird (com backup automático)."""
+    if not IS_ADMIN:
+        return "Erro: operação restrita a administradores."
     gdb = caminho_gdb or FIREBIRD_PATH
     fazer_backup(gdb, "pre_limpar_duplicatas")
     log_auditoria("limpar_duplicatas", f"gdb={gdb}")

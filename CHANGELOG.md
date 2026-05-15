@@ -10,6 +10,9 @@
 
 ### Changed
 - **`archive/` → `scripts/`** — Renomeado diretório e atualizadas todas as referências nos docstrings.
+- `limpar_clones.py` movido da raiz para `scripts/`.
+- `scripts/faxina.py` renomeado para `scripts/faxina_sqlite.py` para indicar o uso do banco SQLite nativo do Python.
+- Raiz `faxina.py` movido para `scripts/faxina_firebird.py` para manter o script Firebird separado.
 - **`app_painel.py`**, **`corrigir_data.py`**, **`integracao/banco_de_dados_hospital_bpa.py`**, **`integracao/duplicatas_gdb.py`**, **`integracao/nacionalidade_gdb.py`**, **`scripts/cpf_bpa.py`** — Agora usam `config.py` em vez de valores hardcoded para Firebird.
 - **`planilha_nuvem.py`** — Agora usa `config.py` para Google Sheet ID, escopos e caminho do SQLite.
 - **`integracao/gerador_arquivo_bpa.py`**, **`integracao/gerador_csv.py`** — Agora usam `config.py` para CNS_PROFISSIONAL e códigos BPA.
@@ -99,7 +102,7 @@
   - `main.py` (helpers `info/sucesso/aviso/erro` agora usam `logger.info/warning/error`)
   - `analise/analise_anual_csv.py`, `analise/auditoria_periodica.py`, `analise/dashboard_visual.py`, `analise/historico_paciente.py`, `analise/planilha_producao.py`
   - `integracao/converter_csv.py`, `integracao/corrigir_nulls.py`, `integracao/duplicatas_gdb.py`, `integracao/exportar_bpa.py`, `integracao/importador_recepcao.py`, `integracao/sincronizar_contingencia.py`, `integracao/sincronizar_firebird.py`
-  - `scripts/atualizar_sexo.py`, `scripts/auditor_bpa.py`, `scripts/corrigir_data.py`, `scripts/corrigir_sexo_bpa.py`, `scripts/faxina.py`, `scripts/fusao.py`, `scripts/inspecionar_db.py`, `scripts/relatorio_fusao.py`, `scripts/validar_cns.py`
+  - `scripts/atualizar_sexo.py`, `scripts/auditor_bpa.py`, `scripts/corrigir_data.py`, `scripts/corrigir_sexo_bpa.py`, `scripts/faxina_sqlite.py`, `scripts/fusao.py`, `scripts/inspecionar_db.py`, `scripts/relatorio_fusao.py`, `scripts/validar_cns.py`
 - `backlog.md` — item de logging marcado como concluído
 
 ## [2026-05-15] — Sessão 6

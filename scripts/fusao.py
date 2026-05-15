@@ -1,7 +1,7 @@
 """
 FUSAO.PY — Fusão Inteligente de Pacientes Duplicados
 ======================================================
-Esse script é a FAXINA V3 — mais inteligente que a faxina.py
+Esse script é a FAXINA V3 — mais inteligente que o `scripts/faxina_sqlite.py`
 porque ele lida com casos complexos de duplicação.
 
 O PROBLEMA REAL:

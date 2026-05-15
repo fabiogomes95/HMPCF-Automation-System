@@ -112,6 +112,8 @@ python integracao/corrigir_nulls.py
 # Informe o caminho do .gdb (opcional), ou use o padrão
 ```
 
+> **Admin-only:** esta operação altera muitos registros no banco oficial. No Painel de Gestão (`web_painel`), ela está disponível apenas para usuários com permissões administrativas.
+
 ---
 
 ### 7. `duplicatas_gdb.py` — Caçador de Duplicatas no Firebird
@@ -123,6 +125,8 @@ Agrupa pacientes pelo **Cartão SUS**, avalia cada ficha por um **sistema de pon
 python duplicatas_gdb.py
 # Informe o caminho do .gdb (opcional), ou use o padrão
 ```
+
+> **Admin-only:** remover duplicatas é destrutivo. No Painel de Gestão, essa ação exige autenticação administrativa.
 
 ---
 

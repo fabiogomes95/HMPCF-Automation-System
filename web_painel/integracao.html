@@ -13,6 +13,10 @@
 <div class="topbar">
     <a href="index.html" style="position: absolute; left: 30px; color: white; text-decoration: none; font-weight: 600;">⬅️ Início</a>
     <h4>🔌 MÓDULO DE INTEGRAÇÃO SUS</h4>
+    <div style="position: absolute; right: 30px; top: 12px;">
+        <span id="adminStatus" class="badge bg-secondary">Admin: off</span>
+        <button id="adminLogoutBtn" class="btn btn-sm btn-outline-light" style="margin-left:8px; display:none;" onclick="logoutAdmin()">Logout</button>
+    </div>
 </div>
 
 <div class="container py-4">
@@ -57,20 +61,20 @@
             </div>
         </div>
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('aniquilar_nulls')">
+            <div class="module-card admin-only" style="padding: 20px; cursor: pointer;" onclick="pedirSenhaAdmin('aniquilar_nulls')">
                 <div class="module-icon" style="font-size: 2rem;">💣</div>
-                <h5>Aniquilar NULLs no Firebird</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Remove campos NULL do BPAMAG.GDB</p>
+                <h5>Aniquilar NULLs no Firebird <span class="badge bg-danger ms-2">Admin</span></h5>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Remove campos NULL do BPAMAG.GDB (admin only)</p>
             </div>
         </div>
     </div>
 
     <div class="row g-4 mb-5 justify-content-center">
         <div class="col-md-4">
-            <div class="module-card" style="padding: 20px; cursor: pointer;" onclick="abrirModal('limpar_duplicatas')">
+            <div class="module-card admin-only" style="padding: 20px; cursor: pointer;" onclick="pedirSenhaAdmin('limpar_duplicatas')">
                 <div class="module-icon" style="font-size: 2rem;">🧹</div>
-                <h5>Limpar Duplicatas no Firebird</h5>
-                <p style="font-size: 0.8rem; color: var(--text-muted);">Remove fichas duplicadas por pontuação</p>
+                <h5>Limpar Duplicatas no Firebird <span class="badge bg-danger ms-2">Admin</span></h5>
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Remove fichas duplicadas por pontuação (admin only)</p>
             </div>
         </div>
     </div>
@@ -96,6 +100,24 @@
             <div class="modal-footer">
                 <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button class="btn" style="background: var(--primary-blue); color: white;" onclick="executarModal()">Executar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin password modal -->
+<div class="modal fade" id="adminModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="background: #b02a37; color: white; border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title" id="adminModalLabel">Autenticação Administrativa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="adminModalBody">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-danger" onclick="submitAdminPassword()">Confirmar</button>
             </div>
         </div>
     </div>
@@ -210,6 +232,46 @@
         limpar_duplicatas: ['caminho_gdb']
     };
 
+    // Admin modal flow: opens modal to ask for admin password, then executes command
+    let adminPendingCommand = null;
+
+    function pedirSenhaAdmin(comando) {
+        adminPendingCommand = comando;
+        // inject modal body
+        document.getElementById('adminModalBody').innerHTML = `
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Senha Admin</label>
+                <input type="password" class="form-control" id="admin_password" placeholder="Senha administrativa">
+            </div>`;
+        const modal = new bootstrap.Modal(document.getElementById('adminModal'));
+        modal.show();
+    }
+
+    async function submitAdminPassword() {
+        const senha = document.getElementById('admin_password').value || '';
+        try {
+            const res = await eel.set_admin(senha)();
+            if (typeof res === 'string' && res.toLowerCase().includes('enabled')) {
+                const comando = adminPendingCommand;
+                adminPendingCommand = null;
+                const cfg = toolConfigs[comando];
+                if (cfg && cfg.fields && cfg.fields.length > 0) {
+                    abrirModal(comando);
+                } else {
+                    await executar(comando, {});
+                }
+                const bootstrapModal = bootstrap.Modal.getInstance(document.getElementById('adminModal'));
+                bootstrapModal.hide();
+                // update UI status immediately
+                updateAdminBadge();
+            } else {
+                alert(res || 'Senha inválida');
+            }
+        } catch (e) {
+            alert('Erro ao autenticar admin: ' + e);
+        }
+    }
+
     function limparLog() {
         document.getElementById('log_output').value = '';
     }
@@ -217,6 +279,40 @@
     function agora() {
         return new Date().toLocaleTimeString('pt-BR');
     }
+
+    // Admin status polling and logout
+    async function updateAdminBadge() {
+        try {
+            const active = await eel.is_admin()();
+            const badge = document.getElementById('adminStatus');
+            const logoutBtn = document.getElementById('adminLogoutBtn');
+            if (active) {
+                badge.textContent = 'Admin: on';
+                badge.className = 'badge bg-success';
+                logoutBtn.style.display = 'inline-block';
+            } else {
+                badge.textContent = 'Admin: off';
+                badge.className = 'badge bg-secondary';
+                logoutBtn.style.display = 'none';
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    async function logoutAdmin() {
+        try {
+            const res = await eel.logout_admin()();
+            updateAdminBadge();
+            alert(res || 'Deslogado');
+        } catch (e) {
+            alert('Erro no logout: ' + e);
+        }
+    }
+
+    // start polling
+    setInterval(updateAdminBadge, 20000);
+    updateAdminBadge();
 </script>
 </body>
 </html>

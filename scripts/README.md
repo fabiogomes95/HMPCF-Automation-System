@@ -6,7 +6,7 @@ Este diretório é a **caixa de ferramentas de manutenção** do sistema HMPCF. 
 
 ## 📋 Scripts
 
-### 1. `faxina.py` — Faxina Geral do SQLite
+### 1. `faxina_sqlite.py` — Faxina Geral do SQLite
 
 **O grande saneador do banco.** Varre todos os pacientes do `hospital.db`, valida CPF e SUS matematicamente, e aplica as seguintes ações:
 
@@ -17,12 +17,42 @@ Este diretório é a **caixa de ferramentas de manutenção** do sistema HMPCF. 
 
 **Como usar:**
 ```bash
-python scripts/faxina.py
+python scripts/faxina_sqlite.py
 ```
 
 ---
 
-### 2. `validar_cns.py` — Faxina Cirúrgica de CNS
+### 2. `faxina_firebird.py` — Faxina de banco Firebird
+
+Script de manutenção para o banco Firebird/HMR que roda fora do `hospital.db`.
+
+- **Detecta** duplicatas e registros inválidos no Firebird
+- **Faz backup** antes de operações destrutivas
+- **Limpa** ou corrige registros clonados no banco nativo do BPA
+
+**Como usar:**
+```bash
+python scripts/faxina_firebird.py
+```
+
+---
+
+### 3. `limpar_clones.py` — Remoção de clones Firebird
+
+Ferramenta especializada para identificar e remover registros duplicados do Firebird com base em nome, CPF e CNS.
+
+- Detecta grupos de pacientes com mesmo nome e CNS
+- Mantém apenas a ficha mais completa
+- Remove registros fantasma ou duplicados
+
+**Como usar:**
+```bash
+python scripts/limpar_clones.py
+```
+
+---
+
+### 4. `validar_cns.py` — Faxina Cirúrgica de CNS
 
 Faxina focada **apenas em Cartão SUS** (ignora CPFs propositalmente).
 

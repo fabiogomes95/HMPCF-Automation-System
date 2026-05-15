@@ -166,7 +166,9 @@ HMPCF-Automation-System/
 - `raiz/`: `main.py`, `planilha_nuvem.py`, `app_painel.py`, `app_recepcao.py`
 - `analise/`: `analise_anual_csv.py`, `auditoria_periodica.py`, `dashboard_visual.py`, `historico_paciente.py`, `planilha_producao.py`
 - `integracao/`: `converter_csv.py`, `corrigir_nulls.py`, `duplicatas_gdb.py`, `exportar_bpa.py`, `importador_recepcao.py`, `sincronizar_contingencia.py`, `sincronizar_firebird.py`
-- `scripts/`: `atualizar_sexo.py`, `auditor_bpa.py`, `corrigir_data.py`, `corrigir_sexo_bpa.py`, `faxina.py`, `fusao.py`, `inspecionar_db.py`, `relatorio_fusao.py`, `validar_cns.py`
+- `scripts/`: `atualizar_sexo.py`, `auditor_bpa.py`, `corrigir_data.py`, `corrigir_sexo_bpa.py`, `faxina_sqlite.py`, `fusao.py`, `inspecionar_db.py`, `relatorio_fusao.py`, `validar_cns.py`
+- `limpar_clones.py` movido da raiz para `scripts/`
+- `faxina.py` da raiz movido para `scripts/faxina_firebird.py`
 
 ### Pendente
 - Nada. Todos os prints substituídos e verificados (syntax check OK nos 35 .py).
@@ -186,7 +188,7 @@ HMPCF-Automation-System/
 - `automacao/`: `digitacao.py` (3 funções), `executor_rpa.py` (2 funções), `cpf_sus.py` (1 função)
 - `integracao/`: todas as 7 funções principais tipadas
 - `analise/`: todas as 11 funções tipadas
-- `scripts/`: `corrigir_data.py`, `faxina.py`, `fusao.py`, `relatorio_fusao.py`
+- `scripts/`: `corrigir_data.py`, `faxina_sqlite.py`, `fusao.py`, `relatorio_fusao.py`
 - `app_painel.py`: todas as 22 funções `@eel.expose` + `carregar_base()` e `iniciar()`
 - `app_recepcao.py`: todas as 11 funções + helpers tipadas
 - `main.py`: todas as 9 funções tipadas

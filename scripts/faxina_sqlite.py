@@ -1,5 +1,5 @@
 """
-FAXINA.PY — Faxina Geral do SQLite | Auditoria + Mesclagem + Reestruturação
+FAXINA_SQLITE.PY — Faxina Geral do SQLite | Auditoria + Mesclagem + Reestruturação
 =============================================================================
 Esse script faz uma faxina COMPLETA no banco hospital.db:
 
@@ -11,7 +11,7 @@ Esse script faz uma faxina COMPLETA no banco hospital.db:
 4. REESTRUTURAÇÃO: Recria a tabela com PRIMARY KEY (cpf, sus)
 5. LIMPEZA DOS ATENDIMENTOS: Valida CPF/SUS dos históricos
 
-Uso: python scripts/faxina.py
+Uso: python scripts/faxina_sqlite.py
 """
 
 import sqlite3
