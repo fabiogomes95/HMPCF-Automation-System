@@ -458,11 +458,23 @@ IMPRESSÃO
 @page { size: A4; margin: 0; }
 
 @media print {
-    body { background: none; padding: 0; margin: 0; }
-    .page { box-shadow: none; margin: 0 auto; padding: 8mm 10mm; border: none; }
+    body { background: none; padding: 0; margin: 0; font-size: 11px; }
+    .page { box-shadow: none; margin: 0 auto; padding: 5mm 8mm; border: none; }
     .controls, .no-print, .status-bar, .toast-container, .history-panel { display: none !important; }
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
+    .row { page-break-inside: avoid; }
+    .section-title { page-break-after: avoid; }
+    .handwriting-area { page-break-inside: avoid; }
+    .handwriting-area[style*="height: 75"] { height: 55px !important; }
+    .handwriting-area[style*="height: 125"] { height: 90px !important; }
+    .spacer-row { margin-bottom: 4px; }
+    .header-text { font-size: 10px; }
+    .header-logo img { max-height: 40px; }
+    .field { padding: 2px 4px; }
+    input[type="text"], input[type="date"], input[type="time"] { font-size: 10px; }
+    label { font-size: 10px; }
+    table.tabela-risco td { padding: 2px 5px; height: 16px; font-size: 9px; }
 }
