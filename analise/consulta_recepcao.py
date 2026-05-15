@@ -27,8 +27,10 @@ def _conectar() -> sqlite3.Connection | None:
         logger.warning(f"hospital.db não encontrado em: {path}")
         return None
     try:
-        conn = sqlite3.connect(path, timeout=10.0)
+        conn = sqlite3.connect(path, timeout=15.0)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
         return conn
     except Exception as e:
         logger.error(f"Erro ao conectar hospital.db: {e}")
@@ -53,7 +55,10 @@ def consultar_atendimentos(data_inicio: str, data_fim: str) -> list[dict]:
             ORDER BY a.data_atendimento DESC, a.hora_atendimento DESC
         """, (data_inicio, data_fim))
 
-        return [dict(row) for row in cursor.fetchall()]
+        rows = cursor.fetchall()
+        cols = [d[0] for d in cursor.description]
+        logger.info(f"Consulta retornou {len(rows)} linhas")
+        return [dict(zip(cols, row)) for row in rows]
     except Exception as e:
         logger.error(f"Erro ao consultar atendimentos: {e}")
         return []
