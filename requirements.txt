@@ -24,5 +24,3 @@ weasyprint
 # --- Build do Instalador ---
 pyinstaller
 
-# --- Auto-Update (GitHub) ---
-requests

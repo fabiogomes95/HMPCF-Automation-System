@@ -3,9 +3,11 @@ cd /d "%~dp0"
 
 netstat -ano | findstr :8000 >nul
 if %errorlevel% equ 0 (
-    echo [OK] Recepcao ja esta rodando. Abrindo interface...
-    start msedge http://localhost:8000
-    exit
+    echo [!] Matando processo atual na porta 8000...
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8000') do (
+        taskkill /f /pid %%a >nul 2>nul
+    )
+    timeout /t 2 /nobreak >nul
 )
 
 echo [!] Localizando Python...

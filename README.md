@@ -23,7 +23,7 @@ Sistema completo de automação hospitalar desenvolvido para modernizar o fluxo 
  ┣ 📂 integracao/       # Integração SUS — conversores TXT e sincronizadores
  ┣ 📂 web_recepcao/     # Frontend da Recepção (Eel)
  ┣ 📂 web_painel/       # Frontend do Painel de Gestão (Eel)
- ┣ 📂 archive/          # Ferramentas de manutenção DBA
+ ┣ 📂 scripts/          # Ferramentas de manutenção DBA
  ┣ 📂 assets/           # Recursos estáticos (ícones)
  ┣ 📜 app_recepcao.py   # Servidor da Recepção (Eel, porta 8000)
  ┣ 📜 app_painel.py     # Servidor do Painel de Gestão (Eel, porta 8001)
@@ -88,7 +88,7 @@ Acessível via web no Painel de Gestão → [Análise / BI](http://localhost:800
 - `analise_anual_csv.py` — relatório Top 20 a partir de CSVs
 - `historico_paciente.py` — "Lupa do Auditor" — busca interativa por nome/CPF/SUS
 
-### 🛠️ Manutenção / DBA (`archive/`)
+### 🛠️ Manutenção / DBA (`scripts/`)
 - `faxina.py` — faxina geral do banco SQLite (valida CPF/SUS, mescla duplicados, recria estrutura)
 - `cns_validator_tool.py` — faxina cirúrgica de CNS inválidos
 - `fusao.py` — deduplicação inteligente com fusão de clones
@@ -151,19 +151,13 @@ Coloque o arquivo `credentials.json` (Google Cloud Console) na raiz do projeto p
 | Painel de Gestão | `python app_painel.py` | 8001 |
 | Gari da Nuvem | Inicia automaticamente com a Recepção | — |
 
-**Produção (Windows):** execute `start.vbs` ou compile com `build_exe.bat` para gerar `HMPCF.exe`.
+**Produção (Windows):** execute `start_painel.vbs` (Painel) ou `start_recepcao.vbs` (Recepção).
 
-### 🏗️ Build do Instalador (.exe)
+### 🏗️ Execução via atalho no Windows
 
-```bash
-pip install pyinstaller
-build_exe.bat          # Gera dist/HMPCF.exe
-```
-
-O executável já inclui:
-- Todos os módulos (recepção, painel, BI, integração, automação)
-- Bootstrap local (sem depender de internet)
-- Verificador de atualização via GitHub na inicialização
+Crie atalhos na Área de Trabalho apontando para:
+- `wscript.exe "C:\caminho\HMPCF-Automation-System\start_painel.vbs"` — Painel
+- `wscript.exe "C:\caminho\HMPCF-Automation-System\start_recepcao.vbs"` — Recepção
 
 ---
 
