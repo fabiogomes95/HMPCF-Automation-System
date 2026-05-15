@@ -70,3 +70,18 @@
 - `build_exe.bat` e `main.spec` (obsoletos)
 - `scripts/sinc_nome.py` (código duplicado — `sincronizar_firebird.py` faz o mesmo)
 - `requirements.txt`/`pyproject.toml`: `weasyprint` removido, `fpdf2` adicionado
+
+## [2026-05-15] — Sessão 4
+
+### Changed
+- `README.md` — removida referência a `sinc_nome.py`; WeasyPrint → fpdf2 na lista de tecnologias
+- `scripts/README.md` — removida seção `sinc_nome.py`; renumeração 8→7, 9→8
+- `backlog.md` — itens de `sinc_nome.py` e WeasyPrint marcados como concluídos
+- `pyproject.toml` — `weasyprint` → `fpdf2`
+
+### Removed
+- `scripts/sinc_nome.py` (duplicata de `integracao/sincronizar_firebird.py`)
+
+### Security
+- Verificado: `credentials.json` **nunca** foi commitado ao Git (`.gitignore` já protegia)
+- Verificado: nenhum CSV/TXT de paciente está trackeado (apenas `requirements.txt`)
