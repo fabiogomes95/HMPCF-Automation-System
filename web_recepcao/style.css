@@ -258,6 +258,11 @@ CABEÇALHO DO BOLETIM
     gap: 4px;
 }
 
+.priority-item label {
+    min-width: 0;
+    flex-shrink: 1;
+}
+
 .section-title {
     text-align: center;
     font-weight: bold;
@@ -300,8 +305,14 @@ GRID DO FORMULÁRIO
 
 label {
     font-weight: bold;
-    margin-right: 6px;
+    margin-right: 4px;
     white-space: nowrap;
+    font-size: 10px;
+}
+
+.field > label:first-child {
+    min-width: 75px;
+    flex-shrink: 0;
 }
 
 input[type="text"], input[type="date"], input[type="time"] {
@@ -321,6 +332,11 @@ input[type="text"], input[type="date"], input[type="time"] {
     gap: 10px;
     align-items: center;
     flex-wrap: nowrap;
+}
+
+.checkbox-group label {
+    min-width: 0;
+    flex-shrink: 1;
 }
 
 .invalid-input {
@@ -477,5 +493,6 @@ IMPRESSÃO
     .field { padding: 2px 4px; }
     input[type="text"], input[type="date"], input[type="time"] { font-size: 10px; }
     label { font-size: 10px; }
+    .field > label:first-child { min-width: 60px; }
     table.tabela-risco td { padding: 2px 5px; height: 16px; font-size: 9px; }
 }
