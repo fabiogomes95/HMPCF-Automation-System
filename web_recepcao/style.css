@@ -1,33 +1,89 @@
 /*
-=========================================================================
 SISTEMA DE BOLETIM DE ATENDIMENTO - HOSPITAL CAFÉ FILHO
-Arquivo de Estilos (CSS) - Guia de Referência Didática
-=========================================================================
+Arquivo de Estilos (CSS) - Versão com Tema Dinâmico
+=====================================================
 */
 
 /* ---------------------------------------------------
-ETAPA 1: O FUNDO DA TELA E A FOLHA A4
+CSS VARIABLES — Tema Claro (Padrão)
 --------------------------------------------------- */
-/* 'body' é a mesa virtual de fundo (Cinza hospitalar) */
+:root {
+    --bg-body: #e9ecef;
+    --bg-page: #ffffff;
+    --bg-topbar: #0d6efd;
+    --bg-header: #f2f2f2;
+    --text-primary: #000000;
+    --text-muted: #555555;
+    --text-status: #ffffff;
+    --border-color: #000000;
+    --border-light: #999999;
+    --shadow-page: rgba(0,0,0,0.2);
+    --btn-save-bg: #28a745;
+    --btn-print-bg: #007bff;
+    --btn-danger-bg: #dc3545;
+    --status-online: #28a745;
+    --status-offline: #dc3545;
+    --toast-bg: #ffffff;
+    --toast-text: #000000;
+    --field-bg: transparent;
+    --input-ssvv-bg: transparent;
+    --invalid-bg: #fff0f0;
+    --handwriting-line: #000000;
+    --hover-card: rgba(0,0,0,0.05);
+}
+
+/* ---------------------------------------------------
+TEMA ESCURO
+--------------------------------------------------- */
+body.dark-mode {
+    --bg-body: #1a1d23;
+    --bg-page: #2d2f36;
+    --bg-topbar: #1a1d23;
+    --bg-header: #373a40;
+    --text-primary: #e0e0e0;
+    --text-muted: #aaaaaa;
+    --text-status: #ffffff;
+    --border-color: #555555;
+    --border-light: #666666;
+    --shadow-page: rgba(0,0,0,0.5);
+    --btn-save-bg: #2d6a4f;
+    --btn-print-bg: #1a5bb5;
+    --btn-danger-bg: #a02030;
+    --status-online: #2d6a4f;
+    --status-offline: #a02030;
+    --toast-bg: #373a40;
+    --toast-text: #e0e0e0;
+    --field-bg: transparent;
+    --input-ssvv-bg: transparent;
+    --invalid-bg: #3d2020;
+    --handwriting-line: #555555;
+    --hover-card: rgba(255,255,255,0.05);
+}
+
+/* ---------------------------------------------------
+FUNDO DA TELA E FOLHA A4
+--------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
     font-size: 14px;
     margin: 0;
     padding: 0;
-    background-color: #e9ecef; 
+    background-color: var(--bg-body);
+    color: var(--text-primary);
+    transition: background-color 0.3s, color 0.3s;
 }
 
-/* '.page' é a Folha A4 perfeitamente dimensionada flutuando na tela */
 .page {
     width: 210mm;
     min-height: 297mm;
     padding: 8mm 10mm;
     margin: 0 auto;
-    background: white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    background: var(--bg-page);
+    box-shadow: 0 4px 10px var(--shadow-page);
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    transition: background 0.3s, box-shadow 0.3s;
 }
 
 form#formBoletim {
@@ -37,18 +93,57 @@ form#formBoletim {
 }
 
 /* ---------------------------------------------------
-ETAPA 2: BOTÕES DE PROCEDÊNCIA (Painel de Triagem)
+BARRA DE STATUS SUPERIOR
+--------------------------------------------------- */
+.status-bar {
+    background: var(--bg-topbar);
+    color: var(--text-status);
+    padding: 6px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    flex-wrap: wrap;
+    gap: 6px;
+    transition: background 0.3s;
+}
+
+.status-bar .status-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-bar .status-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+}
+
+.status-dot.online { background-color: var(--status-online); }
+.status-dot.offline { background-color: var(--status-offline); }
+
+/* ---------------------------------------------------
+BOTÕES DE PROCEDÊNCIA (Painel de Triagem)
 --------------------------------------------------- */
 .procedencia-container {
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin: 25px 0;
+    margin: 15px 0;
 }
 
 .procedencia-titulo {
-    color: #333;
+    color: var(--text-primary);
     font-weight: bold;
     margin-bottom: 3px;
     font-size: 16px;
@@ -61,7 +156,6 @@ ETAPA 2: BOTÕES DE PROCEDÊNCIA (Painel de Triagem)
     flex-wrap: wrap;
 }
 
-/* Base de formato e transição dos botões */
 .btn-proc {
     cursor: pointer;
     padding: 6px 6px;
@@ -72,11 +166,8 @@ ETAPA 2: BOTÕES DE PROCEDÊNCIA (Painel de Triagem)
     transition: 0.2s;
 }
 
-.btn-proc input {
-    cursor: pointer;
-}
+.btn-proc input { cursor: pointer; }
 
-/* Sistema de Cores: Semântica visual (UI/UX) */
 .btn-samu   { background-color: #ff6200; color: white; border: 1px solid #b37100; }
 .btn-troca  { background-color: #027bd8; color: white; border: 1px solid #008ee0; }
 .btn-obs    { background-color: #17a2b8; color: white; border: 1px solid #117a8b; }
@@ -84,7 +175,7 @@ ETAPA 2: BOTÕES DE PROCEDÊNCIA (Painel de Triagem)
 .btn-normal { background-color: #6c757d; color: white; border: 1px solid #545b62; }
 
 /* ---------------------------------------------------
-ETAPA 3: BOTÕES DE AÇÃO DO SISTEMA
+BOTÕES DE AÇÃO DO SISTEMA
 --------------------------------------------------- */
 .controls {
     text-align: center;
@@ -92,9 +183,9 @@ ETAPA 3: BOTÕES DE AÇÃO DO SISTEMA
     padding: 5px;
 }
 
-.btn {
+.btn-action {
     width: 140px;
-    height: 45px; 
+    height: 45px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -110,19 +201,42 @@ ETAPA 3: BOTÕES DE AÇÃO DO SISTEMA
     box-sizing: border-box;
 }
 
-.btn-print { background-color: #007bff; }
-.btn-save { background-color: #28a745; }
-.btn-danger { background-color: #dc3545; }
+.btn-print { background-color: var(--btn-print-bg); }
+.btn-save { background-color: var(--btn-save-bg); }
+.btn-danger { background-color: var(--btn-danger-bg); }
 
 /* ---------------------------------------------------
-ETAPA 4: CABEÇALHO DO BOLETIM E ESTRUTURA
+TOGGLE DARK MODE
 --------------------------------------------------- */
-/* Caixa superior que segura os 3 blocos estruturais do Boletim */
+.btn-darkmode {
+    width: auto;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 16px;
+    color: white;
+    background: rgba(255,255,255,0.1);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: 0.2s;
+}
+
+.btn-darkmode:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+/* ---------------------------------------------------
+CABEÇALHO DO BOLETIM
+--------------------------------------------------- */
 .header-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border: 1px solid #000;
+    border: 1px solid var(--border-color);
     border-bottom: none;
     padding: 6px;
 }
@@ -131,7 +245,6 @@ ETAPA 4: CABEÇALHO DO BOLETIM E ESTRUTURA
 .header-text { width: 60%; text-align: center; font-size: 12px; line-height: 1.3; }
 .header-priority { width: 25%; font-size: 10px; padding-left: 5px; }
 
-/* Utilização de CSS Grid para alinhar perfeitamente as bolinhas de Prioridade */
 .priority-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -148,10 +261,11 @@ ETAPA 4: CABEÇALHO DO BOLETIM E ESTRUTURA
 .section-title {
     text-align: center;
     font-weight: bold;
-    background-color: #f2f2f2;
+    background-color: var(--bg-header);
     padding: 4px;
-    border: 1px solid #000;
+    border: 1px solid var(--border-color);
     border-top: none;
+    transition: background-color 0.3s;
 }
 
 .header-logo img {
@@ -160,30 +274,27 @@ ETAPA 4: CABEÇALHO DO BOLETIM E ESTRUTURA
 }
 
 /* ---------------------------------------------------
-ETAPA 5: O GRID DO FORMULÁRIO (Linhas e Campos Flexíveis)
+GRID DO FORMULÁRIO
 --------------------------------------------------- */
-/* A Row desenha a linha horizontal e as bordas externas pretas */
 .row {
     display: flex;
-    border-left: 1px solid #000;
-    border-right: 1px solid #000;
-    border-bottom: 1px solid #000;
+    border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
 }
 
-.row.top-border { border-top: 1px solid #000; }
+.row.top-border { border-top: 1px solid var(--border-color); }
 .spacer-row { margin-bottom: 10px; }
 
-/* A Field é a caixa de conteúdo (ex: o quadrado da Idade). Ele se estica flexivelmente */
 .field {
     flex: 1;
     padding: 3px 6px;
-    border-right: 1px solid #000;
+    border-right: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     box-sizing: border-box;
 }
 
-/* O Segredo de Ouro: Tira a borda direita da ÚLTIMA caixa da linha para não duplicar tinta */
 .field:last-child { border-right: none; }
 
 label {
@@ -192,16 +303,16 @@ label {
     white-space: nowrap;
 }
 
-/* Estiliza os campos <input> normais para sumirem e deixarem apenas uma linha pontilhada embaixo */
 input[type="text"], input[type="date"], input[type="time"] {
     flex: 1;
     border: none;
-    border-bottom: 1px dotted #999;
+    border-bottom: 1px dotted var(--border-light);
     outline: none;
     font-size: 12px;
-    background: transparent;
+    background: var(--field-bg);
     padding: 1px;
     min-width: 0;
+    color: var(--text-primary);
 }
 
 .checkbox-group {
@@ -211,25 +322,24 @@ input[type="text"], input[type="date"], input[type="time"] {
     flex-wrap: nowrap;
 }
 
-/* A classe dinâmica injetada pelo JavaScript caso a validação do CPF falhe */
 .invalid-input {
     border-bottom: 2px solid red !important;
-    background-color: #fff0f0 !important;
+    background-color: var(--invalid-bg) !important;
 }
 
 /* ---------------------------------------------------
-ETAPA 6: TABELAS E CALIGRAFIA (Anotações Médicas)
+TABELAS E CALIGRAFIA
 --------------------------------------------------- */
 table.tabela-risco {
     width: 100%;
     border-collapse: collapse;
-    border-left: 1px solid #000;
-    border-right: 1px solid #000;
-    border-bottom: 1px solid #000;
+    border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
 }
 
 table.tabela-risco td {
-    border: 1px solid #000;
+    border: 1px solid var(--border-color);
     padding: 3px 8px;
     height: 20px;
     font-size: 11px;
@@ -244,18 +354,17 @@ table.tabela-risco td {
 
 .input-ssvv {
     width: 45px !important;
-    border-bottom: 1px solid #999 !important;
+    border-bottom: 1px solid var(--border-light) !important;
     text-align: center;
 }
 
-/* A Mágica de UI: Desenha linhas horizontais infinitas como um caderno (Gradient) */
 .handwriting-area {
-    border-top: 1px solid #000;    
-    border-bottom: 1px solid #000; 
-    border-left: none;  
-    border-right: none; 
+    border-top: 1px solid var(--text-primary);
+    border-bottom: 1px solid var(--text-primary);
+    border-left: none;
+    border-right: none;
     width: 100%;
-    background-image: repeating-linear-gradient(transparent, transparent 24px, #000 25px);
+    background-image: repeating-linear-gradient(transparent, transparent 24px, var(--handwriting-line) 25px);
     line-height: 25px;
     display: flex;
     box-sizing: border-box;
@@ -272,25 +381,86 @@ table.tabela-risco td {
     line-height: 25px;
     padding: 0 5px;
     overflow: hidden;
+    color: var(--text-primary);
 }
 
 /* ---------------------------------------------------
-ETAPA 7: O COMPILADOR DE IMPRESSÃO (CSS Print Rules)
+PAINEL DE HISTÓRICO DO PACIENTE
 --------------------------------------------------- */
-/* Define que o tamanho absoluto do "Canvas" da impressora deve ser A4 sem margem global */
+.history-panel {
+    max-width: 210mm;
+    margin: 10px auto;
+    background: var(--bg-page);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    display: none;
+    box-shadow: 0 2px 8px var(--shadow-page);
+    transition: background 0.3s;
+}
+
+.history-panel.visible {
+    display: block;
+}
+
+.history-panel h6 {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-light);
+    padding-bottom: 4px;
+}
+
+.history-item {
+    font-size: 12px;
+    padding: 3px 0;
+    color: var(--text-primary);
+    border-bottom: 1px dashed var(--border-light);
+}
+
+.history-item:last-child {
+    border-bottom: none;
+}
+
+/* ---------------------------------------------------
+TOASTS
+--------------------------------------------------- */
+.toast-container {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    z-index: 9999;
+}
+
+/* ---------------------------------------------------
+BOTÃO ADICIONAR FAMILIAR
+--------------------------------------------------- */
+.btn-familia {
+    font-size: 11px;
+    padding: 2px 8px;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    cursor: pointer;
+    background: var(--bg-header);
+    color: var(--text-primary);
+    margin-left: 6px;
+    white-space: nowrap;
+}
+
+.btn-familia:hover {
+    opacity: 0.8;
+}
+
+/* ---------------------------------------------------
+IMPRESSÃO
+--------------------------------------------------- */
 @page { size: A4; margin: 0; }
 
-/* Tudo que estiver dentro dessa Media Query SÓ É LIDO na hora de imprimir (Ctrl+P) */
 @media print {
     body { background: none; padding: 0; margin: 0; }
-    
-    /* Remove a sombra "3D" da folha pra não gastar tinta preta à toa */
     .page { box-shadow: none; margin: 0 auto; padding: 8mm 10mm; border: none; }
-    
-    /* A classe universal "no-print" que apaga qualquer botão da folha de papel */
-    .controls, .no-print { display: none !important; }
-    
-    /* Força os navegadores (Chrome/Edge) a respeitarem as cores de fundo preenchidas */
+    .controls, .no-print, .status-bar, .toast-container, .history-panel { display: none !important; }
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;

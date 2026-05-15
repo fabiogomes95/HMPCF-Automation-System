@@ -1,19 +1,10 @@
 """
 APP_RECEPCAO.PY — Servidor Web da Recepção (Eel | Porta 8000)
 ===============================================================
-Esse é o coração da RECEPÇÃO do hospital.
 
-O que faz:
-- Sobe um servidor web Eel na porta 8000
-- Serve a interface web_recepcao/ (HTML+CSS+JS)
-- Expõe funções Python pro frontend chamar:
-    * buscar_paciente() — procura por CPF/SUS no SQLite
-    * salvar() — salva o atendimento no banco
-- Inicia o Gari da Nuvem (thread em background)
-
-O fluxo:
+Fluxo:
 1. Recepcionista abre index.html no navegador
-2. Digita CPF ou SUS → frontend chama buscar_paciente()
+2. Digita CPF, SUS ou NOME → frontend chama buscar_paciente() ou buscar_por_nome()
 3. Preenche o formulário → clica F2 → frontend chama salvar()
 4. salvar() insere no SQLite
 5. Gari da Nuvem (outra thread) pega do SQLite e manda pro Google Sheets
@@ -26,38 +17,18 @@ import eel
 from utils import apenas_numeros
 from planilha_nuvem import gari_da_nuvem
 
-# Mudo pro diretório do script pra garantir que o hospital.db seja achado
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-# Inicializo o Eel apontando pra pasta web_recepcao/
-# É lá que estão os arquivos HTML, CSS e JS
 eel.init('web_recepcao')
 
 DB_NAME = 'hospital.db'
 
 
 def conectar_banco():
-    """
-    Abre conexão com o SQLite.
-    timeout=30 segundos pra evitar "Database Locked" quando
-    o Gari da Nuvem também estiver acessando ao mesmo tempo.
-    check_same_thread=False permite que o Eel (que roda em outra thread)
-    use a mesma conexão.
-    """
-    return sqlite3.connect(
-        DB_NAME, timeout=30.0, check_same_thread=False
-    )
+    return sqlite3.connect(DB_NAME, timeout=30.0, check_same_thread=False)
 
 
 def init_db():
-    """
-    Cria as tabelas se elas não existirem.
-    Roda só uma vez, na inicialização do servidor.
-    
-    Tabela pacientes: um registro por CPF (PK)
-    Tabela atendimentos: múltiplos atendimentos por paciente
-    - enviado_nuvem: 0=pendente, 1=enviado, 2=processando
-    """
     conn = conectar_banco()
     cursor = conn.cursor()
 
@@ -83,25 +54,19 @@ def init_db():
         )
     ''')
 
-    # Tento adicionar a coluna enviado_nuvem (pode já existir)
     try:
         cursor.execute(
             "ALTER TABLE atendimentos "
             "ADD COLUMN enviado_nuvem INTEGER DEFAULT 0"
         )
     except sqlite3.OperationalError:
-        pass  # Se já existe, ignoro o erro
+        pass
 
     conn.commit()
     conn.close()
 
 
 def converter_data_para_db(data_br):
-    """
-    Converte DD/MM/AAAA → AAAA-MM-DD (formato ISO pro SQLite).
-    O frontend manda data no formato brasileiro (dd/mm/aaaa)
-    mas no banco eu guardo como ISO pra ordenar corretamente.
-    """
     try:
         if "/" in data_br:
             partes = data_br.split('/')
@@ -112,10 +77,6 @@ def converter_data_para_db(data_br):
 
 
 def converter_data_para_web(data_db):
-    """
-    Converte AAAA-MM-DD → DD/MM/AAAA (formato brasileiro pro frontend).
-    Quando devolvo os dados pro navegador, converto de volta.
-    """
     try:
         if "-" in data_db:
             partes = data_db.split('-')
@@ -126,27 +87,22 @@ def converter_data_para_web(data_db):
 
 
 # =====================================================================
-# FUNÇÕES EXPORTADAS PRO JAVASCRIPT (via @eel.expose)
-# O frontend chama essas funções como se fossem JS
+# FUNÇÕES EXPORTADAS PRO JAVASCRIPT
 # =====================================================================
 
 @eel.expose
 def buscar_paciente(id_procurado):
     """
     Busca paciente por CPF ou SUS.
-    O frontend chama quando a recepcionista digita o CPF/SUS e aperta TAB.
-    
-    Retorna dict com os dados do paciente, ou {"erro": "nulo"} se não achar.
+    Retorna dict com dados, ou {"erro": "nulo"} se não achar.
     """
     try:
-        # Limpo a string: tiro pontos, traços, espaços
         id_limpo = apenas_numeros(str(id_procurado))
 
         conn = conectar_banco()
-        conn.row_factory = sqlite3.Row  # Linhas como dicionários
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        # Busco nas duas colunas (cpf e sus) com o mesmo valor
         cursor.execute(
             "SELECT * FROM pacientes WHERE cpf=? OR sus=?",
             (id_limpo, id_limpo)
@@ -155,7 +111,6 @@ def buscar_paciente(id_procurado):
         conn.close()
 
         if row:
-            # Converte pra dict e formata a data pro padrão BR
             dados = {k: row[k] for k in row.keys()}
             dados['dn'] = converter_data_para_web(dados.get('dn', ''))
             return dados
@@ -168,30 +123,122 @@ def buscar_paciente(id_procurado):
 
 
 @eel.expose
+def buscar_por_nome(termo):
+    """
+    Busca pacientes por nome (parcial, case insensitive).
+    Retorna lista de pacientes encontrados.
+    """
+    try:
+        conn = conectar_banco()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT nome, cpf, sus, dn FROM pacientes WHERE nome LIKE ? LIMIT 20",
+            (f"%{termo.upper()}%",)
+        )
+        rows = cursor.fetchall()
+        conn.close()
+
+        if not rows:
+            return []
+
+        resultados = []
+        for row in rows:
+            resultados.append({
+                'nome': row['nome'],
+                'cpf': row['cpf'] or '',
+                'sus': row['sus'] or '',
+                'dn': converter_data_para_web(row['dn'] or '')
+            })
+        return resultados
+
+    except Exception as e:
+        print(f"ERRO NA BUSCA POR NOME: {e}")
+        return []
+
+
+@eel.expose
+def buscar_historico(cpf_ou_sus):
+    """
+    Busca os últimos 3 atendimentos de um paciente.
+    """
+    try:
+        id_limpo = apenas_numeros(str(cpf_ou_sus))
+        if not id_limpo:
+            return []
+
+        conn = conectar_banco()
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT data_atendimento, hora_atendimento, procedencia
+               FROM atendimentos
+               WHERE cpf=? OR sus=?
+               ORDER BY data_atendimento DESC, hora_atendimento DESC
+               LIMIT 5""",
+            (id_limpo, id_limpo)
+        )
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [
+            {
+                'data': converter_data_para_web(r[0]) if r[0] else '',
+                'hora': r[1] or '',
+                'procedencia': r[2] or ''
+            }
+            for r in rows
+        ]
+
+    except Exception as e:
+        print(f"ERRO NO HISTORICO: {e}")
+        return []
+
+
+@eel.expose
+def verificar_duplicata(nome, dn):
+    """
+    Verifica se já existe paciente com mesmo nome + data de nascimento.
+    Retorna lista de possíveis duplicatas.
+    """
+    try:
+        if not nome or not dn:
+            return []
+
+        nome_upper = nome.strip().upper()
+        dn_iso = converter_data_para_db(dn)
+
+        conn = conectar_banco()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT nome, cpf, sus, dn FROM pacientes WHERE nome=? AND dn=?",
+            (nome_upper, dn_iso)
+        )
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [
+            {'nome': r[0], 'cpf': r[1] or '', 'sus': r[2] or ''}
+            for r in rows
+        ]
+
+    except Exception as e:
+        print(f"ERRO NA VERIFICACAO DE DUPLICATA: {e}")
+        return []
+
+
+@eel.expose
 def salvar(dados):
     """
-    Salva o paciente e o atendimento no banco.
-    
-    O frontend chama quando a recepcionista aperta F2.
-    Recebe um dict com TODOS os campos do formulário.
-    
-    Fluxo:
-    1. Converte a data de nascimento pra ISO
-    2. INSERT OR REPLACE na tabela pacientes (se já existe, atualiza)
-    3. INSERT na tabela atendimentos (novo atendimento)
-    4. COMMIT
-    
+    Salva paciente + atendimento no banco.
     Retorna {"status": "sucesso"} ou {"status": "erro"}.
     """
     conn = conectar_banco()
     cursor = conn.cursor()
 
     try:
-        # Data de nascimento no formato do banco
         data_nascimento_db = converter_data_para_db(dados.get('dn', ''))
 
-        # --- INSERT OU UPDATE DO PACIENTE ---
-        # INSERT OR REPLACE: se o CPF já existe, substitui tudo
         cursor.execute('''
             INSERT OR REPLACE INTO pacientes
             (cpf, sus, nome, nomeSocial, naturalidade,
@@ -221,8 +268,6 @@ def salvar(dados):
             dados.get('estado', '')
         ))
 
-        # --- INSERT DO ATENDIMENTO ---
-        # Cada vez que a recepcionista salva, é um novo atendimento
         cursor.execute('''
             INSERT INTO atendimentos
             (cpf, sus, data_atendimento, hora_atendimento,
@@ -249,27 +294,30 @@ def salvar(dados):
 
 
 # --- GARI DA NUVEM (THREAD PROTEGIDA) ---
+_status_gari = "desconhecido"
+
 def rodar_gari():
-    """
-    Roda o Gari da Nuvem em uma thread separada.
-    Se ele quebrar por algum motivo, o servidor continua de pé.
-    """
+    global _status_gari
     try:
+        _status_gari = "rodando"
         gari_da_nuvem()
     except Exception:
-        pass
+        _status_gari = "erro"
+
+
+@eel.expose
+def status_gari():
+    """Retorna o status atual do Gari da Nuvem."""
+    return _status_gari
 
 
 # =====================================================================
 # PONTO DE ENTRADA
 # =====================================================================
 if __name__ == '__main__':
-    init_db()  # Cria as tabelas se não existirem
+    init_db()
 
-    # Inicio o Gari da Nuvem em background (daemon=True)
     threading.Thread(target=rodar_gari, daemon=True).start()
 
     print("App Recepcao HMPCF Iniciado...")
-    # Abre no Microsoft Edge (modo app, sem barras)
-    # Tamanho 1250x850, porta 8000
     eel.start('index.html', mode='msedge', size=(1250, 850), port=8000)
