@@ -20,12 +20,12 @@
 - `app_painel.py` — Firebird user/password/path
 - `planilha_nuvem.py` — Google Sheet ID, escopos, caminho SQLite
 - `corrigir_data.py` — Firebird credenciais
-- `integracao/banco_de_dados_hospital_bpa.py` — Firebird credenciais
+- `integracao/sincronizar_firebird.py` — Firebird credenciais
 - `integracao/duplicatas_gdb.py` — Firebird credenciais
-- `integracao/nacionalidade_gdb.py` — Firebird credenciais
-- `integracao/gerador_arquivo_bpa.py` — CNS_PROFISSIONAL, CBO, etc.
-- `integracao/gerador_csv.py` — CNS_PROFISSIONAL, CBO, etc.
-- `scripts/cpf_bpa.py` — Firebird credenciais
+- `integracao/corrigir_nulls.py` — Firebird credenciais
+- `integracao/exportar_bpa.py` — CNS_PROFISSIONAL, CBO, etc.
+- `integracao/converter_csv.py` — CNS_PROFISSIONAL, CBO, etc.
+- `scripts/sinc_nome.py` — Firebird credenciais
 
 **Arquivos criados:**
 - `config.py` — lê `.env` ou usa defaults (sem `.env` o sistema funciona igual)

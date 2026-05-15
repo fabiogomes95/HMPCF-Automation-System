@@ -45,12 +45,12 @@ from automacao import digitacao
 
 # Adiciono a pasta integracao ao sys.path pra importar os scripts
 sys.path.insert(0, PASTA_INTEGRACAO)
-from integracao import gerador_arquivo_bpa
-from integracao import gerador_csv
+from integracao import exportar_bpa
+from integracao import converter_csv
 from integracao import importador_recepcao
-from integracao import banco_de_dados_hospital_bpa
+from integracao import sincronizar_firebird
 from integracao import sincronizar_contingencia
-from integracao import nacionalidade_gdb
+from integracao import corrigir_nulls
 from integracao import duplicatas_gdb
 
 # =====================================================================
@@ -288,7 +288,7 @@ def salvar_txt_pacientes(conteudo):
 def integracao_exportar_bpa(mes_ano="", caminho_salvar=""):
     """Exporta SQLite → TXT BPA (Datasus)."""
     try:
-        return gerador_arquivo_bpa.exportar_dados(mes_ano, caminho_salvar)
+        return exportar_bpa.exportar_dados(mes_ano, caminho_salvar)
     except Exception as e:
         return f"Erro: {e}"
 
@@ -297,7 +297,7 @@ def integracao_exportar_bpa(mes_ano="", caminho_salvar=""):
 def integracao_converter_csv(caminho_csv="", caminho_salvar=""):
     """Converte CSVs antigos → TXT BPA."""
     try:
-        return gerador_csv.processar_csv_antigo(caminho_csv, caminho_salvar)
+        return converter_csv.processar_csv_antigo(caminho_csv, caminho_salvar)
     except Exception as e:
         return f"Erro: {e}"
 
@@ -315,7 +315,7 @@ def integracao_importar_lote(separador=";"):
 def integracao_sincronizar_firebird(mes_ano="", caminho_gdb=""):
     """Sincroniza SQLite → Firebird."""
     try:
-        return banco_de_dados_hospital_bpa.sincronizar_sqlite_para_gdb(
+        return sincronizar_firebird.sincronizar_sqlite_para_gdb(
             mes_ano, caminho_gdb
         )
     except Exception as e:
@@ -335,7 +335,7 @@ def integracao_sincronizar_contingencia(caminho_csv=""):
 def integracao_aniquilar_nulls(caminho_gdb=""):
     """Remove NULLs do Firebird."""
     try:
-        return nacionalidade_gdb.aniquilar_nulls_bpa(caminho_gdb)
+        return corrigir_nulls.aniquilar_nulls_bpa(caminho_gdb)
     except Exception as e:
         return f"Erro: {e}"
 

@@ -72,12 +72,12 @@ Thread em background sincroniza atendimentos do SQLite para uma planilha Google 
 
 ### 🔌 Integração SUS (`integracao/`)
 Acessível via web no Painel de Gestão → [Integração](http://localhost:8001/integracao.html)
-- `gerador_arquivo_bpa.py` — exporta SQLite → TXT posicional Datasus
-- `gerador_csv.py` — converte CSVs antigos para TXT BPA
-- `banco_de_dados_hospital_bpa.py` — sincronizador SQLite ↔ Firebird
+- `exportar_bpa.py` — exporta SQLite → TXT posicional Datasus
+- `converter_csv.py` — converte CSVs antigos para TXT BPA
+- `sincronizar_firebird.py` — sincronizador SQLite ↔ Firebird
 - `importador_recepcao.py` — importa CSV com Smart Update (enriquece campos vazios)
 - `sincronizar_contingencia.py` — processa planilhas offline com regex inteligente
-- `nacionalidade_gdb.py` — aniquila NULLs no Firebird
+- `corrigir_nulls.py` — aniquila NULLs no Firebird
 - `duplicatas_gdb.py` — caça e remove duplicatas por pontuação
 
 ### 📈 Business Intelligence (`analise/`)
@@ -90,14 +90,14 @@ Acessível via web no Painel de Gestão → [Análise / BI](http://localhost:800
 
 ### 🛠️ Manutenção / DBA (`scripts/`)
 - `faxina.py` — faxina geral do banco SQLite (valida CPF/SUS, mescla duplicados, recria estrutura)
-- `cns_validator_tool.py` — faxina cirúrgica de CNS inválidos
+- `validar_cns.py` — faxina cirúrgica de CNS inválidos
 - `fusao.py` — deduplicação inteligente com fusão de clones
 - `auditor_bpa.py` — auditor de sexo em TXT BPA
 - `corrigir_sexo_bpa.py` — RPA corretor de sexo no sistema BPA
-- `att_sexo.py` — atualização em massa de sexo no SQLite
-- `sonda_db.py` — debug de registros no banco
-- `cpf_bpa.py` — sincronizador alternativo por nome + data de nascimento
-- `gerar_txt_fusao.py` — relatório pós-faxina
+- `atualizar_sexo.py` — atualização em massa de sexo no SQLite
+- `inspecionar_db.py` — debug de registros no banco
+- `sinc_nome.py` — sincronizador alternativo por nome + data de nascimento
+- `relatorio_fusao.py` — relatório pós-faxina
 
 ---
 

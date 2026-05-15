@@ -1,7 +1,7 @@
 """
 CPF_BPA.PY — Sincronizador Alternativo SQLite → Firebird (por NOME + DATA)
 ============================================================================
-Esse script faz a mesma coisa que o banco_de_dados_hospital_bpa.py da
+Esse script faz a mesma coisa que o integracao/sincronizar_firebird.py da
 pasta integracao/, mas é uma versão MAIS ANTIGA e independente.
 
 Diferenças:
@@ -13,7 +13,7 @@ Diferenças:
 Por que existe? Porque antes de refatorar o módulo de integração,
 esse era o sincronizador principal. Agora é mantido como backup.
 
-Uso: python scripts/cpf_bpa.py
+Uso: python scripts/sinc_nome.py
 """
 
 import sqlite3

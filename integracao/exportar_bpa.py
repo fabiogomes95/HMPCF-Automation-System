@@ -10,7 +10,7 @@ Exemplo de linha gerada:
   898765432109876MARIA JOSE SILVA        19900101M24036001003    59575000081
 
 Pra usar:
-  - Direto no terminal: python gerador_arquivo_bpa.py
+  - Direto no terminal: python integracao/exportar_bpa.py
   - Via web: Painel de Gestão → Integração → Exportar SQLite → TXT BPA
 """
 

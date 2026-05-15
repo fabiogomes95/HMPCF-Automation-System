@@ -6,7 +6,7 @@ Antes do sistema atual, a recepção usava um formato CSV de 13 colunas
  OBS, ENDERECO, TEL).
 
 Esse script lê esses CSVs antigos e converte pro mesmo formato
-posicional do BPA que o gerador_arquivo_bpa.py produz.
+posicional do BPA que o exportar_bpa.py produz.
 
 O diferencial: ele faz parse INTELIGENTE do endereço separando
 rua, número e bairro mesmo quando vem tudo bagunçado.

@@ -9,7 +9,7 @@ Serve pra diagnosticar problemas como:
 - Formatação incorreta do SUS
 - Campo sexo vazio
 
-Uso: python scripts/sonda_db.py
+Uso: python scripts/inspecionar_db.py
 (Edite o nome_alvo na linha 27 antes de rodar)
 """
 

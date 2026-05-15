@@ -22,7 +22,7 @@ python scripts/faxina.py
 
 ---
 
-### 2. `cns_validator_tool.py` — Faxina Cirúrgica de CNS
+### 2. `validar_cns.py` — Faxina Cirúrgica de CNS
 
 Faxina focada **apenas em Cartão SUS** (ignora CPFs propositalmente).
 
@@ -33,7 +33,7 @@ Faxina focada **apenas em Cartão SUS** (ignora CPFs propositalmente).
 
 **Como usar:**
 ```bash
-python scripts/cns_validator_tool.py
+python scripts/validar_cns.py
 ```
 
 ---
@@ -85,43 +85,43 @@ python scripts/corrigir_sexo_bpa.py
 
 ---
 
-### 6. `att_sexo.py` — Atualização em Massa de Sexo no SQLite
+### 6. `atualizar_sexo.py` — Atualização em Massa de Sexo no SQLite
 
 Varre o `hospital.db` e seta sexo como `'I'` (Indefinido) para todos os pacientes com sexo nulo, vazio ou diferente de M/F.
 
 **Como usar:**
 ```bash
-python scripts/att_sexo.py
+python scripts/atualizar_sexo.py
 ```
 
 ---
 
-### 7. `cpf_bpa.py` — Sincronizador BPA Alternativo
+### 7. `sinc_nome.py` — Sincronizador BPA Alternativo
 
 Sincroniza pacientes do SQLite com o Firebird usando **NOME + DATA DE NASCIMENTO** como chave de busca (em vez de SUS). Útil quando o SUS está inconsistente mas o nome e data estão corretos.
 
 **Como usar:**
 ```bash
-python scripts/cpf_bpa.py
+python scripts/sinc_nome.py
 # Informe mês e ano
 ```
 
 ---
 
-### 8. `gerar_txt_fusao.py` — Relatório Pós-Faxina
+### 8. `relatorio_fusao.py` — Relatório Pós-Faxina
 
 Gera um arquivo `RELATORIO_FINAL_FAXINA.txt` com a lista de todos os pacientes que sobreviveram à faxina, ordenados por nome.
 
 **Como usar:**
 ```bash
-python scripts/gerar_txt_fusao.py
+python scripts/relatorio_fusao.py
 ```
 
 ---
 
-### 9. `sonda_db.py` — Sonda de Banco de Dados
+### 9. `inspecionar_db.py` — Inspeção de Banco de Dados
 
-Ferramenta de **debug** para desenvolvedores. Faz uma busca por nome no SQLite e exibe os valores **exatos** salvos no banco (incluindo espaços, formatação e caracteres).
+Ferraramenta de **debug** para desenvolvedores. Faz uma busca por nome no SQLite e exibe os valores **exatos** salvos no banco (incluindo espaços, formatação e caracteres).
 
 Útil para diagnosticar problemas como:
 - "Por que este paciente não aparece na busca?"
@@ -130,7 +130,7 @@ Ferramenta de **debug** para desenvolvedores. Faz uma busca por nome no SQLite e
 
 **Como usar:**
 ```bash
-python scripts/sonda_db.py
+python scripts/inspecionar_db.py
 ```
 
 ---

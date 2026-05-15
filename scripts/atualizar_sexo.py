@@ -11,7 +11,7 @@ onde o sexo for:
 
 Isso garante que o sistema BPA do governo não rejeite a ficha.
 
-Uso: python scripts/att_sexo.py
+Uso: python scripts/atualizar_sexo.py
 """
 
 import sqlite3

@@ -8,7 +8,7 @@ Todas as ferramentas funcionam **via terminal** (com parâmetros opcionais) e **
 
 ## 📋 Scripts
 
-### 1. `gerador_arquivo_bpa.py` — Exportador SQLite → TXT BPA
+### 1. `exportar_bpa.py` — Exportador SQLite → TXT BPA
 
 Gera o arquivo **TXT posicional** que o sistema BPA do governo importa.
 
@@ -21,14 +21,14 @@ Gera o arquivo **TXT posicional** que o sistema BPA do governo importa.
 
 **Como usar:**
 ```bash
-python gerador_arquivo_bpa.py
+python integracao/exportar_bpa.py
 # Informe mês/ano (opcional) e caminho de saída, ou use padrões
 ```
 Também disponível no Painel de Gestão → Integração → Exportar SQLite → TXT BPA.
 
 ---
 
-### 2. `gerador_csv.py` — Conversor de CSVs Antigos para TXT BPA
+### 2. `converter_csv.py` — Conversor de CSVs Antigos para TXT BPA
 
 Lê o formato CSV usado antes do sistema atual (13 colunas: REGISTRO, NOME, DN, IDADE, SEXO, RAÇA, CIDADE, HORARIO, CPF, SUS, OBS, ENDERECO, TEL) e converte para o layout posicional do BPA.
 
@@ -40,7 +40,7 @@ Lê o formato CSV usado antes do sistema atual (13 colunas: REGISTRO, NOME, DN, 
 
 **Como usar:**
 ```bash
-python gerador_csv.py
+python integracao/converter_csv.py
 # Informe o caminho do CSV e onde salvar (opcional), ou use padrões
 ```
 
@@ -65,7 +65,7 @@ python importador_recepcao.py
 
 ---
 
-### 4. `banco_de_dados_hospital_bpa.py` — Sincronizador SQLite → Firebird
+### 4. `sincronizar_firebird.py` — Sincronizador SQLite → Firebird
 
 Integra os pacientes do `hospital.db` (SQLite) com o banco oficial do BPA (`BPAMAG.GDB` / Firebird).
 
@@ -76,7 +76,7 @@ Integra os pacientes do `hospital.db` (SQLite) com o banco oficial do BPA (`BPAM
 
 **Como usar:**
 ```bash
-python banco_de_dados_hospital_bpa.py
+python integracao/sincronizar_firebird.py
 # Informe o mês/ano e caminho do .gdb (opcional), ou use padrões
 ```
 
@@ -100,7 +100,7 @@ python sincronizar_contingencia.py
 
 ---
 
-### 6. `nacionalidade_gdb.py` — Aniquilador de NULLs no Firebird
+### 6. `corrigir_nulls.py` — Aniquilador de NULLs no Firebird
 
 Varre **todas as colunas** da tabela `CADCNS` no Firebird e substitui valores `NULL` por `''` (texto) ou `0` (número).
 
@@ -108,7 +108,7 @@ Varre **todas as colunas** da tabela `CADCNS` no Firebird e substitui valores `N
 
 **Como usar:**
 ```bash
-python nacionalidade_gdb.py
+python integracao/corrigir_nulls.py
 # Informe o caminho do .gdb (opcional), ou use o padrão
 ```
 
@@ -147,17 +147,17 @@ CSVs da Recepção
   │
   ├── sincronizar_contingencia.py  →  SQLite (modo offline)
   │
-  └── gerador_csv.py  →  TXT BPA (CSVs antigos)
+  └── converter_csv.py  →  TXT BPA (CSVs antigos)
   
 SQLite
   │
-  ├── gerador_arquivo_bpa.py  →  TXT BPA (Datasus)
+  ├── exportar_bpa.py  →  TXT BPA (Datasus)
   │
-  └── banco_de_dados_hospital_bpa.py  →  Firebird (BPAMAG.GDB)
+  └── sincronizar_firebird.py  →  Firebird (BPAMAG.GDB)
 
 Firebird
   │
-  ├── nacionalidade_gdb.py  →  Aniquila NULLs
+  ├── corrigir_nulls.py  →  Aniquila NULLs
   │
   └── duplicatas_gdb.py  →  Remove duplicatas
 ```
