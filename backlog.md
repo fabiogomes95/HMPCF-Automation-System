@@ -34,3 +34,4 @@
  - [x] Confirmado: não registrar username (apenas status/resultado da autenticação admin é logado).
  - [x] Implementado timeout de sessão admin (`ADMIN_SESSION_MINUTES`), endpoint `logout_admin` e badge de status no painel.
  - [x] Painel de integração iniciado **fechado** por padrão com overlay de cadeado; botão `Desbloquear` exige autenticação admin.
+ - [x] Senha padrão do painel definida como `8878` quando não configurada; agora é possível alterar a senha pelo próprio painel (menu `Alterar senha`).

@@ -47,5 +47,36 @@ FOLHA_CODIGO = getenv('FOLHA_CODIGO', '010')
 SEQ_PROFISSIONAL = getenv('SEQ_PROFISSIONAL', '03')
 
 DB_SQLITE = getenv('DB_SQLITE', 'hospital.db')
-ADMIN_PASSWORD = getenv('ADMIN_PASSWORD', '')
-ADMIN_SESSION_MINUTES = int(getenv('ADMIN_SESSION_MINUTES', '15'))
+
+
+def _read_admin_password_file() -> str | None:
+    path = os.path.join(os.path.dirname(__file__), '.admin_pass')
+    if os.path.exists(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return f.read().strip()
+        except Exception:
+            return None
+    return None
+
+
+def get_admin_password() -> str:
+    """Return the current admin password.
+
+    Priority: `.admin_pass` file > ENV `ADMIN_PASSWORD` > default '8878'.
+    """
+    v = _read_admin_password_file()
+    if v:
+        return v
+    return getenv('ADMIN_PASSWORD', '8878')
+
+
+def set_admin_password(newpass: str) -> bool:
+    """Persist new admin password to `.admin_pass` file. Returns True on success."""
+    path = os.path.join(os.path.dirname(__file__), '.admin_pass')
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(newpass or '')
+        return True
+    except Exception:
+        return False

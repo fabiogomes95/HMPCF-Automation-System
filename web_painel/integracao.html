@@ -13,9 +13,10 @@
 <div class="topbar">
     <a href="index.html" style="position: absolute; left: 30px; color: white; text-decoration: none; font-weight: 600;">⬅️ Início</a>
     <h4>🔌 MÓDULO DE INTEGRAÇÃO SUS</h4>
-    <div style="position: absolute; right: 30px; top: 12px;">
+    <div style="position: absolute; right: 30px; top: 12px; display:flex; gap:8px; align-items:center;">
         <span id="adminStatus" class="badge bg-secondary">Admin: off</span>
-        <button id="adminLogoutBtn" class="btn btn-sm btn-outline-light" style="margin-left:8px; display:none;" onclick="logoutAdmin()">Logout</button>
+        <button id="adminLogoutBtn" class="btn btn-sm btn-outline-light" style="display:none;" onclick="logoutAdmin()">Logout</button>
+        <button id="adminChangeBtn" class="btn btn-sm btn-outline-light" style="display:none;" onclick="abrirChangePassword()">Alterar senha</button>
     </div>
 </div>
 
@@ -133,6 +134,32 @@
             <div class="modal-footer">
                 <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button class="btn btn-danger" onclick="submitAdminPassword()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change password modal (visible when admin is active) -->
+<div class="modal fade" id="changePassModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #0d6efd; color: white;">
+                <h5 class="modal-title">Alterar Senha Admin</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Nova Senha</label>
+                    <input type="password" id="new_admin_password" class="form-control" placeholder="Nova senha">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Confirmar Senha</label>
+                    <input type="password" id="new_admin_password_confirm" class="form-control" placeholder="Confirme a nova senha">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="submitChangePassword()">Salvar</button>
             </div>
         </div>
     </div>
@@ -310,17 +337,42 @@
             const active = await eel.is_admin()();
             const badge = document.getElementById('adminStatus');
             const logoutBtn = document.getElementById('adminLogoutBtn');
+            const changeBtn = document.getElementById('adminChangeBtn');
             if (active) {
                 badge.textContent = 'Admin: on';
                 badge.className = 'badge bg-success';
                 logoutBtn.style.display = 'inline-block';
+                if (changeBtn) changeBtn.style.display = 'inline-block';
             } else {
                 badge.textContent = 'Admin: off';
                 badge.className = 'badge bg-secondary';
                 logoutBtn.style.display = 'none';
+                if (changeBtn) changeBtn.style.display = 'none';
             }
         } catch (e) {
             // ignore
+        }
+    }
+
+    function abrirChangePassword() {
+        const modal = new bootstrap.Modal(document.getElementById('changePassModal'));
+        modal.show();
+    }
+
+    async function submitChangePassword() {
+        const a = document.getElementById('new_admin_password').value || '';
+        const b = document.getElementById('new_admin_password_confirm').value || '';
+        if (a !== b) {
+            alert('As senhas não coincidem');
+            return;
+        }
+        try {
+            const res = await eel.change_admin_password(a)();
+            alert(res || 'OK');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('changePassModal'));
+            if (modal) modal.hide();
+        } catch (e) {
+            alert('Erro ao alterar senha: ' + e);
         }
     }
 

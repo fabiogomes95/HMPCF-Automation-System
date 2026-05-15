@@ -24,7 +24,7 @@ import eel
 import firebirdsql
 import sys
 from logging_setup import logger
-from config import FIREBIRD_PATH, FIREBIRD_USER, FIREBIRD_PASSWORD, ADMIN_PASSWORD, ADMIN_SESSION_MINUTES
+from config import FIREBIRD_PATH, FIREBIRD_USER, FIREBIRD_PASSWORD, get_admin_password, set_admin_password
 from auditoria_log import registrar as log_auditoria
 from integracao.backup_utils import fazer_backup, listar_backups
 
@@ -74,20 +74,11 @@ BASE_PACIENTES = []
 
 # Admin session management (expiry timestamp or None for no session)
 # If `ADMIN_PASSWORD` is empty, enabling admin will create an unlimited session (legacy behavior).
-ADMIN_SESSION_EXPIRY = None  # type: datetime | None
+ADMIN_SESSION_EXPIRY = None  # 'unlimited' or None
 
 
 def _is_admin_active() -> bool:
-    global ADMIN_SESSION_EXPIRY
-    if ADMIN_SESSION_EXPIRY is None:
-        return False
-    # special value: string 'unlimited' used when no password configured
-    if isinstance(ADMIN_SESSION_EXPIRY, str) and ADMIN_SESSION_EXPIRY == 'unlimited':
-        return True
-    try:
-        return ADMIN_SESSION_EXPIRY > datetime.now()
-    except Exception:
-        return False
+    return isinstance(ADMIN_SESSION_EXPIRY, str) and ADMIN_SESSION_EXPIRY == 'unlimited'
 
 
 @eel.expose
@@ -99,18 +90,19 @@ def set_admin(password: str) -> str:
     global IS_ADMIN
     try:
         global ADMIN_SESSION_EXPIRY
-        if ADMIN_PASSWORD == "":
-            # Legacy: allow admin without password -> unlimited session
+        current = get_admin_password()
+        # If password is empty, allow unlimited admin (legacy)
+        if current == "":
             ADMIN_SESSION_EXPIRY = 'unlimited'
             logger.info("Admin mode enabled (no password configured)")
             log_auditoria("admin_auth", "status=enabled_no_password")
             return "Admin mode enabled (no password configured)."
-        if password == ADMIN_PASSWORD:
-            expiry = datetime.now() + timedelta(minutes=ADMIN_SESSION_MINUTES)
-            ADMIN_SESSION_EXPIRY = expiry
-            logger.info("Admin mode enabled by correct password (expires %s)", expiry.isoformat())
+        if password == current:
+            # Per user request: unlimited session after unlocking
+            ADMIN_SESSION_EXPIRY = 'unlimited'
+            logger.info("Admin mode enabled by correct password (unlimited)")
             log_auditoria("admin_auth", "status=success")
-            return f"Admin mode enabled for {ADMIN_SESSION_MINUTES} minute(s)."
+            return "Admin mode enabled."
         # failed
         ADMIN_SESSION_EXPIRY = None
         logger.warning("Admin authentication failed")
@@ -127,20 +119,9 @@ def set_admin(password: str) -> str:
 
 @eel.expose
 def is_admin() -> bool:
-    """Returns True if an admin session is active. If the session expired, logs an event."""
-    global ADMIN_SESSION_EXPIRY
+    """Returns True if an admin session is active (unlimited until logout)."""
     try:
-        if ADMIN_SESSION_EXPIRY is None:
-            return False
-        if isinstance(ADMIN_SESSION_EXPIRY, str) and ADMIN_SESSION_EXPIRY == 'unlimited':
-            return True
-        if ADMIN_SESSION_EXPIRY > datetime.now():
-            return True
-        # expired
-        ADMIN_SESSION_EXPIRY = None
-        logger.info("Admin session expired")
-        log_auditoria("admin_auth", "status=expired")
-        return False
+        return _is_admin_active()
     except Exception as e:
         logger.error(f"Erro ao checar admin: {e}")
         return False
@@ -157,6 +138,27 @@ def logout_admin() -> str:
         return "Admin logged out."
     except Exception as e:
         logger.error(f"Erro ao deslogar admin: {e}")
+        try:
+            log_auditoria("admin_auth", f"status=error details={str(e)[:120]}")
+        except Exception:
+            pass
+        return f"Erro: {e}"
+
+
+@eel.expose
+def change_admin_password(nova: str) -> str:
+    """Change the persisted admin password (requires active admin session)."""
+    try:
+        if not _is_admin_active():
+            return "Erro: operação restrita a administradores."
+        ok = set_admin_password(nova)
+        if ok:
+            logger.info("Admin password changed via panel")
+            log_auditoria("admin_auth", "status=password_changed")
+            return "Senha alterada com sucesso."
+        return "Erro ao gravar nova senha."
+    except Exception as e:
+        logger.error(f"Erro ao alterar senha admin: {e}")
         try:
             log_auditoria("admin_auth", f"status=error details={str(e)[:120]}")
         except Exception:
