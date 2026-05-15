@@ -61,12 +61,12 @@
 
 <div class="topbar">
     <h4>
-        <span style="background: white; border-radius: 50%; width: 45px; height: 45px; display: inline-flex; align-items: center; justify-content: center; color: var(--hmpcf-red); box-shadow: 0 2px 5px rgba(0,0,0,0.3); font-size: 1.4rem;">🏥</span>
-        HMPCF - GESTÃO DIGITAL 3.0
+        <span class="brand-icon">🏥</span>
+        <span>HMPCF - GESTÃO DIGITAL 3.0</span>
     </h4>
-    <div style="position: absolute; right: 30px; display: flex; gap: 10px; align-items: center;">
+    <div>
         <span id="alerta-status">🟢 Online</span>
-        <button id="btnDarkMode" onclick="toggleDarkMode()" style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 16px; padding: 4px 14px; font-size: 13px; cursor: pointer;">🌙 Escuro</button>
+        <button id="btnDarkMode" class="btn-darkmode" onclick="toggleDarkMode()">🌙 Escuro</button>
     </div>
 </div>
 
@@ -76,8 +76,8 @@
     </div>
 
     <div class="dashboard-header mb-4 text-center">
-        <h2 style="font-weight: 800; color: var(--primary-blue);">Painel de Gestão</h2>
-        <p style="color: var(--text-muted);">Selecione a área de trabalho para continuar.</p>
+        <h2>Painel de Gestão</h2>
+        <p>Selecione a área de trabalho para continuar.</p>
     </div>
 
     <div class="row g-4 justify-content-center">
@@ -117,10 +117,10 @@
             </div>
         </div>
         <div class="col-md-6">
-            <div class="terminal-card" style="margin-top: 0;">
+                <div class="terminal-card">
                 <div class="terminal-header">
                     <span>>_ Terminal de Eventos</span>
-                    <span style="color: var(--extremoz-yellow);">Ativo</span>
+                    <span class="terminal-active">Ativo</span>
                 </div>
                 <div class="terminal-body" id="terminal-logs">
                     <div><span class="log-time">[SISTEMA]</span> <span class="log-info">Motor HMPCF 3.0 iniciado.</span></div>
@@ -187,6 +187,20 @@
                 const detalhes = e.detalhes ? ` — ${e.detalhes}` : '';
                 return `<div class="log-item"><span class="log-time">${t}</span><span class="log-acao">${e.acao}</span><span class="text-muted">${detalhes}</span></div>`;
             }).join('');
+            // Also update the terminal area with the most recent entries
+            try {
+                const term = document.getElementById('terminal-logs');
+                if (term) {
+                    const last = entries.slice(0, 10); // newest already first
+                    term.innerHTML = last.map(ev => {
+                        const tt = (ev.timestamp || '').slice(0, 19).replace('T', ' ');
+                        const detalhe = ev.detalhes ? ` ${ev.detalhes}` : '';
+                        return `<div><span class="log-time">[${tt}]</span> <span class="log-info">${ev.acao}${detalhe}</span></div>`;
+                    }).join('');
+                }
+            } catch (e) {
+                console.error('Erro atualizando terminal:', e);
+            }
         } catch (e) {
             console.error('Erro log:', e);
         }

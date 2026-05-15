@@ -68,6 +68,38 @@ body {
     text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
 }
 
+/* Marca / ícone do topo */
+.brand-icon {
+    background: white;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--hmpcf-red);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    font-size: 1.4rem;
+}
+
+/* Botão de modo escuro no topo */
+.btn-darkmode {
+    background: rgba(255,255,255,0.08);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 16px;
+    padding: 4px 14px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+/* Cabeçalho do dashboard */
+.dashboard-header h2 { font-weight: 800; color: var(--primary-blue); }
+.dashboard-header p { color: var(--text-muted); }
+
+/* Label ativo no terminal */
+.terminal-active { color: var(--extremoz-yellow); font-weight: 700; }
+
 #alerta-status {
     position: absolute;
     right: 30px; /* Ancora à direita */
