@@ -400,6 +400,40 @@ def analise_buscar_historico(termo: str) -> str:
 
 
 # =====================================================================
+# 6. CONSULTA ATENDIMENTOS (RECEPÇÃO)
+# =====================================================================
+from analise.consulta_recepcao import (
+    consultar_atendimentos,
+    resumo_atendimentos,
+    atendimentos_por_dia,
+)
+
+
+@eel.expose
+def consulta_listar_atendimentos(data_inicio: str, data_fim: str) -> list[dict]:
+    try:
+        return consultar_atendimentos(data_inicio, data_fim)
+    except Exception as e:
+        return []
+
+
+@eel.expose
+def consulta_resumo_atendimentos(data_inicio: str, data_fim: str) -> dict:
+    try:
+        return resumo_atendimentos(data_inicio, data_fim)
+    except Exception as e:
+        return {"total": 0, "por_procedencia": {}, "media_dia": 0}
+
+
+@eel.expose
+def consulta_atendimentos_por_dia(data_inicio: str, data_fim: str) -> list[dict]:
+    try:
+        return atendimentos_por_dia(data_inicio, data_fim)
+    except Exception as e:
+        return []
+
+
+# =====================================================================
 # INICIAR (usado pelo main.py)
 # =====================================================================
 def iniciar() -> None:
