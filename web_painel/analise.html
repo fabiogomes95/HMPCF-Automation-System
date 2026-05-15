@@ -65,6 +65,16 @@
         </div>
     </div>
 
+    <div class="row g-4 mb-4 justify-content-center">
+        <div class="col-md-4">
+            <div class="module-card" style="padding: 20px; background: linear-gradient(135deg, var(--primary-blue), #052244); color: white; cursor: pointer;" onclick="abrirModal('exportacao')">
+                <div class="module-icon" style="background: rgba(255,255,255,0.15); color: white; font-size: 2rem;">📦</div>
+                <h5 style="color: white;">Exportação Consolidada</h5>
+                <p style="font-size: 0.8rem; opacity: 0.85;">Gera todos os relatórios + ZIP único</p>
+            </div>
+        </div>
+    </div>
+
     <div class="editor-container shadow-sm" style="max-width: 900px; margin: 0 auto;">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="fw-bold" style="color: var(--primary-blue);">📋 Terminal de Saída:</span>
@@ -121,6 +131,10 @@
             fields: [
                 { id: 'termo', label: 'Nome, CPF ou SUS', placeholder: 'Digite o nome, CPF ou SUS', required: true }
             ]
+        },
+        exportacao: {
+            label: 'Exportação Consolidada',
+            fields: []
         }
     };
 
@@ -129,7 +143,8 @@
         relatorio_mes: { fn: 'analise_gerar_relatorio_mes', args: ['mes_ref'] },
         auditoria: { fn: 'analise_gerar_auditoria_periodo', args: ['opcao'] },
         csv_analise: { fn: 'analise_analisar_csvs_para_pdf', args: [] },
-        historico: { fn: 'analise_buscar_historico', args: ['termo'] }
+        historico: { fn: 'analise_buscar_historico', args: ['termo'] },
+        exportacao: { fn: 'exportacao_consolidada', args: [] }
     };
 
     function abrirModal(comando) {

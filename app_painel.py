@@ -19,11 +19,14 @@ pra fazer buscas ultrarrápidas (sem consultar o banco toda hora).
 
 import os
 import glob
+from datetime import datetime
 import eel
 import firebirdsql
 import sys
 from logging_setup import logger
 from config import FIREBIRD_PATH, FIREBIRD_USER, FIREBIRD_PASSWORD
+from auditoria_log import registrar as log_auditoria
+from integracao.backup_utils import fazer_backup, listar_backups
 
 # =====================================================================
 # CONFIGURAÇÃO DE DIRETÓRIOS
@@ -157,13 +160,8 @@ def adicionar_paciente_txt(arquivo: str, documento: str) -> bool:
 
 @eel.expose
 def rodar_limpador(data_lote: str, enfermeiros_str: str) -> str:
-    """
-    Processa o arquivo cpf_sus.txt (dados sujos) e gera
-    lotes organizados por enfermeiro.
-    
-    Cada lote tem no máximo 99 pacientes (limite do BPA).
-    Distribui os pacientes entre os enfermeiros informados.
-    """
+    """Processa CPF/SUS sujos e organiza lotes por enfermeiro."""
+    log_auditoria("rodar_limpador", f"data={data_lote}")
     caminho_sujo = os.path.join(PASTA_AUTOMACAO, "cpf_sus.txt")
 
     # Extrai CPF/SUS dos dados bagunçados
@@ -230,11 +228,8 @@ def preparar_rpa(nome_arquivo: str) -> dict:
 
 @eel.expose
 def digitar_lote_rpa(medico: str, data: str, cargo: str, pacientes: list) -> str:
-    """
-    Executa a digitação automática via PyAutoGUI.
-    Pacientes é uma lista de dicts (nome, sus, etc).
-    O callback atualiza o frontend com o progresso.
-    """
+    """Executa a digitação automática via PyAutoGUI."""
+    log_auditoria("digitar_lote_rpa", f"medico={medico} data={data} pacientes={len(pacientes)}")
     def callback(msg):
         eel.atualizar_progresso_web(msg)()
 
@@ -314,7 +309,10 @@ def integracao_importar_lote(separador: str = ";") -> str:
 
 @eel.expose
 def integracao_sincronizar_firebird(mes_ano: str = "", caminho_gdb: str = "") -> str:
-    """Sincroniza SQLite → Firebird."""
+    """Sincroniza SQLite → Firebird (com backup automático)."""
+    gdb = caminho_gdb or FIREBIRD_PATH
+    fazer_backup(gdb, "pre_sincronizar")
+    log_auditoria("sincronizar_firebird", f"mes={mes_ano} gdb={gdb}")
     try:
         return sincronizar_firebird.sincronizar_sqlite_para_gdb(
             mes_ano, caminho_gdb
@@ -334,7 +332,10 @@ def integracao_sincronizar_contingencia(caminho_csv: str = "") -> str:
 
 @eel.expose
 def integracao_aniquilar_nulls(caminho_gdb: str = "") -> str:
-    """Remove NULLs do Firebird."""
+    """Remove NULLs do Firebird (com backup automático)."""
+    gdb = caminho_gdb or FIREBIRD_PATH
+    fazer_backup(gdb, "pre_aniquilar_nulls")
+    log_auditoria("aniquilar_nulls", f"gdb={gdb}")
     try:
         return corrigir_nulls.aniquilar_nulls_bpa(caminho_gdb)
     except Exception as e:
@@ -343,7 +344,10 @@ def integracao_aniquilar_nulls(caminho_gdb: str = "") -> str:
 
 @eel.expose
 def integracao_limpar_duplicatas(caminho_gdb: str = "") -> str:
-    """Remove duplicatas do Firebird."""
+    """Remove duplicatas do Firebird (com backup automático)."""
+    gdb = caminho_gdb or FIREBIRD_PATH
+    fazer_backup(gdb, "pre_limpar_duplicatas")
+    log_auditoria("limpar_duplicatas", f"gdb={gdb}")
     try:
         return duplicatas_gdb.limpar_duplicados_gdb(caminho_gdb)
     except Exception as e:
@@ -357,6 +361,7 @@ def integracao_limpar_duplicatas(caminho_gdb: str = "") -> str:
 @eel.expose
 def analise_gerar_dashboard() -> str:
     """Gera dashboard PNG + relatório Top 20."""
+    log_auditoria("gerar_dashboard")
     try:
         return dashboard_visual.gerar_dashboard()
     except Exception as e:
@@ -366,6 +371,7 @@ def analise_gerar_dashboard() -> str:
 @eel.expose
 def analise_gerar_relatorio_mes(mes_ref: str) -> str:
     """Gera planilha Excel de produção para um mês."""
+    log_auditoria("gerar_relatorio_mes", mes_ref)
     try:
         return planilha_producao.gerar_relatorio_mes(mes_ref)
     except Exception as e:
@@ -375,6 +381,7 @@ def analise_gerar_relatorio_mes(mes_ref: str) -> str:
 @eel.expose
 def analise_gerar_auditoria_periodo(opcao: str) -> str:
     """Gera PDF de auditoria: '1', '3' ou '6' meses."""
+    log_auditoria("gerar_auditoria_periodo", f"{opcao} mes(es)")
     try:
         return auditoria_periodica.gerar_auditoria_periodo(opcao)
     except Exception as e:
@@ -384,6 +391,7 @@ def analise_gerar_auditoria_periodo(opcao: str) -> str:
 @eel.expose
 def analise_analisar_csvs_para_pdf() -> str:
     """Analisa CSVs antigos e gera PDF com Top 20."""
+    log_auditoria("analisar_csvs_para_pdf")
     try:
         return analise_anual_csv.analisar_csvs_para_pdf()
     except Exception as e:
@@ -393,6 +401,7 @@ def analise_analisar_csvs_para_pdf() -> str:
 @eel.expose
 def analise_buscar_historico(termo: str) -> str:
     """Busca histórico de paciente por nome, CPF ou SUS."""
+    log_auditoria("buscar_historico", termo[:80])
     try:
         return historico_paciente.buscar_por_termo(termo)
     except Exception as e:
@@ -439,12 +448,102 @@ def consulta_status_cache() -> str:
 
 
 # =====================================================================
+# 7. BACKUP E LOG DE AUDITORIA
+# =====================================================================
+
+@eel.expose
+def backup_executar(caminho: str, prefixo: str = "manual") -> str:
+    """Faz backup manual de um arquivo."""
+    destino = fazer_backup(caminho, prefixo)
+    if destino:
+        log_auditoria("backup_manual", f"{caminho} → {destino}")
+        return f"Backup criado: {destino}"
+    return f"Erro: arquivo {caminho} nao encontrado."
+
+
+@eel.expose
+def backup_listar(arquivo_original: str = "") -> list[dict]:
+    """Lista backups disponíveis."""
+    return listar_backups(arquivo_original)
+
+
+@eel.expose
+def auditoria_listar(limite: int = 100) -> list[dict]:
+    """Retorna as últimas entradas do log de auditoria."""
+    return listar(limite)
+
+
+# =====================================================================
+# 8. EXPORTAÇÃO CONSOLIDADA
+# =====================================================================
+from analise.exportacao_consolidada import exportar_tudo
+
+
+@eel.expose
+def exportacao_consolidada() -> str:
+    """Gera todos os relatórios e empacota em ZIP."""
+    log_auditoria("exportacao_consolidada", "iniciada")
+    resultado = exportar_tudo()
+    log_auditoria("exportacao_consolidada", resultado)
+    return resultado
+
+
+# =====================================================================
+# 9. INDICADORES DO PAINEL (HOME)
+# =====================================================================
+from analise.consulta_recepcao import status as consulta_status
+
+
+@eel.expose
+def dashboard_indicadores() -> dict:
+    """Retorna métricas resumidas pra home do painel."""
+    qtd_fb = len(BASE_PACIENTES)
+
+    status_db = consulta_status()
+    qtd_atendimentos = 0
+    if "OK" in status_db:
+        try:
+            qtd_atendimentos = int(
+                status_db.split("atendimentos")[1].split("na")[0].strip()
+            )
+        except (ValueError, IndexError):
+            qtd_atendimentos = 0
+
+    backups = listar_backups()
+    total_backups = len(backups)
+    ultimo_backup = backups[0]["data"] if backups else "Nunca"
+
+    mes_atual = datetime.now().strftime("%m-%Y")
+    bpa_exportado = "nao"
+    for f in os.listdir(PASTA_AUTOMACAO):
+        if f.endswith(".txt") and mes_atual.replace("-", "") in f:
+            bpa_exportado = "sim"
+            break
+    if bpa_exportado == "nao":
+        for f in os.listdir(PASTA_ATUAL):
+            if f.endswith(("_BPA.txt", ".txt")) and mes_atual[:2] in f:
+                bpa_exportado = "sim"
+                break
+
+    return {
+        "pacientes_firebird_ram": qtd_fb,
+        "atendimentos_recepcao_ram": qtd_atendimentos,
+        "cache_hospital_db": status_db,
+        "total_backups": total_backups,
+        "ultimo_backup": ultimo_backup,
+        "bpa_mes_atual_exportado": bpa_exportado,
+        "mes_atual": mes_atual,
+    }
+
+
+# =====================================================================
 # INICIAR (usado pelo main.py)
 # =====================================================================
 def iniciar() -> None:
     logger.info("Servidor HMPCF Iniciado e Persistente na porta 8001")
     carregar_base()
     carregar()
+    log_auditoria("painel_iniciado", f"{len(BASE_PACIENTES)} pacientes FB na RAM")
 
     def manter_vivo(rota, websockets):
         pass
