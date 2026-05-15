@@ -6,6 +6,7 @@ Consultas são instantâneas e não bloqueiam o Eel.
 """
 
 import os
+import math
 import sqlite3
 from logging_setup import logger
 from config import DB_SQLITE
@@ -100,18 +101,33 @@ def status() -> str:
     return _STATUS_MSG
 
 
-def consultar_atendimentos(data_inicio: str, data_fim: str) -> list[dict]:
+def consultar_atendimentos_paginado(
+    data_inicio: str, data_fim: str, pagina: int = 1, por_pagina: int = 100
+) -> dict:
+    """Retorna uma pagina de atendimentos + metadados de paginacao."""
     try:
         if not _CARREGADO:
-            return []
-        resultado = []
-        for a in _ATENDIMENTOS:
-            if data_inicio <= (a.get("data_atendimento") or "") <= data_fim:
-                resultado.append(a)
-        return resultado
+            return {"atendimentos": [], "total": 0, "pagina": 1, "total_paginas": 0}
+
+        filtrados = [
+            a for a in _ATENDIMENTOS
+            if data_inicio <= (a.get("data_atendimento") or "") <= data_fim
+        ]
+        total = len(filtrados)
+        total_paginas = max(1, math.ceil(total / por_pagina))
+        pagina = max(1, min(pagina, total_paginas))
+        inicio = (pagina - 1) * por_pagina
+        fim = min(inicio + por_pagina, total)
+
+        return {
+            "atendimentos": filtrados[inicio:fim],
+            "total": total,
+            "pagina": pagina,
+            "total_paginas": total_paginas,
+        }
     except Exception as e:
-        logger.error(f"Erro consultar_atendimentos: {e}")
-        return []
+        logger.error(f"Erro consultar_atendimentos_paginado: {e}")
+        return {"atendimentos": [], "total": 0, "pagina": 1, "total_paginas": 0}
 
 
 def resumo_atendimentos(data_inicio: str, data_fim: str) -> dict:

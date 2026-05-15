@@ -153,20 +153,13 @@
             const d = await eel.dashboard_indicadores()();
 
             document.getElementById('indicadoresRow').innerHTML = `
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="indicador-card">
                         <div class="numero">${d.pacientes_firebird_ram}</div>
                         <div class="rotulo">Pacientes BPA (RAM)</div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="indicador-card">
-                        <div class="numero">${d.atendimentos_recepcao_ram}</div>
-                        <div class="rotulo">Atendimentos (RAM)</div>
-                        <div class="sub">${d.cache_hospital_db.split(',')[0] || d.cache_hospital_db}</div>
-                    </div>
-                </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="indicador-card">
                         <div class="numero">${d.total_backups}</div>
                         <div class="rotulo">Backups Disponíveis</div>

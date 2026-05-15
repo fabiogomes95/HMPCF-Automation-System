@@ -414,15 +414,15 @@ def analise_buscar_historico(termo: str) -> str:
 from analise.consulta_recepcao import (
     carregar,
     status as consulta_status,
-    consultar_atendimentos,
+    consultar_atendimentos_paginado,
     resumo_atendimentos,
     atendimentos_por_dia,
 )
 
 
 @eel.expose
-def consulta_listar_atendimentos(data_inicio: str, data_fim: str) -> list[dict]:
-    return consultar_atendimentos(data_inicio, data_fim) or []
+def consulta_listar_atendimentos(data_inicio: str, data_fim: str, pagina: int = 1) -> dict:
+    return consultar_atendimentos_paginado(data_inicio, data_fim, pagina)
 
 
 @eel.expose
