@@ -1,5 +1,5 @@
 """
-CNS_VALIDATOR_TOOL.PY — Faxina Cirúrgica de SUS Inválido
+VALIDAR_CNS.PY — Faxina Cirúrgica de SUS Inválido
 =========================================================
 Essa ferramenta varre o SQLite e aplica duas regras:
 

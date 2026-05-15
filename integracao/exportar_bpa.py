@@ -1,5 +1,5 @@
 """
-GERADOR_ARQUIVO_BPA.PY — Exporta SQLite → TXT posicional Datasus
+EXPORTAR_BPA.PY — Exporta SQLite → TXT posicional Datasus
 =================================================================
 Esse script gera o arquivo TXT que o sistema BPA do governo importa.
 

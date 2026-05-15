@@ -1,5 +1,5 @@
 """
-BANCO_DE_DADOS_HOSPITAL_BPA.PY — Sincronizador SQLite → Firebird
+SINCRONIZAR_FIREBIRD.PY — Sincronizador SQLite → Firebird
 ===================================================================
 Esse script integra os pacientes do hospital.db (SQLite) com o banco
 oficial do BPA (BPAMAG.GDB / Firebird).

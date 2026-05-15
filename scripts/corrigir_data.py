@@ -10,8 +10,12 @@ O que ele faz:
 3. Substitui tudo por 01/01/1990 (data padrão segura)
 4. Mostra um preview antes de aplicar (segurança)
 
-Uso: python corrigir_data.py
+Uso: python scripts/corrigir_data.py
 """
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import firebirdsql
 from datetime import datetime

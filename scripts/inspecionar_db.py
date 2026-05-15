@@ -1,5 +1,5 @@
 """
-SONDA_DB.PY — Sonda de Banco de Dados | Debug de Registros
+INSPECIONAR_DB.PY — Inspeção de Banco de Dados | Debug de Registros
 ===========================================================
 Uma ferramenta leve pra desenvolvedor conferir rapidamente
 como um registro específico foi salvo no banco SQLite.

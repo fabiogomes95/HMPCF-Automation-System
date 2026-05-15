@@ -1,5 +1,5 @@
 """
-GERAR_TXT_FUSAO.PY — Relatório Pós-Faxina
+RELATORIO_FUSAO.PY — Relatório Pós-Faxina
 ===========================================
 Gera um relatório .txt com a lista de pacientes que
 sobreviveram à faxina/fusão.

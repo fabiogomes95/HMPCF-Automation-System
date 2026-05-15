@@ -1,5 +1,5 @@
 """
-NACIONALIDADE_GDB.PY — Aniquilador de NULLs no Firebird
+CORRIGIR_NULLS.PY — Aniquilador de NULLs no Firebird
 =========================================================
 O sistema BPA do governo TRAVA quando encontra campos NULL
 no banco, gerando o erro "UDFLIB".
@@ -18,6 +18,7 @@ descobrir os tipos de cada coluna dinamicamente.
 import firebirdsql
 import sys
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config import FIREBIRD_USER, FIREBIRD_PASSWORD
 
 

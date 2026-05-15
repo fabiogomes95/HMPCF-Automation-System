@@ -21,18 +21,28 @@ Sistema completo de automação hospitalar desenvolvido para modernizar o fluxo 
  ┣ 📂 analise/          # BI — Dashboards, relatórios Excel e PDF
  ┣ 📂 automacao/        # RPA — Robô digitador, triagem e fila de lotes
  ┣ 📂 integracao/       # Integração SUS — conversores TXT e sincronizadores
+ ┣ 📂 scripts/          # Ferramentas de manutenção DBA
  ┣ 📂 web_recepcao/     # Frontend da Recepção (Eel)
  ┣ 📂 web_painel/       # Frontend do Painel de Gestão (Eel)
- ┣ 📂 scripts/          # Ferramentas de manutenção DBA
  ┣ 📂 assets/           # Recursos estáticos (ícones)
+ ┣ 📂 registro/         # Registro de sessão (dev)
  ┣ 📜 app_recepcao.py   # Servidor da Recepção (Eel, porta 8000)
  ┣ 📜 app_painel.py     # Servidor do Painel de Gestão (Eel, porta 8001)
+ ┣ 📜 main.py           # Launcher unificado (opcional)
+ ┣ 📜 config.py         # Configuração centralizada
  ┣ 📜 planilha_nuvem.py # "Gari da Nuvem" — sincronizador Google Sheets
  ┣ 📜 utils.py          # Motor de validações (CPF, CNS, regex)
- ┣ 📜 corrigir_data.py  # Correção de datas impossíveis no Firebird
+ ┣ 📜 pyproject.toml    # Estrutura de pacote
+ ┣ 📜 .env.example      # Template de configuração
  ┣ 📜 hospital.db       # Banco SQLite local
  ┣ 📜 credentials.json  # Chave de API Google Cloud
- ┗ 📜 requirements.txt  # Dependências
+ ┣ 📜 requirements.txt  # Dependências
+ ┣ 📜 backlog.md        # Pendências e ideias
+ ┣ 📜 CHANGELOG.md      # Histórico de alterações
+ ┣ 📜 start_painel.vbs  # Atalho silencioso — Painel
+ ┣ 📜 start_recepcao.vbs# Atalho silencioso — Recepção
+ ┣ 📜 iniciar_painel.bat# Inicializador — Painel (porta 8001)
+ ┗ 📜 iniciar_recepcao.bat # Inicializador — Recepção (porta 8000)
 ```
 
 ---

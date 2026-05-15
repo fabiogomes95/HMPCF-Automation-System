@@ -1,5 +1,5 @@
 """
-CPF_BPA.PY — Sincronizador Alternativo SQLite → Firebird (por NOME + DATA)
+SINC_NOME.PY — Sincronizador Alternativo SQLite → Firebird (por NOME + DATA)
 ============================================================================
 Esse script faz a mesma coisa que o integracao/sincronizar_firebird.py da
 pasta integracao/, mas é uma versão MAIS ANTIGA e independente.

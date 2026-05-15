@@ -1,5 +1,5 @@
 """
-GERADOR_CSV.PY — Conversor de CSVs Antigos para TXT BPA
+CONVERTER_CSV.PY — Conversor de CSVs Antigos para TXT BPA
 ==========================================================
 Antes do sistema atual, a recepção usava um formato CSV de 13 colunas
 (REGISTRO, NOME, DN, IDADE, SEXO, RACA, CIDADE, HORARIO, CPF, SUS,
