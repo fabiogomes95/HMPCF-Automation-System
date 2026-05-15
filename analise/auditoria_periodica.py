@@ -8,6 +8,7 @@ Via Eel:     analise_gerar_auditoria_periodo("1")  / "3" / "6"
 """
 
 import os
+import sys
 import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta
