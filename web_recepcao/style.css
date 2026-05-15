@@ -278,6 +278,8 @@ GRID DO FORMULÁRIO
 --------------------------------------------------- */
 .row {
     display: flex;
+    flex-wrap: nowrap;
+    margin: 0;
     border-left: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
