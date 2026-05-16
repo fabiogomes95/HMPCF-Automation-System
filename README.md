@@ -31,12 +31,6 @@ O projeto foi desenvolvido com foco em:
 
 ---
 
-# Objetivo do Projeto
-
-O HMPCF Automation System foi desenvolvido para reduzir retrabalho operacional hospitalar, automatizar processos administrativos e integrar fluxos BPA/SUS em ambiente hospitalar real.
-
----
-
 # Impacto Operacional
 
 - Redução significativa de retrabalho manual na recepção
