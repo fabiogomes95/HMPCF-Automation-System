@@ -1,7 +1,6 @@
 # HMPCF Automation System
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)
-![License](https://img.shields.io/badge/licença-CC%20BY--NC--ND%204.0-lightgrey)
 ![Status](https://img.shields.io/badge/status-produção-green)
 
 > Hospital automation system for patient check-in, SUS/BPA billing,
@@ -21,56 +20,65 @@ painel de gestão, auditoria e sincronização com Google Sheets, reduzindo
 retrabalho manual e eliminando fichas em papel no Hospital Municipal
 Pres. Café Filho (Extremoz/RN).
 
+### Problema
+
+Antes do sistema, a recepção usava fichas de papel, os lançamentos BPA
+eram feitos manualmente um a um, a auditoria era feita em planilhas
+soltas e não havia sincronização entre os setores.
+
+### Solução
+
+Um sistema integrado que digitaliza o fluxo da recepção, automatiza a
+geração de lotes BPA/SUS, centraliza a auditoria e sincroniza os dados
+com a nuvem — tudo acessível via navegador nas estações do hospital.
+
 ---
 
 ## Funcionalidades
 
-- **Recepção Digital** — Cadastro de pacientes, busca por CPF/SUS/nome,
-  validação de dados e registro de atendimentos
-- **Automação BPA/SUS** — Geração de lotes, exportação TXT posicional e
-  digitação automática (RPA)
-- **Painel de Gestão** — Indicadores, integração Firebird, consulta de
-  atendimentos, backup e exportação de relatórios
-- **Auditoria** — Verificação de inconsistências, rastreabilidade e
-  log centralizado de operações
-- **Sincronização** — Envio automático de atendimentos para Google Sheets
-  ("Gari da Nuvem")
+- **Recepção Digital** — Cadastro de pacientes com busca por CPF, SUS ou
+  nome, validação automática de CPF e CNS, registro de atendimentos
+- **Automação BPA/SUS** — Geração de arquivos TXT posicionais, exportação
+  de lotes e digitação automática via RPA (PyAutoGUI)
+- **Painel de Gestão** — Indicadores em tempo real, integração com
+  Firebird (sistema legado), consulta de atendimentos paginada,
+  backup automático e exportação de relatórios Excel/PDF
+- **Auditoria** — Verificação de inconsistências, log centralizado de
+  operações e rastreabilidade completa
+- **Sincronização** — "Gari da Nuvem": envio automático de atendimentos
+  para Google Sheets a cada 10 segundos
 
 ---
 
----
+## Arquitetura
 
-## Stack
-
-| Camada | Tecnologia |
-|---|---|
-| Backend | Python, Eel |
-| Frontend | HTML, CSS, JavaScript |
-| Banco | SQLite, Firebird |
-| Automação | PyAutoGUI |
-| Nuvem | Google Sheets API |
-| Relatórios | Excel (openpyxl), PDF (fpdf2) |
-
----
-
-## Instalação
-
-```bash
-git clone https://github.com/fabiogomes95/HMPCF-Automation-System
-cd HMPCF-Automation-System
-pip install -r requirements.txt
-cp .env.example .env  # configure suas credenciais
+```mermaid
+flowchart LR
+A[Recepção Digital] --> B[SQLite Local]
+B --> C[Painel Administrativo]
+B --> D[Automação BPA/SUS]
+D --> E[Triagem e Fila]
+E --> F[Auditoria]
+F --> G[Relatórios Excel/PDF]
+B --> H[Google Sheets]
 ```
 
-## Execução
-
-```bash
-python main.py           # Recepção + Painel
-python app_recepcao.py   # Apenas Recepção (porta 8000)
-python app_painel.py     # Apenas Painel (porta 8001)
+```text
+📦 HMPCF-Automation-System
+ ┣ 📂 analise/                 # BI — Dashboards e relatórios
+ ┣ 📂 automacao/               # RPA — digitação automatizada
+ ┣ 📂 integracao/              # Conversores TXT e sincronizadores
+ ┣ 📂 scripts/                 # Ferramentas administrativas
+ ┣ 📂 web_recepcao/            # Frontend da Recepção (porta 8000)
+ ┣ 📂 web_painel/              # Frontend do Painel (porta 8001)
+ ┣ 📜 app_recepcao.py          # Servidor da Recepção (Eel)
+ ┣ 📜 app_painel.py            # Servidor do Painel (Eel)
+ ┣ 📜 main.py                  # Launcher unificado
+ ┣ 📜 config.py                # Configuração centralizada
+ ┣ 📜 planilha_nuvem.py        # Sincronizador Google Sheets
+ ┣ 📜 utils.py                 # Validações (CPF, CNS)
+ ┗ 📜 .env.example             # Template de configuração
 ```
-
----
 
 ---
 
