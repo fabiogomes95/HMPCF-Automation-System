@@ -57,27 +57,37 @@ flowchart LR
 A[Recepção Digital] --> B[SQLite Local]
 B --> C[Painel Administrativo]
 B --> D[Automação BPA/SUS]
-D --> E[Triagem e Fila]
-E --> F[Auditoria]
+D --> F[Auditoria]
 F --> G[Relatórios Excel/PDF]
 B --> H[Google Sheets]
 ```
 
 ```text
 📦 HMPCF-Automation-System
- ┣ 📂 analise/                 # BI — Dashboards e relatórios
- ┣ 📂 automacao/               # RPA — digitação automatizada
- ┣ 📂 integracao/              # Conversores TXT e sincronizadores
- ┣ 📂 scripts/                 # Ferramentas administrativas
- ┣ 📂 web_recepcao/            # Frontend da Recepção (porta 8000)
- ┣ 📂 web_painel/              # Frontend do Painel (porta 8001)
- ┣ 📜 app_recepcao.py          # Servidor da Recepção (Eel)
- ┣ 📜 app_painel.py            # Servidor do Painel (Eel)
+ ┣ 📂 analise/                 # BI — Dashboards, relatórios Excel e PDF
+ ┣ 📂 automacao/               # RPA — Robô digitador, triagem e fila de lotes
+ ┣ 📂 integracao/              # Integração SUS — conversores TXT e sincronizadores
+ ┣ 📂 scripts/                 # Scripts administrativos e manutenção operacional
+ ┣ 📂 web_recepcao/            # Frontend da Recepção (Eel, porta 8000)
+ ┣ 📂 web_painel/              # Frontend do Painel de Gestão (Eel, porta 8001)
+ ┣ 📂 screenshots/             # Capturas do sistema
+ ┣ 📜 app_recepcao.py          # Servidor da Recepção (Eel — porta 8000)
+ ┣ 📜 app_painel.py            # Servidor do Painel de Gestão (Eel — porta 8001)
  ┣ 📜 main.py                  # Launcher unificado
  ┣ 📜 config.py                # Configuração centralizada
- ┣ 📜 planilha_nuvem.py        # Sincronizador Google Sheets
- ┣ 📜 utils.py                 # Validações (CPF, CNS)
- ┗ 📜 .env.example             # Template de configuração
+ ┣ 📜 planilha_nuvem.py        # "Gari da Nuvem" — sincronizador Google Sheets
+ ┣ 📜 utils.py                 # Motor de validações (CPF, CNS e regex)
+ ┣ 📜 pyproject.toml           # Estrutura do pacote Python
+ ┣ 📜 .env.example             # Template de configuração
+ ┣ 📜 hospital.db              # Banco SQLite local (não versionado)
+ ┣ 📜 credentials.json         # Chave de serviço Google Cloud (não versionado)
+ ┣ 📜 requirements.txt         # Dependências do projeto
+ ┣ 📜 backlog.md               # Pendências e ideias futuras
+ ┣ 📜 CHANGELOG.md             # Histórico de alterações
+ ┣ 📜 start_painel.vbs         # Inicializador silencioso — Painel
+ ┣ 📜 start_recepcao.vbs       # Inicializador silencioso — Recepção
+ ┣ 📜 iniciar_painel.bat       # Inicializador Painel (porta 8001)
+ ┗ 📜 iniciar_recepcao.bat     # Inicializador Recepção (porta 8000)
 ```
 
 ---
