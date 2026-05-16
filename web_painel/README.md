@@ -16,7 +16,11 @@ Dashboard com cards modulares para acesso rápido:
 | 🔌 **Integração** | Exportação BPA, importação de CSVs e sincronização |
 | 🤖 **Automação BPA** | Digitação, triagem e robô RPA |
 
-Inclui um **Terminal de Eventos** que exibe logs do sistema em tempo real.
+Inclui um **Terminal de Eventos** que exibe logs do sistema em tempo real. O terminal mostra:
+- Últimas operações admin (login/logout/sincronizações)
+- Operações do robô RPA
+- Eventos de importação e análise
+- Timestamps completos para rastreabilidade
 
 ---
 
@@ -93,7 +97,46 @@ Interface para operar o robô digitador:
 
 ---
 
-## 🚀 Como Executar
+## � Autenticação Admin
+
+### Senha Padrão
+- **Inicial:** `8878`
+- **Arquivo:** `.admin_pass` (não versionado)
+- **Mudança:** Botão "🔑 Mudar Senha" no painel (requer unlock anterior)
+
+### Fluxo de Autenticação
+1. Ao clicar em operação admin, modal aparece
+2. Digite a senha de 9 dígitos
+3. Sistema valida contra `.admin_pass`
+4. Se correto:
+   - `ADMIN_SESSION_EXPIRY = 'unlimited'` (até logout manual)
+   - Banner 🔓 aparece no topo direito
+   - Todas as operações admin desbloqueadas
+5. Click "Logout" encerra a sessão
+
+### Funções Eel Expostas
+- `set_admin(password)` — Autentica e cria sessão
+- `is_admin()` — Retorna boolean do status
+- `logout_admin()` — Encerra sessão
+- `change_admin_password(nova)` — Muda senha (requer admin session)
+
+---
+
+## 📋 Auditoria de Operações
+
+Todas as ações sensíveis são registradas em `auditoria.log` (JSON Lines):
+
+```json
+{"timestamp": "2026-05-16 14:32:10", "evento": "admin_login", "status": "sucesso"}
+{"timestamp": "2026-05-16 14:35:00", "evento": "integracao_sincronizar_firebird", "status": "concluido", "linhas": 245}
+{"timestamp": "2026-05-16 14:40:00", "evento": "admin_logout", "status": "normal"}
+```
+
+Visualização: **Análise → Terminal de Eventos** → scroll para ver histórico
+
+---
+
+## �🚀 Como Executar
 
 ```bash
 python app_painel.py

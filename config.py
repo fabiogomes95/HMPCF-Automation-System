@@ -11,6 +11,18 @@ Uso:
 """
 
 import os
+import hashlib
+
+
+def _require_env(key: str) -> str:
+    val = os.getenv(key)
+    if not val:
+        raise ValueError(
+            f"CRÍTICO: {key} não configurada. "
+            f"Defina no .env ou na variável de ambiente."
+        )
+    return val
+
 
 def _carregar_dotenv() -> None:
     env_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -34,15 +46,15 @@ getenv = os.getenv
 FIREBIRD_HOST = getenv('FIREBIRD_HOST', 'localhost')
 FIREBIRD_PATH = getenv('FIREBIRD_PATH', r'C:/BPA/BPAMAG.GDB')
 FIREBIRD_USER = getenv('FIREBIRD_USER', 'SYSDBA')
-FIREBIRD_PASSWORD = getenv('FIREBIRD_PASSWORD', 'masterkey')
+FIREBIRD_PASSWORD = _require_env('FIREBIRD_PASSWORD')
 
-GOOGLE_SHEET_ID = getenv('GOOGLE_SHEET_ID', '1xw_x-bYlHCHzMe39g1mJKPFAD_IcXA8BB0uRfmmuR90')
+GOOGLE_SHEET_ID = _require_env('GOOGLE_SHEET_ID')
 GOOGLE_CREDENTIALS_PATH = getenv('GOOGLE_CREDENTIALS_PATH', 'credentials.json')
 GOOGLE_SCOPE_SHEETS = getenv('GOOGLE_SCOPE_SHEETS', 'https://www.googleapis.com/auth/spreadsheets')
 GOOGLE_SCOPE_DRIVE = getenv('GOOGLE_SCOPE_DRIVE', 'https://www.googleapis.com/auth/drive')
 
-CNS_PROFISSIONAL = getenv('CNS_PROFISSIONAL', '59575000081')
-CBO_CODIGO = getenv('CBO_CODIGO', '240360')
+CEP_RUA = _require_env('CEP_RUA')
+CODIGO_UNIDADE = _require_env('CODIGO_UNIDADE')
 FOLHA_CODIGO = getenv('FOLHA_CODIGO', '010')
 SEQ_PROFISSIONAL = getenv('SEQ_PROFISSIONAL', '03')
 
@@ -61,22 +73,26 @@ def _read_admin_password_file() -> str | None:
 
 
 def get_admin_password() -> str:
-    """Return the current admin password.
+    """Return the current admin password hash.
 
-    Priority: `.admin_pass` file > ENV `ADMIN_PASSWORD` > default '8878'.
+    Priority: `.admin_pass` file > ENV `ADMIN_PASSWORD`.
     """
     v = _read_admin_password_file()
     if v:
         return v
-    return getenv('ADMIN_PASSWORD', '8878')
+    return _require_env('ADMIN_PASSWORD')
+
+
+def _hash_password(passwd: str) -> str:
+    return hashlib.sha256(passwd.encode()).hexdigest()
 
 
 def set_admin_password(newpass: str) -> bool:
-    """Persist new admin password to `.admin_pass` file. Returns True on success."""
+    """Persist new admin password (SHA256) to `.admin_pass` file. Returns True on success."""
     path = os.path.join(os.path.dirname(__file__), '.admin_pass')
     try:
         with open(path, 'w', encoding='utf-8') as f:
-            f.write(newpass or '')
+            f.write(_hash_password(newpass or ''))
         return True
     except Exception:
         return False

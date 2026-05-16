@@ -21,12 +21,12 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from logging_setup import logger
 from utils import apenas_numeros, remove_accents
-from config import CNS_PROFISSIONAL, CBO_CODIGO, FOLHA_CODIGO, SEQ_PROFISSIONAL
+from config import CEP_RUA, CODIGO_UNIDADE, FOLHA_CODIGO, SEQ_PROFISSIONAL
 
-E_CBO = CBO_CODIGO
+E_UNIDADE = CODIGO_UNIDADE
 F_FOLHA = FOLHA_CODIGO
 G_SEQ = SEQ_PROFISSIONAL
-H_CNS_PROF = CNS_PROFISSIONAL
+H_CEP_RUA = CEP_RUA
 
 
 def exportar_dados(mes_ano: str = "", caminho_salvar: str = "") -> str:
@@ -146,8 +146,8 @@ def exportar_dados(mes_ano: str = "", caminho_salvar: str = "") -> str:
             nome_f = nome.ljust(30)[:30]
             line = (
                 f"{cns}{nome_f}{data_f}{sexo}"
-                f"{E_CBO}{F_FOLHA}{G_SEQ}    "
-                f"{H_CNS_PROF}{rua_f}          "
+                f"{E_UNIDADE}{F_FOLHA}{G_SEQ}    "
+                f"{H_CEP_RUA}{rua_f}          "
                 f"{num_f}{bairro_f}{telefone_f}"
             )
             lines.append(line)

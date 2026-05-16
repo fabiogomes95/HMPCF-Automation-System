@@ -26,6 +26,10 @@ import urllib.error
 from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Aplica atualizações de .py pendentes ANTES de importar módulos do projeto
+_aplicar_update_pendente()
+
 from logging_setup import logger
 
 # ──────────────────────────────────────────────────────────────────────
@@ -105,6 +109,30 @@ def fazer_update_git_pull() -> bool:
         erro(f"Erro ao executar git pull: {e}")
         return False
 
+def _aplicar_update_pendente() -> None:
+    """Copia .py pendentes do .update_temp e remove marcador."""
+    import shutil
+    marker = os.path.join(PASTA_RAIZ, '.update_pending')
+    if not os.path.exists(marker):
+        return
+    temp_dir = os.path.join(PASTA_RAIZ, '.update_temp')
+    if not os.path.exists(temp_dir):
+        os.remove(marker)
+        return
+    for root, dirs, files in os.walk(temp_dir):
+        for file in files:
+            if not file.endswith('.py'):
+                continue
+            src = os.path.join(root, file)
+            rel = os.path.relpath(src, temp_dir)
+            dst = os.path.join(PASTA_RAIZ, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+    shutil.rmtree(temp_dir)
+    os.remove(marker)
+    sucesso("Arquivos .py atualizados na inicialização.")
+
+
 def fazer_update_zip() -> bool:
     """Download do ZIP e extração manual (fallback sem Git)."""
     import zipfile
@@ -120,7 +148,6 @@ def fazer_update_zip() -> bool:
             dados_zip = resp.read()
 
         with zipfile.ZipFile(io.BytesIO(dados_zip)) as zf:
-            # A pasta dentro do ZIP tem formato: HMPCF-Automation-System-main/
             prefixo = f"HMPCF-Automation-System-{BRANCH}/"
             temp_dir = os.path.join(PASTA_RAIZ, '.update_temp')
             if os.path.exists(temp_dir):
@@ -140,8 +167,9 @@ def fazer_update_zip() -> bool:
                         with open(dest, 'wb') as f:
                             f.write(zf.read(member))
 
-            # Substitui arquivos (exceto hospital.db que é local)
-            excluir = {'hospital.db', 'credentials.json', '.update_temp'}
+            # ---- FASE 1: copia arquivos NÃO-.py agora ----
+            excluir = {'hospital.db', 'credentials.json'}
+            py_pendentes = []
             for root, dirs, files in os.walk(temp_dir):
                 for file in files:
                     if file in excluir:
@@ -150,9 +178,20 @@ def fazer_update_zip() -> bool:
                     rel = os.path.relpath(src, temp_dir)
                     dst = os.path.join(PASTA_RAIZ, rel)
                     os.makedirs(os.path.dirname(dst), exist_ok=True)
-                    shutil.copy2(src, dst)
+                    if file.endswith('.py'):
+                        py_pendentes.append(rel)
+                    else:
+                        shutil.copy2(src, dst)
 
-            shutil.rmtree(temp_dir)
+            # ---- FASE 2: .py vão na PRÓXIMA INICIALIZAÇÃO ----
+            if py_pendentes:
+                marker = os.path.join(PASTA_RAIZ, '.update_pending')
+                with open(marker, 'w') as f:
+                    for rel in py_pendentes:
+                        f.write(rel + '\n')
+                aviso(f"{len(py_pendentes)} arquivos .py serão atualizados na próxima inicialização.")
+            else:
+                shutil.rmtree(temp_dir)
 
         sucesso("Atualização via ZIP concluída!")
         return True
@@ -160,6 +199,14 @@ def fazer_update_zip() -> bool:
     except Exception as e:
         erro(f"Falha na atualização via ZIP: {e}")
         return False
+
+def _is_interactive() -> bool:
+    """Retorna True se o terminal permitir input interativo."""
+    try:
+        return sys.stdin.isatty()
+    except Exception:
+        return False
+
 
 def verificar_atualizacao() -> bool:
     """
@@ -193,6 +240,10 @@ def verificar_atualizacao() -> bool:
         if tuple(partes_remota) > tuple(partes_local):
             aviso(f"Nova versão disponível: {remota}")
 
+            if not _is_interactive():
+                aviso("Modo não-interativo: pulando atualização.")
+                return False
+
             resposta = input(f"{Cores.AMARELO}Deseja atualizar? (S/N): {Cores.RESET}").strip().upper()
 
             if resposta != 'S':
@@ -206,7 +257,8 @@ def verificar_atualizacao() -> bool:
 
             if ok:
                 sucesso("Reinicie o programa para usar a nova versão!")
-                input(f"\n{Cores.VERDE}Pressione ENTER para sair...{Cores.RESET}")
+                if _is_interactive():
+                    input(f"\n{Cores.VERDE}Pressione ENTER para sair...{Cores.RESET}")
                 sys.exit(0)
             else:
                 erro("Falha na atualização. Continuando com versão local.")

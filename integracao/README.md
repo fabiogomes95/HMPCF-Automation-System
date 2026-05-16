@@ -4,6 +4,8 @@ Este diretório contém os scripts responsáveis por **traduzir os dados do sist
 
 Todas as ferramentas funcionam **via terminal** (com parâmetros opcionais) e **via interface web** no Painel de Gestão (Eel, porta 8001).
 
+⚠️ **SEGURANÇA:** Operações sensíveis (sincronização, limpeza, aniquilação) requerem **autenticação de administrador** no painel web. Veja a seção de Admin Authentication mais adiante.
+
 ---
 
 ## 📋 Scripts
@@ -20,10 +22,12 @@ Gera o arquivo **TXT posicional** que o sistema BPA do governo importa.
 **Formato de saída:** Layout posicional do Datasus (nome com 30 caracteres, posições fixas para cada campo).
 
 **Como usar:**
+
 ```bash
 python integracao/exportar_bpa.py
 # Informe mês/ano (opcional) e caminho de saída, ou use padrões
 ```
+
 Também disponível no Painel de Gestão → Integração → Exportar SQLite → TXT BPA.
 
 ---
@@ -39,10 +43,12 @@ Lê o formato CSV usado antes do sistema atual (13 colunas: REGISTRO, NOME, DN, 
 - Gera log de pacientes barrados (SUS inválido)
 
 **Como usar:**
+
 ```bash
 python integracao/converter_csv.py
 # Informe o caminho do CSV e onde salvar (opcional), ou use padrões
 ```
+
 
 ---
 
@@ -58,10 +64,12 @@ Varre a pasta atual em busca de arquivos `.csv` da recepção e os importa para 
 - Gera relatório de auditoria em `.txt` com todos os novos cadastros
 
 **Como usar:**
+
 ```bash
 python importador_recepcao.py
 # Informe o separador (opcional, padrão ";")
 ```
+
 
 ---
 
@@ -75,10 +83,53 @@ Integra os pacientes do `hospital.db` (SQLite) com o banco oficial do BPA (`BPAM
 - Se não existe → **INSERT** (cadastro completo)
 
 **Como usar:**
+
 ```bash
 python integracao/sincronizar_firebird.py
 # Informe o mês/ano e caminho do .gdb (opcional), ou use padrões
 ```
+
+
+---
+
+### 6. `corrigir_nulls.py` — Zerador de NULLs no Firebird
+
+**Utilitário de limpeza crítica.** Varre o banco Firebird (BPAMAG.GDB) e substitui campos vazios por valores padrão seguros:
+
+- SUS vazio → "000 0000 0000 0000" (dummy)
+- Sexo vazio → `'I'` (Indefinido)
+- Data de nascimento inválida → `01/01/1990`
+- Endereço vazio → "NÃO INFORMADO"
+
+**Como usar (terminal):**
+
+```bash
+python integracao/corrigir_nulls.py
+# Informe o caminho do .gdb (opcional)
+```
+
+
+**Via Painel Admin:** Integração → Aniquilar NULLs no Firebird (requer `set_admin()`)
+
+---
+
+### 7. `duplicatas_gdb.py` — Removedor de Duplicatas Firebird
+
+**Ferramenta de deduplicação.** Identifica e remove registros duplicados do Firebird com base em CNS + Nome.
+
+- Detecta múltiplos registros com mesmo CNS
+- Preserva o mais completo
+- Remove clones
+- Faz backup antes de deletar
+
+**Como usar (terminal):**
+
+```bash
+python integracao/duplicatas_gdb.py
+```
+
+
+**Via Painel Admin:** Integração → Limpar Duplicatas no Firebird (requer `set_admin()`)
 
 ---
 
@@ -92,11 +143,38 @@ python integracao/sincronizar_firebird.py
 - Se o paciente já existe no banco com SUS corrompido, atualiza com o SUS válido da planilha
 - Gera dois logs: `PROCESSADOS` e `ERROS`
 
-**Como usar:**
+**Como usar (terminal):**
+
 ```bash
-python sincronizar_contingencia.py
+python integracao/sincronizar_contingencia.py
 # Informe o caminho do CSV (opcional), ou use o padrão
 ```
+
+
+---
+
+## 🔐 Admin Authentication
+
+Operações sensíveis (**Sincronizar Firebird**, **Aniquilar NULLs**, **Limpar Duplicatas**) requerem autenticação:
+
+1. Clique no card da operação
+2. Modal solicitará **senha de 9 dígitos**
+3. Padrão: `8878` (alterável via Painel)
+4. Uma vez desbloqueado, operação executada com logging automático
+5. Banner 🔓 exibido no topo durante sessão ativa
+
+---
+
+## 📋 Auditoria
+
+Todas as operações de integração sensíveis são registradas em `auditoria.log`:
+
+```json
+{"timestamp": "2026-05-16 15:20:30", "evento": "integracao_sincronizar_firebird", "status": "sucesso", "linhas_afetadas": 245}
+{"timestamp": "2026-05-16 15:21:15", "evento": "integracao_aniquilar_nulls", "status": "sucesso", "campos_corrigidos": 89}
+```
+
+Acesse via **Painel → Análise → Terminal de Eventos**.
 
 ---
 
@@ -107,10 +185,12 @@ Varre **todas as colunas** da tabela `CADCNS` no Firebird e substitui valores `N
 **Por que existe:** O sistema BPA do governo **travava** quando encontrava campos NULL, gerando o erro `UDFLIB`. Este script resolve isso de uma vez.
 
 **Como usar:**
+
 ```bash
 python integracao/corrigir_nulls.py
 # Informe o caminho do .gdb (opcional), ou use o padrão
 ```
+
 
 > **Admin-only:** esta operação altera muitos registros no banco oficial. No Painel de Gestão (`web_painel`), ela está disponível apenas para usuários com permissões administrativas.
 
@@ -121,10 +201,12 @@ python integracao/corrigir_nulls.py
 Agrupa pacientes pelo **Cartão SUS**, avalia cada ficha por um **sistema de pontuação** (CPF preenchido = 5pts, endereço = 1pt, telefone = 1pt), mantém a melhor e deleta as inferiores.
 
 **Como usar:**
+
 ```bash
 python duplicatas_gdb.py
 # Informe o caminho do .gdb (opcional), ou use o padrão
 ```
+
 
 > **Admin-only:** remover duplicatas é destrutivo. No Painel de Gestão, essa ação exige autenticação administrativa.
 

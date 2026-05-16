@@ -21,6 +21,7 @@ Gera uma planilha `.xlsx` profissional com separação automática entre **Plant
 - Mesclagem automática de células dos plantões
 
 **Como usar (terminal):**
+
 ```bash
 python planilha_producao.py
 # Depois digite o mês desejado (ex: 04-2026)
@@ -44,6 +45,7 @@ Gera um painel visual com **4 gráficos** em alta resolução (300 DPI):
 Também exibe no terminal o **Top 20 pacientes mais frequentes** com a linha do tempo de cada visita.
 
 **Como usar (terminal):**
+
 ```bash
 python dashboard_visual.py
 ```
@@ -64,6 +66,7 @@ Gera um PDF otimizado para impressão (modo econômico de tinta) com os **20 pac
 **Layout:** duas colunas (side-by-side) para economizar papel, com linha do tempo individual de cada paciente.
 
 **Como usar (terminal):**
+
 ```bash
 python auditoria_periodica.py
 # Escolha 1, 3 ou 6 no menu
@@ -80,6 +83,7 @@ Lê arquivos `.csv` antigos da recepção, cruza dados por CPF/SUS/Nome+DN para 
 Ideal para analisar **dados históricos** que ainda não foram importados para o SQLite.
 
 **Como usar (terminal):**
+
 ```bash
 python analise_anual_csv.py
 # Coloque os CSVs na mesma pasta analise/
@@ -100,6 +104,7 @@ Ferramenta interativa de consulta rápida. Busca o histórico **completo** de at
 Exibe nome, CPF, SUS e a linha do tempo cronológica de cada atendimento com data, hora e procedência.
 
 **Como usar (terminal):**
+
 ```bash
 python historico_paciente.py
 # Depois digite o nome, CPF ou SUS
@@ -114,6 +119,7 @@ python historico_paciente.py
 Todas as 5 ferramentas estão disponíveis no Painel de Gestão, página **Análise / BI**:
 
 ```
+
 http://localhost:8001/analise.html
 ```
 

@@ -15,7 +15,7 @@
 - Raiz `faxina.py` movido para `scripts/faxina_firebird.py` para manter o script Firebird separado.
 - **`app_painel.py`**, **`corrigir_data.py`**, **`integracao/banco_de_dados_hospital_bpa.py`**, **`integracao/duplicatas_gdb.py`**, **`integracao/nacionalidade_gdb.py`**, **`scripts/cpf_bpa.py`** — Agora usam `config.py` em vez de valores hardcoded para Firebird.
 - **`planilha_nuvem.py`** — Agora usa `config.py` para Google Sheet ID, escopos e caminho do SQLite.
-- **`integracao/gerador_arquivo_bpa.py`**, **`integracao/gerador_csv.py`** — Agora usam `config.py` para CNS_PROFISSIONAL e códigos BPA.
+- **`integracao/gerador_arquivo_bpa.py`**, **`integracao/gerador_csv.py`** — Agora usam `config.py` para CEP_RUA e CODIGO_UNIDADE.
 - **`.gitignore`** — Adicionado `/scripts/*.txt`.
  - **`app_painel.py`** — Autenticação admin refinada: `set_admin` agora cria sessão com tempo de expiração, `is_admin` valida/expira sessão automaticamente e `logout_admin` foi adicionado.
  - **`config.py`** — Nova opção `ADMIN_SESSION_MINUTES` para controlar duração da sessão admin (padrão 15 minutos).

@@ -15,7 +15,7 @@ import sqlite3
 import threading
 import eel
 from logging_setup import logger
-from utils import apenas_numeros
+from utils import apenas_numeros, valida_cpf, valida_cns
 from planilha_nuvem import gari_da_nuvem
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -26,7 +26,9 @@ DB_NAME = 'hospital.db'
 
 
 def conectar_banco() -> sqlite3.Connection:
-    return sqlite3.connect(DB_NAME, timeout=30.0, check_same_thread=False)
+    conn = sqlite3.connect(DB_NAME, timeout=30.0, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
 
 
 def init_db() -> None:
@@ -97,6 +99,7 @@ def buscar_paciente(id_procurado: str) -> dict:
     Busca paciente por CPF ou SUS.
     Retorna dict com dados, ou {"erro": "nulo"} se não achar.
     """
+    conn = None
     try:
         id_limpo = apenas_numeros(str(id_procurado))
 
@@ -109,7 +112,6 @@ def buscar_paciente(id_procurado: str) -> dict:
             (id_limpo, id_limpo)
         )
         row = cursor.fetchone()
-        conn.close()
 
         if row:
             dados = {k: row[k] for k in row.keys()}
@@ -121,6 +123,9 @@ def buscar_paciente(id_procurado: str) -> dict:
     except Exception as e:
         logger.error(f"ERRO CRITICO NA BUSCA: {e}")
         return {"erro": "banco_travado"}
+    finally:
+        if conn:
+            conn.close()
 
 
 @eel.expose
@@ -129,17 +134,20 @@ def buscar_por_nome(termo: str) -> list[dict]:
     Busca pacientes por nome (parcial, case insensitive).
     Retorna lista de pacientes encontrados.
     """
+    conn = None
     try:
         conn = conectar_banco()
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
+        # Sanitiza % e _ que são curingas do LIKE
+        termo_sanitizado = termo.upper().replace('%', '\\%').replace('_', '\\_')
         cursor.execute(
-            "SELECT nome, cpf, sus, dn FROM pacientes WHERE nome LIKE ? LIMIT 20",
-            (f"%{termo.upper()}%",)
+            "SELECT nome, cpf, sus, dn FROM pacientes"
+            " WHERE nome LIKE ? ESCAPE '\\' LIMIT 20",
+            (f"%{termo_sanitizado}%",)
         )
         rows = cursor.fetchall()
-        conn.close()
 
         if not rows:
             return []
@@ -157,6 +165,9 @@ def buscar_por_nome(termo: str) -> list[dict]:
     except Exception as e:
         logger.error(f"ERRO NA BUSCA POR NOME: {e}")
         return []
+    finally:
+        if conn:
+            conn.close()
 
 
 @eel.expose
@@ -164,6 +175,7 @@ def buscar_historico(cpf_ou_sus: str) -> list[dict]:
     """
     Busca os últimos 3 atendimentos de um paciente.
     """
+    conn = None
     try:
         id_limpo = apenas_numeros(str(cpf_ou_sus))
         if not id_limpo:
@@ -180,7 +192,6 @@ def buscar_historico(cpf_ou_sus: str) -> list[dict]:
             (id_limpo, id_limpo)
         )
         rows = cursor.fetchall()
-        conn.close()
 
         return [
             {
@@ -194,6 +205,9 @@ def buscar_historico(cpf_ou_sus: str) -> list[dict]:
     except Exception as e:
         logger.error(f"ERRO NO HISTORICO: {e}")
         return []
+    finally:
+        if conn:
+            conn.close()
 
 
 @eel.expose
@@ -202,6 +216,7 @@ def verificar_duplicata(nome: str, dn: str) -> list[dict]:
     Verifica se já existe paciente com mesmo nome + data de nascimento.
     Retorna lista de possíveis duplicatas.
     """
+    conn = None
     try:
         if not nome or not dn:
             return []
@@ -216,7 +231,6 @@ def verificar_duplicata(nome: str, dn: str) -> list[dict]:
             (nome_upper, dn_iso)
         )
         rows = cursor.fetchall()
-        conn.close()
 
         return [
             {'nome': r[0], 'cpf': r[1] or '', 'sus': r[2] or ''}
@@ -226,6 +240,9 @@ def verificar_duplicata(nome: str, dn: str) -> list[dict]:
     except Exception as e:
         logger.error(f"ERRO NA VERIFICACAO DE DUPLICATA: {e}")
         return []
+    finally:
+        if conn:
+            conn.close()
 
 
 @eel.expose
@@ -238,6 +255,13 @@ def salvar(dados: dict) -> dict:
     cursor = conn.cursor()
 
     try:
+        cpf_limpo = apenas_numeros(dados.get('cpf', ''))
+        sus_limpo = apenas_numeros(dados.get('sus', ''))
+        if cpf_limpo and not valida_cpf(cpf_limpo):
+            return {"status": "erro", "mensagem": "CPF inválido"}
+        if sus_limpo and not valida_cns(sus_limpo):
+            return {"status": "erro", "mensagem": "CNS inválido"}
+
         data_nascimento_db = converter_data_para_db(dados.get('dn', ''))
 
         cursor.execute('''

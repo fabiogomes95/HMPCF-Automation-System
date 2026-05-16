@@ -31,6 +31,28 @@ from config import (
 )
 from logging_setup import logger
 
+_gsuite = None
+
+
+def _get_gsuite() -> tuple:
+    """
+    Singleton autenticado do Google.
+    
+    Retorna (gspread.Client, gspread.Spreadsheet).
+    Recria as credenciais apenas na primeira chamada;
+    o AuthorizedSession do gspread renova o token automaticamente.
+    """
+    global _gsuite
+    if _gsuite is None:
+        creds = Credentials.from_service_account_file(
+            GOOGLE_CREDENTIALS_PATH,
+            scopes=[GOOGLE_SCOPE_SHEETS, GOOGLE_SCOPE_DRIVE]
+        )
+        client = gspread.authorize(creds)
+        spreadsheet = client.open_by_key(GOOGLE_SHEET_ID)
+        _gsuite = (client, spreadsheet)
+    return _gsuite
+
 
 def enviar_para_planilha(dados: dict) -> bool:
     """
@@ -46,14 +68,8 @@ def enviar_para_planilha(dados: dict) -> bool:
     Retorna True se deu certo, False se deu erro.
     """
     try:
-        # --- AUTENTICAÇÃO GOOGLE ---
-        # Carrego as credenciais do arquivo JSON baixado do Google Cloud
-        creds = Credentials.from_service_account_file(
-            GOOGLE_CREDENTIALS_PATH,
-            scopes=[GOOGLE_SCOPE_SHEETS, GOOGLE_SCOPE_DRIVE]
-        )
-        client = gspread.authorize(creds)
-        spreadsheet = client.open_by_key(GOOGLE_SHEET_ID)
+        # --- AUTENTICAÇÃO GOOGLE (SINGLETON) ---
+        client, spreadsheet = _get_gsuite()
 
         # --- LÓGICA DA VIRADA DO MÊS (REGRA DO PLANTÃO) ---
         # Se agora é 05/05 às 03:00, o plantão NOTURNO ainda é de MAIO
@@ -218,6 +234,22 @@ def gari_da_nuvem() -> None:
     O "lock" com enviado_nuvem = 2 evita que duas threads
     peguem o mesmo atendimento ao mesmo tempo.
     """
+    # --- LIMPEZA DE LOCKS FANTASMAS ---
+    # Se o programa crashou num ciclo anterior, podem ter ficado
+    # registros com enviado_nuvem = 2 (travados pra sempre).
+    # Aqui a gente destrava tudo na inicialização.
+    try:
+        conn_init = sqlite3.connect(DB_SQLITE)
+        conn_init.execute(
+            "UPDATE atendimentos SET enviado_nuvem = 0 "
+            "WHERE enviado_nuvem = 2"
+        )
+        conn_init.commit()
+        conn_init.close()
+        logger.info("Locks fantasmas limpos na inicializacao do Gari")
+    except Exception:
+        pass
+
     while True:
         try:
             conn = sqlite3.connect(DB_SQLITE)

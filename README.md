@@ -31,6 +31,39 @@ O projeto foi desenvolvido com foco em:
 
 ---
 
+# 🔐 Sistema de Autenticação e Auditoria
+
+## Admin Panel Protegido
+
+Todas as operações sensíveis (integração, sincronização, limpeza de dados) requerem **autenticação de administrador** antes de execução.
+
+### Como Funciona
+1. **Login via Painel** → Modal solicitando senha de 9 dígitos
+2. **Validação** → Senha comparada com `.admin_pass` (padrão: `8878`)
+3. **Sessão Ilimitada** → Uma vez desbloqueado, painel fica acessível até logout
+4. **Auditoria Automática** → Cada login/logout/operação registrada em `auditoria.log`
+5. **Mudança de Senha** → Botão "🔑 Mudar Senha" no painel de gestão
+
+### Arquivo de Auditoria
+
+- **Local:** `auditoria.log` (JSON Lines)
+- **Conteúdo:** Timestamp, evento (login/logout/operação), usuário, IP, detalhes
+- **Acesso:** Painel → Análise → Terminal de Eventos
+
+```json
+{"timestamp": "2026-05-16 14:32:10", "evento": "admin_login", "status": "sucesso"}
+{"timestamp": "2026-05-16 14:33:45", "evento": "integracao_sincronizar", "status": "concluido"}
+{"timestamp": "2026-05-16 14:35:00", "evento": "admin_logout", "status": "normal"}
+```
+
+### Segurança
+- Senha armazenada em `.admin_pass` (fora do versionamento)
+- Tentativas falhadas registradas
+- Session timeout ajustável via `config.py`
+- Operações admin logadas para rastreabilidade
+
+---
+
 # Impacto Operacional
 
 - Redução significativa de retrabalho manual na recepção
@@ -88,19 +121,19 @@ O projeto foi desenvolvido com foco em:
 
 ## Recepção
 
-![Recepção](./screenshots/recepcao.png)
+> 📸 *Captura de tela da interface de Recepção — disponível em breve.*
 
 ---
 
 ## Painel Administrativo
 
-![Painel](./screenshots/painel.png)
+> 📸 *Captura de tela do Painel Administrativo — disponível em breve.*
 
 ---
 
 ## Automação e Auditoria
 
-![Automação](./screenshots/automacao.png)
+> 📸 *Captura de tela do módulo de Automação e Auditoria — disponível em breve.*
 
 ---
 
@@ -149,8 +182,8 @@ B --> H
  ┣ 📜 utils.py                 # Motor de validações (CPF, CNS e regex)
  ┣ 📜 pyproject.toml           # Estrutura do pacote Python
  ┣ 📜 .env.example             # Template de configuração
- ┣ 📜 local_database.db        # Banco SQLite local para contingência operacional
- ┣ 📜 google_credentials.example.json # Template de credenciais Google Cloud
+ ┣ 📜 hospital.db              # Banco SQLite local (não versionado — dados reais)
+ ┣ 📜 credentials.json         # Chave de serviço Google Cloud (não versionado)
  ┣ 📜 requirements.txt         # Dependências do projeto
  ┣ 📜 backlog.md               # Pendências e ideias futuras
  ┣ 📜 CHANGELOG.md             # Histórico de alterações

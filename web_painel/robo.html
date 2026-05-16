@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <div class="editor-container editor-container--wide" style="margin: 0 auto;">
+    <div class="editor-container editor-container--wide">
         <span class="editor-title destino fw-bold">📄 Conteúdo do Lote Selecionado</span>
         <textarea id="texto_lote" class="form-control" rows="20" spellcheck="false" readonly placeholder="O conteúdo do lote aparecerá aqui para conferência..."></textarea>
     </div>
@@ -40,9 +40,9 @@
       </div>
       <div class="modal-body">
         <div id="areaEscolha">
-            <p>👨‍⚕️ <b style="color: var(--primary-blue);">Profissional:</b> <span id="roboMedico" class="fw-bold"></span></p>
-            <p>📅 <b style="color: var(--primary-blue);">Data:</b> <span id="roboData" class="fw-bold"></span></p>
-            <p>👥 <b style="color: var(--primary-blue);">Pacientes Válidos:</b> <span id="roboQtd" class="badge bg-success fs-6"></span></p>
+            <p>👨‍⚕️ <b class="badge-primary">Profissional:</b> <span id="roboMedico" class="fw-bold"></span></p>
+            <p>📅 <b class="badge-primary">Data:</b> <span id="roboData" class="fw-bold"></span></p>
+            <p>👥 <b class="badge-primary">Pacientes Válidos:</b> <span id="roboQtd" class="badge bg-success fs-6"></span></p>
             <hr>
             <label class="form-label fw-bold text-dark">Selecione o Procedimento no BPA:</label>
             <select id="roboCargo" class="form-select mb-3">
@@ -51,7 +51,7 @@
                 <option value="0301010048">👩‍⚕️ Enfermeiro (0301010048)</option>
             </select>
             <div class="passo-a-passo">
-                <strong style="color: var(--hmpcf-red);">ATENÇÃO:</strong><br>
+                <strong class="attention-title">ATENÇÃO:</strong><br>
                 1. Deixe o programa do BPA aberto e visível.<br>
                 2. Ao clicar em INICIAR, você terá <b>5 segundos</b> para clicar no campo correto do BPA.<br>
                 3. Solte o mouse e deixe o robô trabalhar sozinho.
@@ -59,8 +59,8 @@
         </div>
         
         <div id="areaStatus" class="d-none text-center py-4">
-            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
-            <h5 id="statusRobo" style="color: var(--primary-blue); font-weight: bold;">Aguardando...</h5>
+            <div class="spinner-border text-primary mb-3 spinner-lg"></div>
+            <h5 id="statusRobo" class="status-title">Aguardando...</h5>
         </div>
       </div>
       <div class="modal-footer" id="areaBotoes">

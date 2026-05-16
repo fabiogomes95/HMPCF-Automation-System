@@ -16,6 +16,7 @@ Este diretório é a **caixa de ferramentas de manutenção** do sistema HMPCF. 
 - **Audita** a tabela de atendimentos, limpando documentos inválidos
 
 **Como usar:**
+
 ```bash
 python scripts/faxina_sqlite.py
 ```
@@ -31,13 +32,30 @@ Script de manutenção para o banco Firebird/HMR que roda fora do `hospital.db`.
 - **Limpa** ou corrige registros clonados no banco nativo do BPA
 
 **Como usar:**
+
 ```bash
 python scripts/faxina_firebird.py
 ```
 
 ---
 
-### 3. `limpar_clones.py` — Remoção de clones Firebird
+### 3. `corrigir_data.py` — Corretor de Datas de Nascimento
+
+Script para corrigir datas de nascimento malformadas no SQLite.
+
+- Detecta formatos inválidos (DDY, MM/AA, etc)
+- Converte para YYYY-MM-DD
+- Gera log de correções
+
+**Como usar:**
+
+```bash
+python scripts/corrigir_data.py
+```
+
+---
+
+### 4. `limpar_clones.py` — Remoção de clones Firebird
 
 Ferramenta especializada para identificar e remover registros duplicados do Firebird com base em nome, CPF e CNS.
 
@@ -46,13 +64,14 @@ Ferramenta especializada para identificar e remover registros duplicados do Fire
 - Remove registros fantasma ou duplicados
 
 **Como usar:**
+
 ```bash
 python scripts/limpar_clones.py
 ```
 
 ---
 
-### 4. `validar_cns.py` — Faxina Cirúrgica de CNS
+### 5. `validar_cns.py` — Faxina Cirúrgica de CNS
 
 Faxina focada **apenas em Cartão SUS** (ignora CPFs propositalmente).
 
@@ -62,13 +81,14 @@ Faxina focada **apenas em Cartão SUS** (ignora CPFs propositalmente).
 - Gera `relatorio_faxina.txt` com o log completo
 
 **Como usar:**
+
 ```bash
 python scripts/validar_cns.py
 ```
 
 ---
 
-### 3. `fusao.py` — Deduplicação Inteligente V3
+### 6. `fusao.py` — Deduplicação Inteligente V3
 
 Faxina avançada com **inteligência artificial** para fusão de clones.
 
@@ -80,13 +100,14 @@ Faxina avançada com **inteligência artificial** para fusão de clones.
 - Exclui os clones
 
 **Como usar:**
+
 ```bash
 python scripts/fusao.py
 ```
 
 ---
 
-### 4. `auditor_bpa.py` — Auditor de Arquivos TXT do BPA
+### 7. `auditor_bpa.py` — Auditor de Arquivos TXT do BPA
 
 Lê o arquivo `ExpPaciente.txt` gerado para o governo e verifica:
 
@@ -95,6 +116,7 @@ Lê o arquivo `ExpPaciente.txt` gerado para o governo e verifica:
 - Gera `lista_correcao.txt` com os SUS que precisam de correção manual
 
 **Como usar:**
+
 ```bash
 python scripts/auditor_bpa.py
 # Coloque o ExpPaciente.txt na mesma pasta
@@ -102,11 +124,12 @@ python scripts/auditor_bpa.py
 
 ---
 
-### 5. `corrigir_sexo_bpa.py` — Robô RPA Corretor de Sexo
+### 8. `corrigir_sexo_bpa.py` — Robô RPA Corretor de Sexo
 
 **Robô complementar ao auditor.** Lê a `lista_correcao.txt` e assume o teclado (PyAutoGUI) para digitar 'I' no campo sexo de cada paciente no sistema BPA governamental.
 
 **Como usar:**
+
 ```bash
 python scripts/corrigir_sexo_bpa.py
 # Informe data e procedimento
@@ -115,29 +138,31 @@ python scripts/corrigir_sexo_bpa.py
 
 ---
 
-### 6. `atualizar_sexo.py` — Atualização em Massa de Sexo no SQLite
+### 9. `atualizar_sexo.py` — Atualização em Massa de Sexo no SQLite
 
 Varre o `hospital.db` e seta sexo como `'I'` (Indefinido) para todos os pacientes com sexo nulo, vazio ou diferente de M/F.
 
 **Como usar:**
+
 ```bash
 python scripts/atualizar_sexo.py
 ```
 
 ---
 
-### 7. `relatorio_fusao.py` — Relatório Pós-Faxina
+### 10. `relatorio_fusao.py` — Relatório Pós-Faxina
 
 Gera um arquivo `RELATORIO_FINAL_FAXINA.txt` com a lista de todos os pacientes que sobreviveram à faxina, ordenados por nome.
 
 **Como usar:**
+
 ```bash
 python scripts/relatorio_fusao.py
 ```
 
 ---
 
-### 8. `inspecionar_db.py` — Inspeção de Banco de Dados
+### 11. `inspecionar_db.py` — Inspeção de Banco de Dados
 
 Ferraramenta de **debug** para desenvolvedores. Faz uma busca por nome no SQLite e exibe os valores **exatos** salvos no banco (incluindo espaços, formatação e caracteres).
 
@@ -147,9 +172,30 @@ Ferraramenta de **debug** para desenvolvedores. Faz uma busca por nome no SQLite
 - "O SUS está formatado corretamente?"
 
 **Como usar:**
+
 ```bash
 python scripts/inspecionar_db.py
+# Digite o nome do paciente
+# Veja os dados exatos salvos no banco
 ```
+
+---
+
+## 🔐 Integração com Sistema de Autenticação
+
+Scripts críticos (faxina, fusão, limpeza) **não requerem autenticação no terminal**, mas:
+
+- ⚠️ Fazer **backup** antes de executar qualquer faxina
+- 📝 Operações equivalentes no Painel Web **requerem admin unlock** (veja `integracao/README.md`)
+- 📊 Todas as operações são auditadas em `auditoria.log` quando executadas via web
+
+---
+
+## 📁 Arquivos de Saída Típicos
+
+- `relatorio_faxina.txt` — Log de pacientes processados/deletados
+- `lista_correcao.txt` — SUS/CPF que precisam correção manual
+- `RELATORIO_FINAL_FAXINA.txt` — Lista pós-faxina ordenada por nome
 
 ---
 

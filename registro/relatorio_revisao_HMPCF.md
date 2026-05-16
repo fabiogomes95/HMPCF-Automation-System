@@ -36,6 +36,7 @@
 **Stack tecnológica identificada:** Python + SQLite + Eel (Desktop/Web híbrido) + Google Sheets API + Firebird (legado BPA/SUS) + PyAutoGUI (RPA) + gspread.
 
 **Fluxo principal confirmado:**
+
 ```
 Recepcionista (HTML/JS) → Eel → app_recepcao.py → SQLite
                                                       ↓
@@ -89,28 +90,35 @@ logging.basicConfig(level=getattr(logging, LOG_LEVEL, logging.INFO), ...)
 **Problemas críticos:**
 
 1. **🔴 CREDENCIAIS PADRÃO EXPOSTAS — RISCO ALTO:**
+
    ```python
    FIREBIRD_PASSWORD = getenv('FIREBIRD_PASSWORD', 'masterkey')
    ADMIN_PASSWORD default = '8878'
    ```
+
    Senhas padrão hardcoded são um risco de segurança grave, especialmente para um sistema hospitalar com dados sensíveis (CPF, CNS, histórico médico). O sistema deveria **falhar explicitamente** se as credenciais críticas não forem configuradas via `.env`.
 
 2. **🔴 GOOGLE SHEET ID EXPOSTO:**
+
    ```python
    GOOGLE_SHEET_ID = getenv('GOOGLE_SHEET_ID', '1xw_x-bYlHCHzMe39g1mJKPFAD_...')
    ```
+
    Um ID de planilha real está hardcoded como fallback. Isso deveria estar exclusivamente no `.env`, sem valor padrão.
 
-3. **🔴 CNS E CBO PROFISSIONAL HARDCODED:**
+3. **🔴 CEP+RUA E CÓDIGO UNIDADE HARDCODED:**
+
    ```python
-   CNS_PROFISSIONAL = getenv('CNS_PROFISSIONAL', '59575000081')
-   CBO_CODIGO = getenv('CBO_CODIGO', '240360')
+   CEP_RUA = getenv('CEP_RUA', '59575000081')
+   CODIGO_UNIDADE = getenv('CODIGO_UNIDADE', '240360')
    ```
-   Dados de profissional de saúde reais como fallback podem gerar lançamentos BPA/SUS errôneos se o `.env` não for configurado. **Risco operacional direto.**
+
+   Dados reais da unidade como fallback podem gerar lançamentos BPA/SUS errôneos se o `.env` não for configurado. **Risco operacional direto.**
 
 4. **`.admin_pass` sem proteção de permissão:** A função `set_admin_password()` grava a senha em texto plano em um arquivo no diretório raiz. Não há hash, não há restrição de permissão de arquivo (`os.chmod`).
 
 **Sugestão de melhoria:**
+
 ```python
 # Para credenciais críticas, forçar erro explícito:
 FIREBIRD_PASSWORD = getenv('FIREBIRD_PASSWORD') or _raise("FIREBIRD_PASSWORD não configurado")
@@ -155,6 +163,7 @@ FIREBIRD_PASSWORD = getenv('FIREBIRD_PASSWORD') or _raise("FIREBIRD_PASSWORD nã
 1. **🔴 RECONEXÃO AO BANCO A CADA CICLO:** O `gari_da_nuvem()` abre e fecha uma conexão SQLite a cada 10 segundos, para cada atendimento. Em dias de alto volume isso pode causar contenção. Seria mais eficiente usar `sqlite3.connect()` com `WAL mode` e manter a conexão aberta com retry.
 
 2. **🔴 AUTENTICAÇÃO GOOGLE RECRIADA A CADA ENVIO:** A função `enviar_para_planilha()` chama `Credentials.from_service_account_file()` e `gspread.authorize()` a cada atendimento. A autenticação deveria ser criada uma vez e reutilizada (com refresh automático do token).
+
    ```python
    # Anti-padrão atual:
    def enviar_para_planilha(dados):
@@ -163,10 +172,12 @@ FIREBIRD_PASSWORD = getenv('FIREBIRD_PASSWORD') or _raise("FIREBIRD_PASSWORD nã
    ```
 
 3. **⚠️ EXCEPT SILENCIOSO NO LOOP PRINCIPAL:**
+
    ```python
    except Exception:
        pass  # ← Engole qualquer erro silenciosamente
    ```
+
    Se o banco corromper ou a API Google retornar um erro permanente, o sistema falha silenciosamente sem alertar ninguém. Ao menos `logger.error()` deveria ser chamado.
 
 4. **⚠️ `enviado_nuvem = 2` (estado "processando") pode ficar travado:** Se o processo for encerrado abruptamente enquanto um registro está com `enviado_nuvem = 2`, ele fica nesse estado para sempre e nunca mais é processado. É necessário uma lógica de "limpeza de locks fantasmas" na inicialização.
@@ -211,9 +222,11 @@ FIREBIRD_PASSWORD = getenv('FIREBIRD_PASSWORD') or _raise("FIREBIRD_PASSWORD nã
 **Problemas identificados:**
 
 1. **🔴 INJEÇÃO SQL POTENCIAL em `buscar_por_nome()`:**
+
    ```python
    cursor.execute("... WHERE nome LIKE ?", (f"%{termo.upper()}%",))
    ```
+
    O `?` parameterizado protege contra injeção, mas `termo` não é sanitizado. Strings muito longas ou com caracteres especiais do LIKE (`%`, `_`) podem causar comportamentos inesperados. Adicionar `termo = termo.replace('%', '').replace('_', '')[:50]` antes da query.
 
 2. **🔴 GERENCIAMENTO DE CONEXÃO INCONSISTENTE:** `buscar_paciente()`, `buscar_por_nome()` e `buscar_historico()` fecham a conexão no caminho feliz, mas se ocorrer uma exceção antes do `conn.close()`, a conexão vaza. Apenas `salvar()` usa `finally` corretamente. As demais deveriam usar `with conectar_banco() as conn:` ou `try/finally`.
@@ -227,9 +240,11 @@ FIREBIRD_PASSWORD = getenv('FIREBIRD_PASSWORD') or _raise("FIREBIRD_PASSWORD nã
 6. **⚠️ `salvar()` não valida os dados recebidos:** Não há verificação de campos obrigatórios nem validação de CPF/SUS antes de inserir no banco. Se o frontend enviar dados malformados, eles entram no banco sem validação. As funções de `utils.py` existem mas não são usadas aqui para validar.
 
 7. **Modo `msedge` hardcoded:**
+
    ```python
    eel.start('index.html', mode='msedge', ...)
    ```
+
    Em máquinas sem Edge instalado, o sistema falha. Deveria ter fallback (`mode='default'` ou tentativa com Chrome).
 
 ---
@@ -251,6 +266,7 @@ FIREBIRD_PASSWORD = getenv('FIREBIRD_PASSWORD') or _raise("FIREBIRD_PASSWORD nã
 1. **🔴 `fazer_update_zip()` substitui arquivos de código enquanto o sistema roda:** O processo Python está em execução enquanto os `.py` são sobrescritos. No Windows isso pode causar erros de `PermissionError` ou comportamento imprevisível. A atualização deveria criar um script de atualização externo que roda após o processo principal encerrar.
 
 2. **🔴 `verificar_atualizacao()` usa `input()` bloqueante na thread principal:** Se o sistema for iniciado como serviço (sem terminal interativo), a chamada a `input()` bloqueia o processo para sempre. Adicionar timeout ou modo não-interativo:
+
    ```python
    if not sys.stdin.isatty():
        aviso("Modo não-interativo: pulando atualização.")

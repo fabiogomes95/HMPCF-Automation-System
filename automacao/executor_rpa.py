@@ -125,7 +125,7 @@ def executar_pyautogui(medico: str, data_atend: str, procedimento: str, paciente
     Parâmetros:
         medico: nome do médico (só pra exibição)
         data_atend: data no formato DD/MM/AAAA
-        procedimento: código do procedimento (ex: "240360")
+        procedimento: código do procedimento (ex: CODIGO_UNIDADE em config.py)
         pacientes: lista de strings (CPF ou SUS)
         callback: função pra atualizar o frontend
     

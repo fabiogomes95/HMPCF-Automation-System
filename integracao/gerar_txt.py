@@ -8,9 +8,14 @@
 import csv           # Ferramenta para ler e escrever arquivos separados por vírgula/ponto-e-vírgula
 import re            # Regex (Expressões Regulares): Nosso "detetive" para achar padrões de texto
 import unicodedata   # Ferramenta para lidar com acentos e cedilhas
+import sys           # Para configurar o caminho de importação
+import os
 import tkinter as tk # Ferramenta para criar janelas (interfaces gráficas) no Windows
 from tkinter import filedialog, messagebox # Módulos para abrir a janela de selecionar arquivo e alertas
 from datetime import datetime # Ferramenta para manipular datas
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config import CEP_RUA, CODIGO_UNIDADE, FOLHA_CODIGO, SEQ_PROFISSIONAL
 
 # --- 2. FUNÇÕES DE LIMPEZA E FORMATAÇÃO (Nossos operários) ---
 
@@ -86,10 +91,10 @@ def process_file():
     )
     if not file_path: return
 
-    e_cbo = "240360"
-    f_folha = "010"
-    g_seq = "03"
-    h_cns_prof = "59575000081"
+    e_unidade = CODIGO_UNIDADE
+    f_folha = FOLHA_CODIGO
+    g_seq = SEQ_PROFISSIONAL
+    h_cep_rua = CEP_RUA
     
     lines = []
     erros = []
@@ -194,7 +199,7 @@ def process_file():
                             telefone_f = tel_digits.ljust(11)[:11]
                             break 
                 
-                line = f"{cns}{nome}{data_f}{sexo}{e_cbo}{f_folha}{g_seq}    {h_cns_prof}{rua_f}{compl_f}{num_f}{bairro_f}{telefone_f}"
+                line = f"{cns}{nome}{data_f}{sexo}{e_unidade}{f_folha}{g_seq}    {h_cep_rua}{rua_f}{compl_f}{num_f}{bairro_f}{telefone_f}"
                 lines.append(line) 
                 
         output_path = file_path.replace('.csv', '_FORMATADO_BPA.txt')

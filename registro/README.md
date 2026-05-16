@@ -23,8 +23,8 @@
 - `integracao/sincronizar_firebird.py` — Firebird credenciais
 - `integracao/duplicatas_gdb.py` — Firebird credenciais
 - `integracao/corrigir_nulls.py` — Firebird credenciais
-- `integracao/exportar_bpa.py` — CNS_PROFISSIONAL, CBO, etc.
-- `integracao/converter_csv.py` — CNS_PROFISSIONAL, CBO, etc.
+- `integracao/exportar_bpa.py` — CEP_RUA, CODIGO_UNIDADE, etc.
+- `integracao/converter_csv.py` — CEP_RUA, CODIGO_UNIDADE, etc.
 - `scripts/sinc_nome.py` — Firebird credenciais
 
 **Arquivos criados:**
@@ -71,6 +71,7 @@
 - `credentials.json` precisa estar na raiz (Google Sheets)
 
 ### Arquitetura atual
+
 ```
 HMPCF-Automation-System/
 ├── app_painel.py          # Servidor web Painel (porta 8001)
@@ -156,6 +157,7 @@ HMPCF-Automation-System/
 - `backlog.md` — item de logging marcado como concluído
 
 ### Formato das mensagens
+
 ```
 2026-05-15 05:27:04 [INFO] Servidor HMPCF Iniciado...
 2026-05-15 05:27:04 [ERROR] Erro ao salvar: ...
@@ -298,3 +300,59 @@ HMPCF-Automation-System/
 - `app_painel.py`: Eel expose `consulta_listar_atendimentos` agora aceita `pagina` param
 - `consulta.html`: `mudarPagina()` chama servidor (nova função `consultar(pagina)`). Cada troca de página faz uma chamada Eel nova
 - Resolve o timeout de 60s — antes enviava 30k+ registros pelo Eel, agora só 100 por vez
+
+---
+
+## Sessão 10 — 2026-05-16 — Correções críticas do relatório de revisão
+
+### 🔴 Etapa 1: config.py — `_require_env()` + remoção de defaults hardcoded
+Criado helper `_require_env(key)` que levanta `ValueError` se a variável não estiver definida.
+Defaults removidos para `FIREBIRD_PASSWORD`, `GOOGLE_SHEET_ID`, `CNS_PROFISSIONAL`, `CBO_CODIGO`, `ADMIN_PASSWORD`.
+
+### 🔴 Etapa 2: SHA256 hash na senha admin
+- `config.py`: função `_hash_password()` + `set_admin_password()` agora persiste hash SHA256
+- `app_painel.py`: `set_admin()` compara `hashlib.sha256(password).hexdigest()` contra o hash armazenado; fallback para texto plano legado (`.admin_pass` antigo)
+
+### 🔴 Etapa 3: app_recepcao.py — WAL mode + try/finally
+- `conectar_banco()` ativa `PRAGMA journal_mode=WAL`
+- `buscar_paciente()`, `buscar_por_nome()`, `buscar_historico()`, `verificar_duplicata()` — refatorados com `conn = None` + `finally` garantindo `conn.close()`
+
+### 🔴 Etapa 4: planilha_nuvem.py — Limpeza de locks fantasmas
+Gari da Nuvem reseta `enviado_nuvem=2` para `0` na inicialização, destravando registros órfãos de crashes anteriores.
+
+### 🐛 Bug extra: `IS_ADMIN` não inicializada
+Variável global `IS_ADMIN = False` adicionada na raiz de `app_painel.py` para prevenir `NameError` em operações admin-only antes do primeiro login.
+
+### 🔴 Etapa 5 (C3): Google Auth Singleton
+`planilha_nuvem.py`: autenticação Google extraída para singleton `_get_gsuite()` — credenciais criadas uma única vez e reutilizadas. `AuthorizedSession` do gspread renova token automaticamente.
+
+### 🔴 Etapa 6 (C5): Validação CPF/CNS no `salvar()`
+`app_recepcao.py`: antes de inserir paciente, chama `valida_cpf()` e `valida_cns()` do `utils.py`. Retorna erro ao frontend se inválido.
+
+### 🔴 Etapa 7: Sanitização LIKE injection
+`app_recepcao.py`: `buscar_por_nome()` escapa `%` e `_` com `ESCAPE '\'` para evitar vazamento de dados via caracteres curinga.
+
+### 🔴 Etapa 8 (C6): `input()` bloqueante em modo serviço
+`main.py`: adicionado `_is_interactive()` (via `sys.stdin.isatty()`). Em terminal não-interativo, pula perguntas de atualização automaticamente.
+
+### 🔴 Etapa 9: `fazer_update_zip()` — .py adiados
+`main.py`: arquivos `.py` não são mais copiados com o processo rodando. São extraídos para `.update_temp/`, um marcador `.update_pending` é criado, e na próxima inicialização `_aplicar_update_pendente()` copia os .py antes de qualquer import do projeto.
+
+### 🔄 Renomeação de variáveis
+`CNS_PROFISSIONAL` → `CEP_RUA` / `CBO_CODIGO` → `CODIGO_UNIDADE` em:
+- `config.py`, `integracao/exportar_bpa.py`, `integracao/converter_csv.py`, `.env.example`
+- `integracao/gerar_txt.py` — migrado de hardcoded para `from config import ...`
+- `registro/relatorio_revisao_HMPCF.md`, `registro/README.md`, `backlog.md`, `CHANGELOG.md`
+- `automacao/executor_rpa.py` (docstring)
+
+### 📄 `.env` criado
+Arquivo `.env` gerado na raiz com valores padrão comentados para facilitar configuração no hospital.
+
+### Resumo
+| Item | Status |
+|------|--------|
+| 🔴 Críticos (tabela 4.1) | **6/6 resolvidos** (C1–C6) |
+| 🔴 SQL injection | Resolvido |
+| 🔴 ZIP sobrescrever .py rodando | Resolvido |
+| ⚠️ Importantes (4.2) | 0/11 resolvidos |
+| 💡 Melhorias (4.3) | 0/10 resolvidos |

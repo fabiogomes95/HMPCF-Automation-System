@@ -19,6 +19,7 @@ pra fazer buscas ultrarrápidas (sem consultar o banco toda hora).
 
 import os
 import glob
+import hashlib
 from datetime import datetime, timedelta
 import eel
 import firebirdsql
@@ -75,6 +76,7 @@ BASE_PACIENTES = []
 # Admin session management (expiry timestamp or None for no session)
 # If `ADMIN_PASSWORD` is empty, enabling admin will create an unlimited session (legacy behavior).
 ADMIN_SESSION_EXPIRY = None  # 'unlimited' or None
+IS_ADMIN = False
 
 
 def _is_admin_active() -> bool:
@@ -87,17 +89,18 @@ def set_admin(password: str) -> str:
 
     Returns a status message.
     """
-    global IS_ADMIN
     try:
         global ADMIN_SESSION_EXPIRY
         current = get_admin_password()
+        provided = hashlib.sha256(password.encode()).hexdigest()
         # If password is empty, allow unlimited admin (legacy)
         if current == "":
             ADMIN_SESSION_EXPIRY = 'unlimited'
             logger.info("Admin mode enabled (no password configured)")
             log_auditoria("admin_auth", "status=enabled_no_password")
             return "Admin mode enabled (no password configured)."
-        if password == current:
+        # Try hash comparison first; fallback to plain text (legacy .admin_pass)
+        if provided == current or password == current:
             # Per user request: unlimited session after unlocking
             ADMIN_SESSION_EXPIRY = 'unlimited'
             logger.info("Admin mode enabled by correct password (unlimited)")

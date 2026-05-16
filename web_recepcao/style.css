@@ -103,8 +103,7 @@ BARRA DE STATUS SUPERIOR
     justify-content: space-between;
     align-items: center;
     font-size: 12px;
-    flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     transition: background 0.3s;
 }
 
@@ -112,12 +111,14 @@ BARRA DE STATUS SUPERIOR
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-shrink: 0;
 }
 
 .status-bar .status-right {
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-shrink: 0;
 }
 
 .status-dot {
