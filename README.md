@@ -1,5 +1,9 @@
 # HMPCF Automation System
 
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)
+![License](https://img.shields.io/badge/licença-CC%20BY--NC--ND%204.0-lightgrey)
+![Status](https://img.shields.io/badge/status-produção-green)
+
 Sistema de automação hospitalar desenvolvido para otimizar processos
 operacionais, recepção, integração BPA/SUS, auditoria e fluxos
 administrativos em ambiente hospitalar real.
@@ -29,63 +33,6 @@ Pres. Café Filho (Extremoz/RN).
   ("Gari da Nuvem")
 
 ---
-
-## Interface
-
-### Recepção
-
-> 📸 *Captura de tela da interface de Recepção — disponível em breve.*
-
-### Painel Administrativo
-
-> 📸 *Captura de tela do Painel Administrativo — disponível em breve.*
-
-### Automação e Auditoria
-
-> 📸 *Captura de tela do módulo de Automação e Auditoria — disponível em breve.*
-
----
-
-## Arquitetura
-
-```mermaid
-flowchart LR
-A[Recepção Digital] --> B[SQLite Local]
-B --> C[Painel Administrativo]
-B --> D[Automação BPA/SUS]
-D --> E[Triagem e Fila]
-E --> F[Auditoria]
-F --> G[Relatórios Excel/PDF]
-B --> H[Google Sheets]
-```
-
-```text
-📦 HMPCF-Automation-System
- ┣ 📂 analise/                 # BI — Dashboards, relatórios Excel e PDF
- ┣ 📂 automacao/               # RPA — Robô digitador, triagem e fila de lotes
- ┣ 📂 integracao/              # Integração SUS — conversores TXT e sincronizadores
- ┣ 📂 scripts/                 # Scripts administrativos e manutenção operacional
- ┣ 📂 web_recepcao/            # Frontend da Recepção (Eel, porta 8000)
- ┣ 📂 web_painel/              # Frontend do Painel de Gestão (Eel, porta 8001)
- ┣ 📂 screenshots/             # Capturas do sistema
- ┣ 📜 app_recepcao.py          # Servidor da Recepção (Eel — porta 8000)
- ┣ 📜 app_painel.py            # Servidor do Painel de Gestão (Eel — porta 8001)
- ┣ 📜 main.py                  # Launcher unificado
- ┣ 📜 config.py                # Configuração centralizada
- ┣ 📜 planilha_nuvem.py        # "Gari da Nuvem" — sincronizador Google Sheets
- ┣ 📜 utils.py                 # Motor de validações (CPF, CNS e regex)
- ┣ 📜 pyproject.toml           # Estrutura do pacote Python
- ┣ 📜 .env.example             # Template de configuração
- ┣ 📜 hospital.db              # Banco SQLite local (não versionado)
- ┣ 📜 credentials.json         # Chave de serviço Google Cloud (não versionado)
- ┣ 📜 requirements.txt         # Dependências do projeto
- ┣ 📜 backlog.md               # Pendências e ideias futuras
- ┣ 📜 CHANGELOG.md             # Histórico de alterações
- ┣ 📜 start_painel.vbs         # Inicializador silencioso — Painel
- ┣ 📜 start_recepcao.vbs       # Inicializador silencioso — Recepção
- ┣ 📜 iniciar_painel.bat       # Inicializador Painel (porta 8001)
- ┗ 📜 iniciar_recepcao.bat     # Inicializador Recepção (porta 8000)
-```
 
 ---
 
