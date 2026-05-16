@@ -31,39 +31,6 @@ O projeto foi desenvolvido com foco em:
 
 ---
 
-# 🔐 Sistema de Autenticação e Auditoria
-
-## Admin Painel Protegido
-
-Todas as operações sensíveis (integração, sincronização, limpeza de dados) requerem **autenticação de administrador** antes de execução.
-
-### Como Funciona
-1. **Login via Painel** → Modal solicitando senha de 9 dígitos
-2. **Validação** → Senha comparada com `.admin_pass` (padrão: `8878`)
-3. **Sessão Ilimitada** → Uma vez desbloqueado, painel fica acessível até logout
-4. **Auditoria Automática** → Cada login/logout/operação registrada em `auditoria.log`
-5. **Mudança de Senha** → Botão "🔑 Mudar Senha" no painel de gestão
-
-### Arquivo de Auditoria
-
-- **Local:** `auditoria.log` (JSON Lines)
-- **Conteúdo:** Timestamp, evento (login/logout/operação), usuário, IP, detalhes
-- **Acesso:** Painel → Análise → Terminal de Eventos
-
-```json
-{"timestamp": "2026-05-16 14:32:10", "evento": "admin_login", "status": "sucesso"}
-{"timestamp": "2026-05-16 14:33:45", "evento": "integracao_sincronizar", "status": "concluido"}
-{"timestamp": "2026-05-16 14:35:00", "evento": "admin_logout", "status": "normal"}
-```
-
-### Segurança
-- Senha armazenada em `.admin_pass` (fora do versionamento)
-- Tentativas falhadas registradas
-- Session timeout ajustável via `config.py`
-- Operações admin logadas para rastreabilidade
-
----
-
 # Impacto Operacional
 
 - Redução significativa de retrabalho manual na recepção
@@ -172,7 +139,6 @@ B --> H
  ┣ 📂 scripts/                 # Scripts administrativos e manutenção operacional
  ┣ 📂 web_recepcao/            # Frontend da Recepção (Eel)
  ┣ 📂 web_painel/              # Frontend do Painel de Gestão (Eel)
- ┣ 📂 assets/                  # Recursos estáticos (ícones)
  ┣ 📂 screenshots/             # Capturas do sistema
  ┣ 📜 app_recepcao.py          # Servidor da Recepção (Eel — porta 8000)
  ┣ 📜 app_painel.py            # Servidor do Painel de Gestão (Eel — porta 8001)
@@ -182,7 +148,7 @@ B --> H
  ┣ 📜 utils.py                 # Motor de validações (CPF, CNS e regex)
  ┣ 📜 pyproject.toml           # Estrutura do pacote Python
  ┣ 📜 .env.example             # Template de configuração
- ┣ 📜 hospital.db              # Banco SQLite local (não versionado — dados reais)
+ ┣ 📜 hospital.db              # Banco SQLite local (não versionado)
  ┣ 📜 credentials.json         # Chave de serviço Google Cloud (não versionado)
  ┣ 📜 requirements.txt         # Dependências do projeto
  ┣ 📜 backlog.md               # Pendências e ideias futuras
