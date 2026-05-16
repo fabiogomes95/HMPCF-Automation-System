@@ -6,89 +6,27 @@ administrativos em ambiente hospitalar real.
 
 ---
 
-## Status
-
-Projeto em operação e evolução contínua.
-
----
-
 ## Visão Geral
 
-O HMPCF Automation System surgiu da necessidade de reduzir retrabalho
-operacional, automatizar processos repetitivos e melhorar o fluxo
-administrativo hospitalar.
-
-O sistema integra:
-
-- automações BPA/SUS;
-- recepção digital;
-- auditoria;
-- sincronização;
-- painéis administrativos;
-- validações;
-- integração com sistemas legados.
-
-O projeto foi desenvolvido com foco em:
-
-- produtividade;
-- redução de erros;
-- automação operacional;
-- fluxo hospitalar real.
+O HMPCF Automation System integra recepção digital, automação BPA/SUS,
+painel de gestão, auditoria e sincronização com Google Sheets, reduzindo
+retrabalho manual e eliminando fichas em papel no Hospital Municipal
+Pres. Café Filho (Extremoz/RN).
 
 ---
 
-## Impacto Operacional
+## Funcionalidades
 
-- Redução significativa de retrabalho manual na recepção
-- Automatização de processos BPA/SUS
-- Eliminação parcial de fichas em papel
-- Integração digital entre setores
-- Geração automatizada de lotes
-- Redução de inconsistências operacionais
-- Auditoria facilitada
-- Centralização de informações administrativas
-- Sincronização automática de dados
-- Sistema utilizado em ambiente hospitalar real
-
----
-
-## Problemas Resolvidos
-
-### Antes do sistema
-
-- Processos manuais repetitivos
-- Uso excessivo de papel
-- Retrabalho operacional
-- Lançamentos BPA manuais
-- Falta de auditoria centralizada
-- Dificuldade de sincronização
-- Perda de produtividade
-- Alto risco de erro humano
-
-### Após automação
-
-- Fluxo digital integrado
-- Automação operacional
-- Painéis administrativos
-- Processamento automatizado
-- Auditoria facilitada
-- Validação de dados
-- Redução de erros
-- Melhor rastreabilidade operacional
-
----
-
-## Casos de Uso
-
-- Recepção hospitalar
-- Automação BPA/SUS
-- Auditoria operacional
-- Processamento de lotes
-- Triagem administrativa
-- Digitalização de fluxo interno
-- Integração entre setores
-- Geração automatizada de relatórios
-- Sincronização operacional
+- **Recepção Digital** — Cadastro de pacientes, busca por CPF/SUS/nome,
+  validação de dados e registro de atendimentos
+- **Automação BPA/SUS** — Geração de lotes, exportação TXT posicional e
+  digitação automática (RPA)
+- **Painel de Gestão** — Indicadores, integração Firebird, consulta de
+  atendimentos, backup e exportação de relatórios
+- **Auditoria** — Verificação de inconsistências, rastreabilidade e
+  log centralizado de operações
+- **Sincronização** — Envio automático de atendimentos para Google Sheets
+  ("Gari da Nuvem")
 
 ---
 
@@ -98,203 +36,59 @@ O projeto foi desenvolvido com foco em:
 
 > 📸 *Captura de tela da interface de Recepção — disponível em breve.*
 
----
-
 ### Painel Administrativo
 
 > 📸 *Captura de tela do Painel Administrativo — disponível em breve.*
 
----
-
-## Automação e Auditoria
+### Automação e Auditoria
 
 > 📸 *Captura de tela do módulo de Automação e Auditoria — disponível em breve.*
 
 ---
 
-## Fluxo Arquitetural
+## Arquitetura
 
 ```mermaid
 flowchart LR
-
-A[Recepção Digital]
-B[Banco SQLite Local]
-C[Painel Administrativo]
-D[Automação BPA/SUS]
-E[Triagem e Fila]
-F[Auditoria]
-G[Relatórios Excel/PDF]
-H[Google Sheets]
-
-A --> B
-B --> C
-B --> D
-D --> E
-E --> F
-F --> G
-B --> H
+A[Recepção Digital] --> B[SQLite Local]
+B --> C[Painel Administrativo]
+B --> D[Automação BPA/SUS]
+D --> E[Triagem e Fila]
+E --> F[Auditoria]
+F --> G[Relatórios Excel/PDF]
+B --> H[Google Sheets]
 ```
-
----
-
-## Arquitetura do Projeto
 
 ```text
 📦 HMPCF-Automation-System
- ┣ 📂 analise/                 # BI — Dashboards, relatórios Excel e PDF
- ┣ 📂 automacao/               # RPA — Robô digitador, triagem e fila de lotes
- ┣ 📂 integracao/              # Integração SUS — conversores TXT e sincronizadores
- ┣ 📂 scripts/                 # Scripts administrativos e manutenção operacional
- ┣ 📂 web_recepcao/            # Frontend da Recepção (Eel)
- ┣ 📂 web_painel/              # Frontend do Painel de Gestão (Eel)
- ┣ 📂 screenshots/             # Capturas do sistema
- ┣ 📜 app_recepcao.py          # Servidor da Recepção (Eel — porta 8000)
- ┣ 📜 app_painel.py            # Servidor do Painel de Gestão (Eel — porta 8001)
- ┣ 📜 main.py                  # Launcher unificado
- ┣ 📜 config.py                # Configuração centralizada
- ┣ 📜 planilha_nuvem.py        # "Gari da Nuvem" — sincronizador Google Sheets
- ┣ 📜 utils.py                 # Motor de validações (CPF, CNS e regex)
- ┣ 📜 pyproject.toml           # Estrutura do pacote Python
- ┣ 📜 .env.example             # Template de configuração
- ┣ 📜 hospital.db              # Banco SQLite local (não versionado)
- ┣ 📜 credentials.json         # Chave de serviço Google Cloud (não versionado)
- ┣ 📜 requirements.txt         # Dependências do projeto
- ┣ 📜 backlog.md               # Pendências e ideias futuras
- ┣ 📜 CHANGELOG.md             # Histórico de alterações
- ┣ 📜 start_painel.vbs         # Inicializador silencioso — Painel
- ┣ 📜 start_recepcao.vbs       # Inicializador silencioso — Recepção
- ┣ 📜 iniciar_painel.bat       # Inicializador Painel (porta 8001)
- ┗ 📜 iniciar_recepcao.bat     # Inicializador Recepção (porta 8000)
+ ┣ 📂 analise/            # Dashboards e relatórios
+ ┣ 📂 automacao/          # RPA e digitação
+ ┣ 📂 integracao/         # BPA/SUS — conversores e sincronizadores
+ ┣ 📂 scripts/            # Ferramentas administrativas
+ ┣ 📂 web_recepcao/       # Frontend da Recepção (porta 8000)
+ ┣ 📂 web_painel/         # Frontend do Painel (porta 8001)
+ ┣ 📂 screenshots/        # Capturas do sistema
+ ┣ 📜 app_recepcao.py     # Servidor da Recepção
+ ┣ 📜 app_painel.py       # Servidor do Painel
+ ┣ 📜 main.py             # Launcher unificado
+ ┣ 📜 config.py           # Configuração centralizada
+ ┣ 📜 planilha_nuvem.py   # Sincronizador Google Sheets
+ ┣ 📜 utils.py            # Validações (CPF, CNS)
+ ┗ 📜 .env.example        # Template de configuração
 ```
 
 ---
 
-## Principais Funcionalidades
+## Stack
 
-### Recepção Digital
-
-- Cadastro e gerenciamento de pacientes
-- Fluxo digital integrado
-- Validação de dados
-- Controle operacional
-
-### Automação BPA/SUS
-
-- Processamento automatizado
-- Geração de lotes
-- Integração operacional
-- Exportações automatizadas
-
-### Auditoria
-
-- Verificação de inconsistências
-- Controle operacional
-- Rastreabilidade
-- Análise de dados
-
-### Painel (Funcionalidades)
-
-- Visualização operacional
-- Controle administrativo
-- Monitoramento de fluxo
-- Indicadores internos
-
-### Sincronização
-
-- Integração entre setores
-- Atualização automática
-- Controle de contingência
-
----
-
-## Stack Técnica
-
-### Backend
-
-- Python
-- SQLite
-- Firebird
-- Eel
-
-### Automação
-
-- PyAutoGUI
-- Automação BPA/SUS
-- Processamento de lotes
-- Integração TXT
-
-### Frontend
-
-- HTML
-- CSS
-- JavaScript
-
-### Integrações
-
-- Google Sheets API
-- Conversores SUS
-- Sincronização operacional
-
-### Relatórios
-
-- Excel
-- PDF
-- Dashboards operacionais
-
----
-
-## Destaques Técnicos
-
-- Arquitetura modular baseada em domínio operacional
-- Separação entre recepção, painel e automação
-- Integração com fluxo SUS/BPA
-- Processamento automatizado de lotes
-- Sistema híbrido Desktop/Web com Eel
-- Validações centralizadas (CPF, CNS e regex)
-- Sincronização operacional com Google Sheets
-- Estrutura preparada para expansão futura
-
----
-
-## Objetivos Técnicos
-
-- Automatizar processos hospitalares
-- Reduzir erros operacionais
-- Melhorar produtividade
-- Facilitar auditoria
-- Digitalizar fluxos administrativos
-- Integrar setores
-- Minimizar retrabalho
-
----
-
-## Diferenciais
-
-- Desenvolvido com base em problemas reais
-- Fluxo hospitalar real
-- Integração SUS/BPA
-- Automação operacional prática
-- Sistema modular
-- Painel administrativo integrado
-- Auditoria operacional
-- Sincronização de dados
-- Contingência operacional
-
----
-
-## Roadmap Futuro
-
-- Migração gradual para FastAPI
-- PostgreSQL
-- APIs REST
-- Dashboard avançado
-- Logs estruturados
-- Melhorias de segurança
-- Deploy profissional
-- Docker
-- Multiusuário
-- Observabilidade
-- OCR e automação avançada
+| Camada | Tecnologia |
+|---|---|
+| Backend | Python, Eel |
+| Frontend | HTML, CSS, JavaScript |
+| Banco | SQLite, Firebird |
+| Automação | PyAutoGUI |
+| Nuvem | Google Sheets API |
+| Relatórios | Excel (openpyxl), PDF (fpdf2) |
 
 ---
 
@@ -302,58 +96,25 @@ B --> H
 
 ```bash
 git clone https://github.com/fabiogomes95/HMPCF-Automation-System
+cd HMPCF-Automation-System
+pip install -r requirements.txt
+cp .env.example .env  # configure suas credenciais
 ```
-
----
 
 ## Execução
 
-### Rodar Recepção
-
 ```bash
-python app_recepcao.py
+python main.py           # Recepção + Painel
+python app_recepcao.py   # Apenas Recepção (porta 8000)
+python app_painel.py     # Apenas Painel (porta 8001)
 ```
-
-### Rodar Painel
-
-```bash
-python app_painel.py
-```
-
-### Rodar Tudo (Recepção + Painel)
-
-```bash
-python main.py
-```
-
----
-
-## Observações
-
-O desenvolvimento contou com apoio de ferramentas de IA generativa para
-assistência técnica, refatoração e aceleração de desenvolvimento.
 
 ---
 
 ## Licença
 
-Copyright (c) 2026 Fabio Gomes
+Copyright (c) 2026 Fabio Gomes. Todos os direitos reservados.
 
-Este projeto está disponível publicamente apenas para fins de:
-
-- estudo;
-- demonstração técnica;
-- portfólio;
-- avaliação educacional.
-
-Não é permitida:
-
-- redistribuição comercial;
-- revenda;
-- uso institucional;
-- implantação em produção;
-- modificação para fins comerciais;
-
-sem autorização explícita do autor.
-
-Todos os direitos reservados.
+Disponível publicamente para fins de estudo, demonstração técnica e
+portfólio. Não é permitido uso comercial, institucional ou implantação
+em produção sem autorização explícita do autor.
