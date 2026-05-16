@@ -1,6 +1,8 @@
 # HMPCF Automation System
 
-Sistema de automação hospitalar desenvolvido para otimizar processos operacionais, recepção, integração BPA/SUS, auditoria e fluxos administrativos em ambiente hospitalar real.
+Sistema de automação hospitalar desenvolvido para otimizar processos
+operacionais, recepção, integração BPA/SUS, auditoria e fluxos
+administrativos em ambiente hospitalar real.
 
 ---
 
@@ -10,11 +12,14 @@ Projeto em operação e evolução contínua.
 
 ---
 
-# Visão Geral
+## Visão Geral
 
-O HMPCF Automation System surgiu da necessidade de reduzir retrabalho operacional, automatizar processos repetitivos e melhorar o fluxo administrativo hospitalar.
+O HMPCF Automation System surgiu da necessidade de reduzir retrabalho
+operacional, automatizar processos repetitivos e melhorar o fluxo
+administrativo hospitalar.
 
 O sistema integra:
+
 - automações BPA/SUS;
 - recepção digital;
 - auditoria;
@@ -24,6 +29,7 @@ O sistema integra:
 - integração com sistemas legados.
 
 O projeto foi desenvolvido com foco em:
+
 - produtividade;
 - redução de erros;
 - automação operacional;
@@ -31,7 +37,7 @@ O projeto foi desenvolvido com foco em:
 
 ---
 
-# Impacto Operacional
+## Impacto Operacional
 
 - Redução significativa de retrabalho manual na recepção
 - Automatização de processos BPA/SUS
@@ -46,9 +52,10 @@ O projeto foi desenvolvido com foco em:
 
 ---
 
-# Problemas Resolvidos
+## Problemas Resolvidos
 
-## Antes do sistema
+### Antes do sistema
+
 - Processos manuais repetitivos
 - Uso excessivo de papel
 - Retrabalho operacional
@@ -58,7 +65,8 @@ O projeto foi desenvolvido com foco em:
 - Perda de produtividade
 - Alto risco de erro humano
 
-## Após automação
+### Após automação
+
 - Fluxo digital integrado
 - Automação operacional
 - Painéis administrativos
@@ -70,7 +78,7 @@ O projeto foi desenvolvido com foco em:
 
 ---
 
-# Casos de Uso
+## Casos de Uso
 
 - Recepção hospitalar
 - Automação BPA/SUS
@@ -84,15 +92,15 @@ O projeto foi desenvolvido com foco em:
 
 ---
 
-# Interface
+## Interface
 
-## Recepção
+### Recepção
 
 > 📸 *Captura de tela da interface de Recepção — disponível em breve.*
 
 ---
 
-## Painel Administrativo
+### Painel Administrativo
 
 > 📸 *Captura de tela do Painel Administrativo — disponível em breve.*
 
@@ -104,7 +112,7 @@ O projeto foi desenvolvido com foco em:
 
 ---
 
-# Fluxo Arquitetural
+## Fluxo Arquitetural
 
 ```mermaid
 flowchart LR
@@ -129,7 +137,7 @@ B --> H
 
 ---
 
-# Arquitetura do Projeto
+## Arquitetura do Projeto
 
 ```text
 📦 HMPCF-Automation-System
@@ -161,71 +169,81 @@ B --> H
 
 ---
 
-# Principais Funcionalidades
+## Principais Funcionalidades
 
-## Recepção Digital
+### Recepção Digital
+
 - Cadastro e gerenciamento de pacientes
 - Fluxo digital integrado
 - Validação de dados
 - Controle operacional
 
-## Automação BPA/SUS
+### Automação BPA/SUS
+
 - Processamento automatizado
 - Geração de lotes
 - Integração operacional
 - Exportações automatizadas
 
-## Auditoria
+### Auditoria
+
 - Verificação de inconsistências
 - Controle operacional
 - Rastreabilidade
 - Análise de dados
 
-## Painel Administrativo
+### Painel (Funcionalidades)
+
 - Visualização operacional
 - Controle administrativo
 - Monitoramento de fluxo
 - Indicadores internos
 
-## Sincronização
+### Sincronização
+
 - Integração entre setores
 - Atualização automática
 - Controle de contingência
 
 ---
 
-# Stack Técnica
+## Stack Técnica
 
-## Backend
+### Backend
+
 - Python
 - SQLite
 - Firebird
 - Eel
 
-## Automação
+### Automação
+
 - PyAutoGUI
 - Automação BPA/SUS
 - Processamento de lotes
 - Integração TXT
 
-## Frontend
+### Frontend
+
 - HTML
 - CSS
 - JavaScript
 
-## Integrações
+### Integrações
+
 - Google Sheets API
 - Conversores SUS
 - Sincronização operacional
 
-## Relatórios
+### Relatórios
+
 - Excel
 - PDF
 - Dashboards operacionais
 
 ---
 
-# Destaques Técnicos
+## Destaques Técnicos
 
 - Arquitetura modular baseada em domínio operacional
 - Separação entre recepção, painel e automação
@@ -238,30 +256,7 @@ B --> H
 
 ---
 
-# Tecnologias Utilizadas
-
-## Backend
-- Python
-
-## Frontend
-- HTML
-- CSS
-- JavaScript
-
-## Automação
-- PyAutoGUI
-- Scripts de integração
-
-## Banco de Dados
-- SQLite
-- Firebird (integração)
-
-## Interface Desktop/Web
-- Eel
-
----
-
-# Objetivos Técnicos
+## Objetivos Técnicos
 
 - Automatizar processos hospitalares
 - Reduzir erros operacionais
@@ -273,7 +268,7 @@ B --> H
 
 ---
 
-# Diferenciais
+## Diferenciais
 
 - Desenvolvido com base em problemas reais
 - Fluxo hospitalar real
@@ -287,7 +282,7 @@ B --> H
 
 ---
 
-# Roadmap Futuro
+## Roadmap Futuro
 
 - Migração gradual para FastAPI
 - PostgreSQL
@@ -303,7 +298,7 @@ B --> H
 
 ---
 
-# Instalação
+## Instalação
 
 ```bash
 git clone https://github.com/fabiogomes95/HMPCF-Automation-System
@@ -311,21 +306,21 @@ git clone https://github.com/fabiogomes95/HMPCF-Automation-System
 
 ---
 
-# Execução
+## Execução
 
-## Recepção
+### Rodar Recepção
 
 ```bash
 python app_recepcao.py
 ```
 
-## Painel Administrativo
+### Rodar Painel
 
 ```bash
 python app_painel.py
 ```
 
-## Inicializador Unificado
+### Rodar Tudo (Recepção + Painel)
 
 ```bash
 python main.py
@@ -333,23 +328,26 @@ python main.py
 
 ---
 
-# Observações
+## Observações
 
-O desenvolvimento contou com apoio de ferramentas de IA generativa para assistência técnica, refatoração e aceleração de desenvolvimento.
+O desenvolvimento contou com apoio de ferramentas de IA generativa para
+assistência técnica, refatoração e aceleração de desenvolvimento.
 
 ---
 
-# Licença
+## Licença
 
 Copyright (c) 2026 Fabio Gomes
 
 Este projeto está disponível publicamente apenas para fins de:
+
 - estudo;
 - demonstração técnica;
 - portfólio;
 - avaliação educacional.
 
 Não é permitida:
+
 - redistribuição comercial;
 - revenda;
 - uso institucional;
