@@ -33,7 +33,7 @@ O projeto foi desenvolvido com foco em:
 
 # 🔐 Sistema de Autenticação e Auditoria
 
-## Admin Panel Protegido
+## Admin Painel Protegido
 
 Todas as operações sensíveis (integração, sincronização, limpeza de dados) requerem **autenticação de administrador** antes de execução.
 
