@@ -336,8 +336,6 @@ python main.py
 
 # Observações
 
-Projeto desenvolvido com base em necessidades operacionais reais de ambiente hospitalar, com foco em automação, integração e digitalização de processos administrativos.
-
 O desenvolvimento contou com apoio de ferramentas de IA generativa para assistência técnica, refatoração e aceleração de desenvolvimento.
 
 ---
