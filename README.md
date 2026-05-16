@@ -4,6 +4,10 @@
 ![License](https://img.shields.io/badge/licença-CC%20BY--NC--ND%204.0-lightgrey)
 ![Status](https://img.shields.io/badge/status-produção-green)
 
+> Hospital automation system for patient check-in, SUS/BPA billing,
+> administrative management and audit. Built for a real hospital in
+> Extremoz/RN, Brazil.
+
 Sistema de automação hospitalar desenvolvido para otimizar processos
 operacionais, recepção, integração BPA/SUS, auditoria e fluxos
 administrativos em ambiente hospitalar real.
@@ -67,6 +71,10 @@ python app_painel.py     # Apenas Painel (porta 8001)
 ```
 
 ---
+
+---
+
+Desenvolvido por [Fabio Gomes](https://www.linkedin.com/in/fabiogsilva95/)
 
 ## Licença
 
