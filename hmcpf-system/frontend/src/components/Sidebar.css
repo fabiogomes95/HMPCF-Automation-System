@@ -1,0 +1,108 @@
+/*
+ * SIDEBAR.CSS — Estilos da barra lateral.
+ *
+ * position: fixed
+ *   Fixa a sidebar no lado esquerdo da tela.
+ *   Ela NÃO rola junto com o conteúdo.
+ *
+ * display: flex + flex-direction: column
+ *   Organiza os elementos na vertical:
+ *     - Header (logo)
+ *     - Nav (links) — flex: 1 para ocupar espaço disponível
+ *     - Footer (tema)
+ *
+ * VARIÁVEIS CSS:
+ *   As cores usam var(--color-sidebar), var(--color-text-on-dark), etc.
+ *   Definidas em styles/variables.css.
+ *   Vantagem: se quiser mudar o tema, muda num lugar só.
+ */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--color-sidebar);
+  color: var(--color-text-on-dark);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+/* ── Cabeçalho ─────────────────────────────────────── */
+.sidebar-header {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-logo {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.sidebar-version {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+/* ── Navegação ─────────────────────────────────────── */
+.sidebar-nav {
+  flex: 1;
+  padding: var(--spacing-md) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-on-dark);
+  opacity: 0.75; /* Links não ativos são mais transparentes */
+  transition: all 0.15s ease;
+}
+
+.sidebar-link:hover {
+  opacity: 1;
+  background: var(--color-sidebar-hover);
+}
+
+/* Destaque do link ativo (página atual) */
+.sidebar-link--active {
+  opacity: 1;
+  background: var(--color-sidebar-active);
+  font-weight: 600;
+}
+
+.sidebar-icon {
+  font-size: var(--font-size-lg);
+  width: 24px;
+  text-align: center;
+}
+
+/* ── Rodapé ────────────────────────────────────────── */
+.sidebar-footer {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-theme-btn {
+  width: 100%;
+  padding: var(--spacing-sm);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-on-dark);
+  font-size: var(--font-size-sm);
+  transition: background 0.15s;
+}
+
+.sidebar-theme-btn:hover {
+  background: var(--color-sidebar-hover);
+}

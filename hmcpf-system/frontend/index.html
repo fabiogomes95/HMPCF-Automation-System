@@ -1,0 +1,36 @@
+<!--
+  INDEX.HTML — Ponto de entrada HTML do frontend.
+
+  Este é o HTML "mínimo" que o Vite precisa.
+  O React toma conta de tudo a partir da div#root.
+
+  POR QUE TÃO MÍNIMO?
+    No React moderno (SPA - Single Page Application),
+    o HTML serve apenas como "casca". O conteúdo real
+    é gerado pelo JavaScript.
+
+    vantagens:
+      - Uma única página HTML para todas as rotas
+      - Navegação sem recarregar (instantânea)
+      - Estado preservado entre páginas
+
+  script type="module":
+    "module" = o navegador trata o arquivo como módulo ES6
+    Isso permite usar import/export no navegador.
+
+    O Vite processa main.jsx e gera o bundle final.
+-->
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HMPCF System</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- type="module" = o navegador carrega como módulo ES6 -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

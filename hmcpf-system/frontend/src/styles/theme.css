@@ -1,0 +1,31 @@
+/*
+ * THEME.CSS — Tema escuro (dark mode).
+ *
+ * COMO FUNCIONA O DARK MODE:
+ *   1. ThemeContext.jsx define o atributo data-theme no <html>
+ *   2. data-theme="dark" ativa os estilos abaixo
+ *   3. As variáveis CSS são sobrescritas com cores escuras
+ *   4. Todos os componentes que usam var(--color-*) atualizam automaticamente
+ *
+ *   Exemplo:
+ *     --color-bg: #f5f6fa (claro) → --color-bg: #0f172a (escuro)
+ *     --color-text: #1e293b (claro) → --color-text: #f1f5f9 (escuro)
+ *
+ *   Isso é MUITO mais eficiente que criar estilos separados
+ *   para cada componente (.card-dark, .sidebar-dark, etc.).
+ *   Com variáveis CSS, o tema troca com UMA linha de CSS.
+ *
+ * NOTA: Apenas as cores que mudam precisam ser declaradas aqui.
+ *       As que permanecem iguais (ex: --color-primary) não precisam.
+ */
+
+[data-theme="dark"] {
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-sidebar: #0f172a;
+  --color-sidebar-hover: #1e293b;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-border: #334155;
+  --color-primary-light: #1e3a5f;
+}
