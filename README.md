@@ -1,11 +1,5 @@
 # HMPCF Automation System
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)
-![Status](https://img.shields.io/badge/status-produção-green)
-![GitHub last commit](https://img.shields.io/github/last-commit/fabiogomes95/HMPCF-Automation-System)
-![GitHub repo size](https://img.shields.io/github/repo-size/fabiogomes95/HMPCF-Automation-System)
-![Firebird](https://img.shields.io/badge/Firebird-3.0-orange?logo=firebird)
-
 > Hospital automation system for patient check-in, SUS/BPA billing,
 > administrative management and audit. Built for a real hospital in
 > Extremoz/RN, Brazil.
