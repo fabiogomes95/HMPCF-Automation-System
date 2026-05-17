@@ -97,24 +97,24 @@ def set_admin(password: str) -> str:
         if current == "":
             ADMIN_SESSION_EXPIRY = 'unlimited'
             logger.info("Admin mode enabled (no password configured)")
-            log_auditoria("admin_auth", "status=enabled_no_password")
+            log_auditoria("admin_auth", "status=enabled_no_password", tipo="acao")
             return "Admin mode enabled (no password configured)."
         # Try hash comparison first; fallback to plain text (legacy .admin_pass)
         if provided == current or password == current:
             # Per user request: unlimited session after unlocking
             ADMIN_SESSION_EXPIRY = 'unlimited'
             logger.info("Admin mode enabled by correct password (unlimited)")
-            log_auditoria("admin_auth", "status=success")
+            log_auditoria("admin_auth", "status=success", tipo="acao")
             return "Admin mode enabled."
         # failed
         ADMIN_SESSION_EXPIRY = None
         logger.warning("Admin authentication failed")
-        log_auditoria("admin_auth", "status=failure")
+        log_auditoria("admin_auth", "status=failure", tipo="acao")
         return "Senha inválida."
     except Exception as e:
         logger.error(f"Erro ao definir admin: {e}")
         try:
-            log_auditoria("admin_auth", f"status=error details={str(e)[:120]}")
+            log_auditoria("admin_auth", f"status=error details={str(e)[:120]}", tipo="acao")
         except Exception:
             pass
         return f"Erro: {e}"
@@ -137,12 +137,12 @@ def logout_admin() -> str:
     try:
         ADMIN_SESSION_EXPIRY = None
         logger.info("Admin logged out")
-        log_auditoria("admin_auth", "status=logout")
+        log_auditoria("admin_auth", "status=logout", tipo="acao")
         return "Admin logged out."
     except Exception as e:
         logger.error(f"Erro ao deslogar admin: {e}")
         try:
-            log_auditoria("admin_auth", f"status=error details={str(e)[:120]}")
+            log_auditoria("admin_auth", f"status=error details={str(e)[:120]}", tipo="acao")
         except Exception:
             pass
         return f"Erro: {e}"
@@ -157,13 +157,13 @@ def change_admin_password(nova: str) -> str:
         ok = set_admin_password(nova)
         if ok:
             logger.info("Admin password changed via panel")
-            log_auditoria("admin_auth", "status=password_changed")
+            log_auditoria("admin_auth", "status=password_changed", tipo="acao")
             return "Senha alterada com sucesso."
         return "Erro ao gravar nova senha."
     except Exception as e:
         logger.error(f"Erro ao alterar senha admin: {e}")
         try:
-            log_auditoria("admin_auth", f"status=error details={str(e)[:120]}")
+            log_auditoria("admin_auth", f"status=error details={str(e)[:120]}", tipo="acao")
         except Exception:
             pass
         return f"Erro: {e}"
@@ -257,7 +257,7 @@ def adicionar_paciente_txt(arquivo: str, documento: str) -> bool:
 @eel.expose
 def rodar_limpador(data_lote: str, enfermeiros_str: str) -> str:
     """Processa CPF/SUS sujos e organiza lotes por enfermeiro."""
-    log_auditoria("rodar_limpador", f"data={data_lote}")
+    log_auditoria("rodar_limpador", f"data={data_lote}", tipo="acao")
     caminho_sujo = os.path.join(PASTA_AUTOMACAO, "cpf_sus.txt")
 
     # Extrai CPF/SUS dos dados bagunçados
@@ -325,7 +325,7 @@ def preparar_rpa(nome_arquivo: str) -> dict:
 @eel.expose
 def digitar_lote_rpa(medico: str, data: str, cargo: str, pacientes: list) -> str:
     """Executa a digitação automática via PyAutoGUI."""
-    log_auditoria("digitar_lote_rpa", f"medico={medico} data={data} pacientes={len(pacientes)}")
+    log_auditoria("digitar_lote_rpa", f"medico={medico} data={data} pacientes={len(pacientes)}", tipo="acao")
     def callback(msg):
         eel.atualizar_progresso_web(msg)()
 
@@ -410,7 +410,7 @@ def integracao_sincronizar_firebird(mes_ano: str = "", caminho_gdb: str = "") ->
         return "Erro: operação restrita a administradores."
     gdb = caminho_gdb or FIREBIRD_PATH
     fazer_backup(gdb, "pre_sincronizar")
-    log_auditoria("sincronizar_firebird", f"mes={mes_ano} gdb={gdb}")
+    log_auditoria("sincronizar_firebird", f"mes={mes_ano} gdb={gdb}", tipo="acao")
     try:
         return sincronizar_firebird.sincronizar_sqlite_para_gdb(
             mes_ano, caminho_gdb
@@ -435,7 +435,7 @@ def integracao_aniquilar_nulls(caminho_gdb: str = "") -> str:
         return "Erro: operação restrita a administradores."
     gdb = caminho_gdb or FIREBIRD_PATH
     fazer_backup(gdb, "pre_aniquilar_nulls")
-    log_auditoria("aniquilar_nulls", f"gdb={gdb}")
+    log_auditoria("aniquilar_nulls", f"gdb={gdb}", tipo="acao")
     try:
         return corrigir_nulls.aniquilar_nulls_bpa(caminho_gdb)
     except Exception as e:
@@ -449,7 +449,7 @@ def integracao_limpar_duplicatas(caminho_gdb: str = "") -> str:
         return "Erro: operação restrita a administradores."
     gdb = caminho_gdb or FIREBIRD_PATH
     fazer_backup(gdb, "pre_limpar_duplicatas")
-    log_auditoria("limpar_duplicatas", f"gdb={gdb}")
+    log_auditoria("limpar_duplicatas", f"gdb={gdb}", tipo="acao")
     try:
         return duplicatas_gdb.limpar_duplicados_gdb(caminho_gdb)
     except Exception as e:
@@ -463,7 +463,7 @@ def integracao_limpar_duplicatas(caminho_gdb: str = "") -> str:
 @eel.expose
 def analise_gerar_dashboard() -> str:
     """Gera dashboard PNG + relatório Top 20."""
-    log_auditoria("gerar_dashboard")
+    log_auditoria("gerar_dashboard", tipo="acao")
     try:
         return dashboard_visual.gerar_dashboard()
     except Exception as e:
@@ -473,7 +473,7 @@ def analise_gerar_dashboard() -> str:
 @eel.expose
 def analise_gerar_relatorio_mes(mes_ref: str) -> str:
     """Gera planilha Excel de produção para um mês."""
-    log_auditoria("gerar_relatorio_mes", mes_ref)
+    log_auditoria("gerar_relatorio_mes", mes_ref, tipo="acao")
     try:
         return planilha_producao.gerar_relatorio_mes(mes_ref)
     except Exception as e:
@@ -483,7 +483,7 @@ def analise_gerar_relatorio_mes(mes_ref: str) -> str:
 @eel.expose
 def analise_gerar_auditoria_periodo(opcao: str) -> str:
     """Gera PDF de auditoria: '1', '3' ou '6' meses."""
-    log_auditoria("gerar_auditoria_periodo", f"{opcao} mes(es)")
+    log_auditoria("gerar_auditoria_periodo", f"{opcao} mes(es)", tipo="acao")
     try:
         return auditoria_periodica.gerar_auditoria_periodo(opcao)
     except Exception as e:
@@ -493,7 +493,7 @@ def analise_gerar_auditoria_periodo(opcao: str) -> str:
 @eel.expose
 def analise_analisar_csvs_para_pdf() -> str:
     """Analisa CSVs antigos e gera PDF com Top 20."""
-    log_auditoria("analisar_csvs_para_pdf")
+    log_auditoria("analisar_csvs_para_pdf", tipo="acao")
     try:
         return analise_anual_csv.analisar_csvs_para_pdf()
     except Exception as e:
@@ -503,7 +503,7 @@ def analise_analisar_csvs_para_pdf() -> str:
 @eel.expose
 def analise_buscar_historico(termo: str) -> str:
     """Busca histórico de paciente por nome, CPF ou SUS."""
-    log_auditoria("buscar_historico", termo[:80])
+    log_auditoria("buscar_historico", termo[:80], tipo="acao")
     try:
         return historico_paciente.buscar_por_termo(termo)
     except Exception as e:
@@ -558,7 +558,7 @@ def backup_executar(caminho: str, prefixo: str = "manual") -> str:
     """Faz backup manual de um arquivo."""
     destino = fazer_backup(caminho, prefixo)
     if destino:
-        log_auditoria("backup_manual", f"{caminho} → {destino}")
+        log_auditoria("backup_manual", f"{caminho} → {destino}", tipo="acao")
         return f"Backup criado: {destino}"
     return f"Erro: arquivo {caminho} nao encontrado."
 
@@ -575,6 +575,18 @@ def auditoria_listar(limite: int = 100) -> list[dict]:
     return listar(limite)
 
 
+@eel.expose
+def auditoria_sistema(limite: int = 50) -> list[dict]:
+    """Retorna eventos do sistema (ex.: painel_iniciado)."""
+    return listar(limite, tipo="sistema")
+
+
+@eel.expose
+def auditoria_acoes(limite: int = 50) -> list[dict]:
+    """Retorna ações do usuário (ex.: admin_auth, exportacao)."""
+    return listar(limite, tipo="acao")
+
+
 # =====================================================================
 # 8. EXPORTAÇÃO CONSOLIDADA
 # =====================================================================
@@ -584,9 +596,9 @@ from analise.exportacao_consolidada import exportar_tudo
 @eel.expose
 def exportacao_consolidada() -> str:
     """Gera todos os relatórios e empacota em ZIP."""
-    log_auditoria("exportacao_consolidada", "iniciada")
+    log_auditoria("exportacao_consolidada", "iniciada", tipo="acao")
     resultado = exportar_tudo()
-    log_auditoria("exportacao_consolidada", resultado)
+    log_auditoria("exportacao_consolidada", resultado, tipo="acao")
     return resultado
 
 
@@ -645,6 +657,11 @@ def iniciar() -> None:
         block=False,
         close_callback=manter_vivo
     )
+
+    try:
+        eel.adicionarEventoTerminal(f"Motor HMPCF 3.0 iniciado — {len(BASE_PACIENTES)} pacientes na RAM", "info")
+    except Exception:
+        pass
 
     while True:
         eel.sleep(1.0)

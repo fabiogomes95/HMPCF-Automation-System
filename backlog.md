@@ -50,3 +50,9 @@
 - [x] **app_recepcao.py (`buscar_por_nome`)**: caracteres `%` e `_` sanitizados com `ESCAPE '\'` para evitar vazamento de dados via LIKE injection.
 - [x] **main.py**: `input()` substituído por `_is_interactive()` — pula perguntas em modo serviço (sem terminal).
 - [x] **main.py (`fazer_update_zip`)**: arquivos `.py` não são mais copiados com o processo rodando; são adiados para a próxima inicialização via marcador `.update_pending`, aplicados por `_aplicar_update_pendente()` antes de qualquer import do projeto.
+- [x] **Bug main.py**: `_aplicar_update_pendente()` chamada antes da definição — movida para antes do uso.
+- [x] **auditoria_log.py**: Adicionado campo `tipo` ("sistema" / "acao") para separar eventos do sistema de ações do usuário.
+- [x] **app_painel.py**: 21 chamadas `log_auditoria()` categorizadas com `tipo="acao"`; expostos `auditoria_sistema()` e `auditoria_acoes()`.
+- [x] **web_painel/index.html**: Terminal de Eventos (sistema) separado de Últimas Ações (usuário); +`adicionarEventoTerminal()` para push tempo real.
+- [ ] **auditoria_sistema/acoes quebradas** — `NameError: name 'listar' is not defined` em `app_painel.py:581`. Importar `listar` de `auditoria_log.py`.
+- [ ] **consulta.html não responde no browser** — WebSocket Eel conecta mas promises não resolvem. Testes Python (cliente externo) funcionam perfeitamente. Investigar race condition no eel.js ou migrar para REST.

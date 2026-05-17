@@ -108,8 +108,8 @@
         <div class="col-md-6">
             <div class="editor-container shadow-sm">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-bold badge-primary">📋 Últimas Ações (Auditoria)</span>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="carregarLog()">🔄</button>
+                    <span class="fw-bold badge-primary">📋 Últimas Ações</span>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="carregarAcoes()">🔄</button>
                 </div>
                 <div class="log-container" id="logContainer">
                     <div class="text-muted text-center py-3">Carregando...</div>
@@ -123,8 +123,7 @@
                     <span class="terminal-active">Ativo</span>
                 </div>
                 <div class="terminal-body" id="terminal-logs">
-                    <div><span class="log-time">[SISTEMA]</span> <span class="log-info">Motor HMPCF 3.0 iniciado.</span></div>
-                    <div><span class="log-time">[SISTEMA]</span> Banco de dados BPA conectado.</div>
+                    <div><span class="log-time">[SISTEMA]</span> <span class="log-info">Aguardando conexão com o servidor...</span></div>
                 </div>
             </div>
         </div>
@@ -174,10 +173,20 @@
         }
     }
 
-    async function carregarLog() {
+    function adicionarEventoTerminal(mensagem, tipo) {
+        const term = document.getElementById('terminal-logs');
+        if (!term) return;
+        const agora = new Date();
+        const ts = agora.toISOString().slice(0, 19).replace('T', ' ');
+        const cor = tipo === 'erro' ? 'text-danger' : tipo === 'aviso' ? 'text-warning' : 'log-info';
+        term.innerHTML = `<div><span class="log-time">[${ts}]</span> <span class="${cor}">${mensagem}</span></div>` + term.innerHTML;
+        if (term.children.length > 50) term.lastChild.remove();
+    }
+
+    async function carregarAcoes() {
+        const container = document.getElementById('logContainer');
         try {
-            const entries = await eel.auditoria_listar(50)();
-            const container = document.getElementById('logContainer');
+            const entries = await eel.auditoria_acoes(50)();
             if (!entries || entries.length === 0) {
                 container.innerHTML = '<div class="text-muted text-center py-3">Nenhuma ação registrada.</div>';
                 return;
@@ -187,30 +196,39 @@
                 const detalhes = e.detalhes ? ` — ${e.detalhes}` : '';
                 return `<div class="log-item"><span class="log-time">${t}</span><span class="log-acao">${e.acao}</span><span class="text-muted">${detalhes}</span></div>`;
             }).join('');
-            // Also update the terminal area with the most recent entries
-            try {
-                const term = document.getElementById('terminal-logs');
-                if (term) {
-                    const last = entries.slice(0, 10); // newest already first
-                    term.innerHTML = last.map(ev => {
-                        const tt = (ev.timestamp || '').slice(0, 19).replace('T', ' ');
-                        const detalhe = ev.detalhes ? ` ${ev.detalhes}` : '';
-                        return `<div><span class="log-time">[${tt}]</span> <span class="log-info">${ev.acao}${detalhe}</span></div>`;
-                    }).join('');
-                }
-            } catch (e) {
-                console.error('Erro atualizando terminal:', e);
-            }
         } catch (e) {
-            console.error('Erro log:', e);
+            console.error('Erro acoes:', e);
+            container.innerHTML = '<div class="text-danger text-center py-3">⚠️ Erro ao carregar ações.</div>';
+        }
+    }
+
+    async function carregarTerminal() {
+        const term = document.getElementById('terminal-logs');
+        if (!term) return;
+        try {
+            const entries = await eel.auditoria_sistema(20)();
+            if (!entries || entries.length === 0) {
+                term.innerHTML = '<div><span class="log-time">[SISTEMA]</span> <span class="log-info">Nenhum evento do sistema registrado.</span></div>';
+                return;
+            }
+            term.innerHTML = entries.map(ev => {
+                const tt = (ev.timestamp || '').slice(0, 19).replace('T', ' ');
+                const detalhe = ev.detalhes ? ` ${ev.detalhes}` : '';
+                return `<div><span class="log-time">[${tt}]</span> <span class="log-info">${ev.acao}${detalhe}</span></div>`;
+            }).join('');
+        } catch (e) {
+            console.error('Erro terminal:', e);
+            term.innerHTML = `<div><span class="log-time">[SISTEMA]</span> <span class="text-warning">⚠️ Sem conexão com o backend.</span></div>`;
         }
     }
 
     document.addEventListener('DOMContentLoaded', function() {
         aplicarTemaSalvo();
         carregarIndicadores();
-        carregarLog();
-        setInterval(carregarLog, 30000);
+        carregarAcoes();
+        carregarTerminal();
+        setInterval(carregarAcoes, 30000);
+        setInterval(carregarTerminal, 30000);
     });
 </script>
 </body>

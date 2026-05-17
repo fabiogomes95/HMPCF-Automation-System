@@ -27,6 +27,29 @@ from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+def _aplicar_update_pendente() -> None:
+    """Copia .py pendentes do .update_temp e remove marcador."""
+    import shutil
+    PASTA_RAIZ_local = os.path.dirname(os.path.abspath(__file__))
+    marker = os.path.join(PASTA_RAIZ_local, '.update_pending')
+    if not os.path.exists(marker):
+        return
+    temp_dir = os.path.join(PASTA_RAIZ_local, '.update_temp')
+    if not os.path.exists(temp_dir):
+        os.remove(marker)
+        return
+    for root, dirs, files in os.walk(temp_dir):
+        for file in files:
+            if not file.endswith('.py'):
+                continue
+            src = os.path.join(root, file)
+            rel = os.path.relpath(src, temp_dir)
+            dst = os.path.join(PASTA_RAIZ_local, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+    shutil.rmtree(temp_dir)
+    os.remove(marker)
+
 # Aplica atualizações de .py pendentes ANTES de importar módulos do projeto
 _aplicar_update_pendente()
 
@@ -108,29 +131,6 @@ def fazer_update_git_pull() -> bool:
     except Exception as e:
         erro(f"Erro ao executar git pull: {e}")
         return False
-
-def _aplicar_update_pendente() -> None:
-    """Copia .py pendentes do .update_temp e remove marcador."""
-    import shutil
-    marker = os.path.join(PASTA_RAIZ, '.update_pending')
-    if not os.path.exists(marker):
-        return
-    temp_dir = os.path.join(PASTA_RAIZ, '.update_temp')
-    if not os.path.exists(temp_dir):
-        os.remove(marker)
-        return
-    for root, dirs, files in os.walk(temp_dir):
-        for file in files:
-            if not file.endswith('.py'):
-                continue
-            src = os.path.join(root, file)
-            rel = os.path.relpath(src, temp_dir)
-            dst = os.path.join(PASTA_RAIZ, rel)
-            os.makedirs(os.path.dirname(dst), exist_ok=True)
-            shutil.copy2(src, dst)
-    shutil.rmtree(temp_dir)
-    os.remove(marker)
-    sucesso("Arquivos .py atualizados na inicialização.")
 
 
 def fazer_update_zip() -> bool:

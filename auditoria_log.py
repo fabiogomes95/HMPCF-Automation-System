@@ -14,13 +14,14 @@ SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_PATH = os.path.join(SRC_DIR, "auditoria.log")
 
 
-def registrar(acao: str, detalhes: str = "", origem: str = "painel") -> None:
+def registrar(acao: str, detalhes: str = "", origem: str = "painel", tipo: str = "sistema") -> None:
     try:
         entry = {
             "timestamp": datetime.now().isoformat(),
             "acao": acao,
             "detalhes": detalhes,
             "origem": origem,
+            "tipo": tipo,
         }
         with open(LOG_PATH, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -28,7 +29,7 @@ def registrar(acao: str, detalhes: str = "", origem: str = "painel") -> None:
         logger.error(f"Erro ao registrar auditoria: {e}")
 
 
-def listar(limite: int = 100) -> list[dict]:
+def listar(limite: int = 100, tipo: str | None = None) -> list[dict]:
     if not os.path.exists(LOG_PATH):
         return []
 
@@ -39,7 +40,9 @@ def listar(limite: int = 100) -> list[dict]:
                 linha = linha.strip()
                 if linha:
                     try:
-                        entradas.append(json.loads(linha))
+                        e = json.loads(linha)
+                        if tipo is None or e.get("tipo", "sistema") == tipo:
+                            entradas.append(e)
                     except json.JSONDecodeError:
                         continue
 

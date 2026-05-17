@@ -356,3 +356,72 @@ Arquivo `.env` gerado na raiz com valores padrão comentados para facilitar conf
 | 🔴 ZIP sobrescrever .py rodando | Resolvido |
 | ⚠️ Importantes (4.2) | 0/11 resolvidos |
 | 💡 Melhorias (4.3) | 0/10 resolvidos |
+
+---
+
+## Sessão 11 — 2026-05-16 — Setup PC teste + Separação Terminal / Últimas Ações
+
+### Ambiente de teste configurado
+- **Firebird 1.5** instalado em `C:\Program Files (x86)\Firebird\Firebird_1_5\`
+- Servidor Firebird iniciado manualmente (`fbserver.exe`) — serviço Windows não registrado
+- Banco `C:\BPA\BPAMAG.GDB` contém **108 pacientes** confirmado via teste direto
+
+### Dependências Python instaladas
+Faltavam diversas dependências não listadas no `requirements.txt`:
+`passlib`, `eel`, `gspread`, `oauth2client`, `pandas`, `openpyxl`, `matplotlib`, `seaborn`, `fpdf2`, `pyautogui`
+
+### Bug crítico corrigido: `NameError` no startup
+`main.py` chamava `_aplicar_update_pendente()` na linha 31, mas a função só era definida na linha 112. Movida a definição da função para antes do uso.
+
+### Separação: Terminal de Eventos × Últimas Ações
+Antes os dois componentes consumiam exatamente os mesmos dados do `auditoria.log`. Agora:
+
+**`auditoria_log.py`:**
+- `registrar()` ganhou parâmetro `tipo: str = "sistema"` — campo registrado no JSON
+- `listar()` ganhou parâmetro `tipo: str | None` — filtra entradas por tipo
+- Entradas antigas sem `tipo` são tratadas como `"sistema"` (compatibilidade retroativa)
+
+**`app_painel.py`:**
+- Todas as 21 chamadas `log_auditoria()` receberam `tipo="acao"` (ações do usuário)
+- Apenas `painel_iniciado` mantém `tipo="sistema"` (evento automático do sistema)
+- Expostos `auditoria_sistema(limite)` e `auditoria_acoes(limite)` via `@eel.expose`
+
+**`web_painel/index.html`:**
+- **Terminal de Eventos** → chama `auditoria_sistema()` — mostra eventos do sistema (inicializações, conexões)
+- **Últimas Ações** → chama `auditoria_acoes()` — mostra ações do usuário (auth, exportações, relatórios)
+- Adicionada função `adicionarEventoTerminal()` para push de tempo real do Python
+- Tratamento de erro com fallback visível em ambos os componentes
+
+### Arquivos modificados
+| Arquivo | Alteração |
+|---------|-----------|
+| `auditoria_log.py` | + parâmetro `tipo` em `registrar()` e `listar()` |
+| `app_painel.py` | + `tipo=` em 21 `log_auditoria()`; + `auditoria_sistema()`, `auditoria_acoes()` |
+| `web_painel/index.html` | JS separado para cada componente; +`adicionarEventoTerminal()` |
+| `main.py` | Bugfix: `_aplicar_update_pendente()` movida antes do uso |
+
+---
+
+## Sessão 12 — 2026-05-16 — Investigação Eel WebSocket + Início migração
+
+### Eel WebSocket confirmado operacional
+- Teste direto via Python (`websocket-client`) confirmou que o servidor processa chamadas Eel corretamente
+- `consulta_listar_atendimentos('2026-05-16', '2026-05-16', 1)` → 222 atendimentos retornados
+- `dashboard_indicadores()` → painel funcional com 108 pacientes Firebird + 29940 pacientes hospital.db
+- `consulta_status_cache()` → cache OK
+
+### Bugs encontrados
+- **`auditoria_sistema()` e `auditoria_acoes()` quebrados** — `NameError: name 'listar' is not defined` em `app_painel.py:581`. A função `listar` não foi importada de `auditoria_log.py`.
+
+### Pendente (consulta.html no browser)
+- Eel WebSocket conecta mas chamadas do browser não resolvem
+- Nenhum erro no console do browser (F12)
+- Testes Python indicam que o servidor é 100% funcional — problema pode estar no cliente JS (eel.js) ou race condition
+- Separar consulta para usar REST (Flask/Bottle) em vez de Eel — cogitado como solução definitiva
+
+### Arquivos modificados
+| Arquivo | Alteração |
+|---------|-----------|
+| `registro/README.md` | + Sessão 12 |
+| `backlog.md` | + itens pendentes |
+| `auditoria_log.py` | (pendente: corrigir import) |
