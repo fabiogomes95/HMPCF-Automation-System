@@ -1,62 +1,109 @@
 # Histórico Atual — Sessão 17/05/2026
 
-## O que fizemos
+## DB Cleanup Completo
 
-### Layout A4 editável (FichaA4Print.jsx + CSS)
-- O formulário principal da Recepção agora **é o próprio layout A4** do Boletim de Atendimento (substituiu a grade moderna de 3 colunas)
-- Inputs sem `border-bottom` — só as linhas pretas da grade (`.row`/`.field`)
-- Tabela SSVV sem cores de fundo — só os nomes em negrito (preenchimento manual após impressão)
-- Logo do hospital adicionado ao lado de "HMPCF" no cabeçalho
+### Normalização e Deduplicação
+- Script centralizado: `hmcpf-system/scripts/limpar_banco.py`
+- **CPF**: normalizados (removidos ., -, espaços) em pacientes e atendimentos
+- **Duplicatas por CPF**: removidas, mantendo registro mais completo, movendo atendimentos
+- **Duplicatas por nome+DN**: removidas (pega CPF trocado, ex: Taise)
+- **SUS**: normalizados (removidos espaços/pontos); SUS inválidos (tamanho ≠ 15) apagados (paciente mantido via CPF)
+- **Pacientes sem nome**: removidos (4 registros)
+- **Pacientes com CPF inválido** (≠ 11 dígitos): removidos (139 registros, 8 atendimentos deletados junto)
+- **Atendimentos órfãos**: 1.255 religados (após normalizar CPF dos atendimentos)
 
-### Impressão (mesma aba, sem nova janela)
-- `handlePrint` usa `window.print()` direto
-- `@page { size: A4; margin: 0; }` suprime cabeçalho/rodapé do navegador (localhost, data/hora, página 1/1)
-- `.page` na impressão: `width: 100%; max-width: none; min-height: 297mm; padding: 8mm 12mm;`
-- Logo na impressão: preenche todo `.header-logo` (`max-height: none; width: 100%; height: auto`)
-- Ancestrais resetados para `display: block; width: 100%` no `@media print`
+### Resultado Final
+- **28.672 pacientes**, **10.139 atendimentos**
+- Zero duplicatas, zero CPF/SUS inválidos, zero órfãos
+- Único paciente sem CPF: Raquel (tem SUS válido + 22 atendimentos — mantida)
 
-### Botões (action-bar)
-- Salvar / Imprimir / Limpar ficam **fora** do formulário A4 (classe `.action-bar`)
-- Não aparecem na impressão (`display: none` no `@media print`)
+### Como rodar no hospital
+```powershell
+python scripts\limpar_banco.py
+```
 
-### Máscaras de input
-- CPF: `000.000.000-00`
-- SUS: `000 0000 0000 0000`
-- DN: `DD/MM/AAAA`
+## Histórico completo (sessões anteriores)
 
-### Busca com feedback
-- Toast de erro quando a API falha: *"Erro ao buscar — o backend está rodando?"*
+### Uppercase automático nos campos de texto
+- Todo texto (nome, endereço, bairro, etc.) convertido pra maiúsculo automaticamente via `.toUpperCase()` no `handleChange`
+- CPF, SUS, data, hora, sexo, civil, raça, registro, nº excluídos da conversão
 
-### Campo Registro
-- Adicionado ao formulário (tela + impressão)
+### Máscara de telefone BR
+- Campo **Telefone** (`tel`) agora formata como `(84) 98188-1207` (DDD + 9 dígitos)
+- Máscara aplicada também ao carregar paciente do banco
+- `numero` (nº da rua) **não** tem máscara de telefone, mantém livre
 
-### Cidade/Estado padrão
-- Cidade: EXTREMOZ
-- Estado: RN
+### Auto-preenche ao digitar CPF/SUS
+- Digita CPF (11 dígitos) ou SUS (15 dígitos) que existe no banco → formulário preenche sozinho
+- Dispara 200ms após parar de digitar e também ao sair do campo (onBlur)
+- Usa debounce com `searchTimerRef` pra não fazer requisição a cada tecla
 
-## Decisões tomadas
+### Foco no CPF ao limpar
+- Botão "Limpar" agora foca automaticamente no campo CPF (`cpfRef.current?.focus()`)
+- Usuário pode digitar o CPF direto sem clicar no campo
 
-| Decisão | Opção escolhida |
-|---------|----------------|
-| Formulário principal | Layout A4 editável (não grade moderna) |
-| Impressão | Mesma aba (`window.print()`) com `@page { margin: 0 }` |
-| Cores SSVV | Sem cores — nomes em negrito (marca-texto após imprimir) |
-| Input borders | Sem `border-bottom` — só linhas da grade |
-| Botões | Fora do A4 (`.action-bar`) |
-| Logo impressão | Sem `max-height` — preenche o container |
-| `@page margin` | `0` (suprime cabeçalho/rodapé do navegador) |
+### Procedência sempre NORMAL ao carregar paciente
+- `selectPatient` agora inclui `procedencia: "NORMAL"` no estado do formulário
+- Corrige bug onde a procedência ficava desmarcada ao auto-preenche
+
+### Botão "+ Novo" removido
+- Botão duplicado ao lado da busca removido (já existe "Limpar" ao lado de "Salvar")
+
+### Formulário moderno em grid (tela) + A4 (impressão)
+- `FichaA4Print` ficou **invisível na tela** e só aparece na impressão (`@media print`)
+- Ordem dos campos segue **exatamente** a ordem do A4 de impressão:
+
+  | Linha | Campos |
+  |-------|--------|
+  | 1 | Data | Hora | Registro |
+  | 2 | Nome Completo (full) |
+  | 3 | Nome Social (full) |
+  | 4 | Naturalidade | DN | Idade |
+  | 5 | CPF | Cartão SUS | Sexo (M/F) |
+  | 6 | Estado Civil (rádios em botão) |
+  | 7 | Raça/Cor (2 col) | Ocupação |
+  | 8 | Nome da Mãe (full) |
+  | 9 | Responsável (2 col) | Telefone |
+  | 10 | Endereço (2 col) | N° |
+  | 11 | Bairro | Cidade | UF |
+
+### Data/Hora automáticos + editáveis
+- `INITIAL_STATE` virou função que preenche data/hora atuais
+- Data com máscara `DD/MM/AAAA`, Hora com máscara `HH:MM`
+- Usuário pode alterar manualmente
+
+### Rádios modernos (chip/button)
+- Sexo, Estado Civil e Raça/Cor usam `<input hidden>` + `<label>` estilizada como botão
+- Borda, `border-radius`, `padding` iguais aos inputs de texto
+- Selecionado fica com fundo da cor primária (`--color-primary`)
+
+### Botão Família
+- Posicionado ao lado do campo **N°**
+- Após **Salvar**, armazena endereço do paciente
+- No próximo paciente, clica em **Família** e preenche Endereço, N°, Bairro, Cidade, UF automaticamente
+- Não aparece na impressão
+
+### Correção de bugs
+- Impressão não funcionava: conflito de especificidade CSS entre `.recepcao-page .page` (tela) e `.page` (print). Resolvido com `@media screen` no hide da tela.
+
+### Tauri Desktop
+- Instalado Rust (1.95.0) + `@tauri-apps/cli`
+- Criado `desktop/tauri/src-tauri/` com:
+  - `Cargo.toml` — dependência `tauri` v2
+  - `tauri.conf.json` — aponta para `frontend/dist` e dev server `localhost:5173`
+  - `src/main.rs` + `src/lib.rs` — entry points
+  - `icons/` — geradas via `npx tauri icon`
+  - `capabilities/default.json` — permissões padrão
+- Build Rust compilado com sucesso (`cargo build`)
+- Comando para rodar: `npm run tauri:dev` (no frontend)
 
 ## Pendências para próxima sessão
 
-- **Validar busca**: Backend FastAPI precisa estar rodando (`uvicorn app.main:app --reload` na porta 8000)
-- **Validação matemática CPF (dígitos verificadores)**
-- **Validação matemática SUS (dígito módulo 11)**
-- **Cálculo automático da idade ao digitar DN**
-- **Campos obrigatórios** (nome, CPF, DN, cor, etc.)
 - **Módulo BPA** (backend + frontend)
 - **Módulo Relatórios** (PDF fpdf2, Excel openpyxl)
-- **Tauri sidecar** para iniciar FastAPI junto com o app desktop
-- **Testar impressão A4**: verificar se preenche a folha corretamente
+- **Firebird** — integração BPAMAG.GDB legado
+- **Google Sheets** — "Gari da Nuvem"
+- **Build produção** — `npm run tauri:build` → `.msi`
 
 ## Como continuar
 
@@ -65,9 +112,8 @@
 cd C:\Users\Fabinho\Documents\Fabio\HMPCF\hmcpf-system\backend
 uvicorn app.main:app --reload
 
-# Terminal 2 — Frontend
+# Terminal 2 — Frontend (ou Tauri desktop)
 cd C:\Users\Fabinho\Documents\Fabio\HMPCF\hmcpf-system\frontend
-npm run dev
+npm run dev        # só frontend no navegador
+npm run tauri:dev  # abre janela desktop nativa
 ```
-
-Abrir `http://localhost:5173`

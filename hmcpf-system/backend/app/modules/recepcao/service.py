@@ -73,6 +73,23 @@ def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     return dict(row) if row else {}
 
 
+def _br_to_iso(data_br: str) -> str:
+    """Converte DD/MM/AAAA para AAAA-MM-DD. Se não conseguir, retorna original."""
+    partes = data_br.split("/")
+    if len(partes) == 3 and len(partes[2]) == 4:
+        return f"{partes[2]}-{partes[1]}-{partes[0]}"
+    return data_br
+
+
+def _iso_col() -> str:
+    """Expressão SQL que converte data_atendimento (DD/MM/AAAA) para AAAA-MM-DD."""
+    return (
+        "substr(a.data_atendimento, 7, 4) || '-' || "
+        "substr(a.data_atendimento, 4, 2) || '-' || "
+        "substr(a.data_atendimento, 1, 2)"
+    )
+
+
 # ── PACIENTES ─────────────────────────────────────────────────
 
 
@@ -136,6 +153,20 @@ def buscar_paciente(cpf: str) -> Optional[dict]:
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM pacientes WHERE cpf = ?", (cpf,))
+        row = cursor.fetchone()
+        return _row_to_dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def buscar_duplicata(nome: str, dn: str) -> Optional[dict]:
+    conn = _get_conn()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM pacientes WHERE nome = ? AND dn = ? LIMIT 1",
+            (nome, dn),
+        )
         row = cursor.fetchone()
         return _row_to_dict(row) if row else None
     finally:
@@ -222,11 +253,11 @@ def listar_atendimentos(
             conditions.append("a.cpf = ?")
             params.append(cpf)
         if data_inicio:
-            conditions.append("a.data_atendimento >= ?")
-            params.append(data_inicio)
+            conditions.append(f"{_iso_col()} >= ?")
+            params.append(_br_to_iso(data_inicio))
         if data_fim:
-            conditions.append("a.data_atendimento <= ?")
-            params.append(data_fim)
+            conditions.append(f"{_iso_col()} <= ?")
+            params.append(_br_to_iso(data_fim))
 
         where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
 
@@ -256,6 +287,24 @@ def listar_atendimentos(
             "total_paginas": total_paginas,
             "por_pagina": por_pagina,
         }
+    finally:
+        conn.close()
+
+
+def criar_atendimento(dados: dict) -> dict:
+    conn = _get_conn()
+    try:
+        cursor = conn.cursor()
+        cols = ", ".join(dados.keys())
+        ph = ", ".join("?" for _ in dados)
+        cursor.execute(
+            f"INSERT INTO atendimentos ({cols}) VALUES ({ph})",
+            list(dados.values()),
+        )
+        conn.commit()
+        return dict(cursor.execute(
+            "SELECT * FROM atendimentos WHERE id = ?", (cursor.lastrowid,)
+        ).fetchone())
     finally:
         conn.close()
 

@@ -56,3 +56,4 @@
 - [x] **web_painel/index.html**: Terminal de Eventos (sistema) separado de Últimas Ações (usuário); +`adicionarEventoTerminal()` para push tempo real.
 - [ ] **auditoria_sistema/acoes quebradas** — `NameError: name 'listar' is not defined` em `app_painel.py:581`. Importar `listar` de `auditoria_log.py`.
 - [ ] **consulta.html não responde no browser** — WebSocket Eel conecta mas promises não resolvem. Testes Python (cliente externo) funcionam perfeitamente. Investigar race condition no eel.js ou migrar para REST.
+- [x] **DB Cleanup completo** — `scripts/limpar_banco.py` criado com dedup CPF, nome+DN, normalização CPF/SUS, remoção de pacientes inválidos. Banco 100% consistente (zero duplicatas, zero órfãos, zero CPF/SUS inválidos).

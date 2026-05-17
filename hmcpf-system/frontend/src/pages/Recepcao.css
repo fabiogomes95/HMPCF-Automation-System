@@ -118,6 +118,20 @@
   font-size: var(--font-size-xs);
 }
 
+/* ── ESCONDE A FICHA A4 NA TELA (só aparece na impressão) ── */
+@media screen {
+  .recepcao-page .page {
+    display: none !important;
+  }
+}
+
+/* ── ESCONDE O HISTÓRICO NA IMPRESSÃO ───────────────── */
+@media print {
+  .recepcao-page .history-panel {
+    display: none !important;
+  }
+}
+
 /* ── FOLHA A4 ─────────────────────────────────── */
 
 .a4-sheet {
@@ -170,6 +184,10 @@
   grid-column: 1 / -1;
 }
 
+.form-group--centered {
+  text-align: center;
+}
+
 .form-group--double {
   grid-column: span 2;
 }
@@ -179,8 +197,13 @@
   font-weight: 600;
   color: var(--color-text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+}
+
+.form-group input.input--invalid {
+  border-color: var(--color-danger, #ef4444);
+  outline-color: var(--color-danger, #ef4444);
+  background: var(--color-danger-bg, #fef2f2);
 }
 
 .form-group input,
@@ -204,6 +227,62 @@
 .form-group input[readonly] {
   background: var(--color-border);
   cursor: not-allowed;
+}
+
+.form-group--narrow input {
+  max-width: 100px;
+}
+
+.form-group--dn input {
+  max-width: 145px;
+}
+
+.form-group--idade input {
+  max-width: 105px;
+}
+
+.radio-input-hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.radio-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.radio-group--centered {
+  justify-content: center;
+}
+
+.radio-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.radio-label:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.radio-input-hidden:checked + .radio-label {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
 }
 
 /* ── AÇÕES DO FORMULÁRIO ──────────────────────── */
@@ -245,13 +324,41 @@
 }
 
 .btn-clear {
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border) !important;
+  background: var(--color-danger);
+  color: #fff;
+  border: none;
 }
 
 .btn-clear:hover {
-  background: var(--color-border);
+  background: #dc2626;
+}
+
+.form-group--numero .input-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.form-group--numero .input-narrow {
+  max-width: 80px;
+}
+
+.btn-family-inline {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  line-height: 1.4;
+}
+
+.btn-family-inline:hover {
+  opacity: 0.9;
 }
 
 /* ── TOAST (notificação) ───────────────────────── */
@@ -264,6 +371,45 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.history-panel {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--color-bg, #fff);
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: var(--radius-md, 8px);
+}
+
+.history-panel h3 {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #666);
+  text-transform: uppercase;
+}
+
+.history-panel .total-badge {
+  font-weight: 700;
+  color: var(--color-primary, #1a5b9c);
+}
+
+.history-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.history-panel th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 2px solid var(--color-border, #ddd);
+  color: var(--color-text-secondary, #666);
+  font-weight: 600;
+}
+
+.history-panel td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border, #ddd);
 }
 
 

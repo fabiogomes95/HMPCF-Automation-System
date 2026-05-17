@@ -26,6 +26,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.modules.recepcao import service as recepcao_service
 from app.modules.recepcao.schemas import (
+    AtendimentoCreate,
     AtendimentoResponse,
     PacienteCreate,
     PacienteResponse,
@@ -52,6 +53,14 @@ async def listar_pacientes(
     )
 
 
+@router.get("/pacientes/duplicata")
+async def verificar_duplicata(
+    nome: str = Query(...),
+    dn: str = Query(...),
+) -> Optional[dict]:
+    return recepcao_service.buscar_duplicata(nome, dn)
+
+
 @router.get("/pacientes/{cpf}")
 async def buscar_paciente(cpf: str) -> PacienteResponse:
     """Busca um paciente pelo CPF."""
@@ -67,7 +76,7 @@ async def criar_paciente(dados: PacienteCreate) -> PacienteResponse:
     existente = recepcao_service.buscar_paciente(dados.cpf)
     if existente:
         raise HTTPException(status_code=409, detail="CPF ja cadastrado")
-    return recepcao_service.criar_paciente(dados.model_dump(exclude_unset=True))
+    return recepcao_service.criar_paciente(dados.model_dump(exclude_unset=True, by_alias=True))
 
 
 @router.put("/pacientes/{cpf}")
@@ -77,7 +86,7 @@ async def atualizar_paciente(cpf: str, dados: PacienteUpdate) -> PacienteRespons
     if not existente:
         raise HTTPException(status_code=404, detail="Paciente nao encontrado")
     atualizado = recepcao_service.atualizar_paciente(
-        cpf, dados.model_dump(exclude_unset=True)
+        cpf, dados.model_dump(exclude_unset=True, by_alias=True)
     )
     return atualizado or existente
 
@@ -96,8 +105,8 @@ async def deletar_paciente(cpf: str) -> None:
 @router.get("/atendimentos")
 async def listar_atendimentos(
     cpf: str = Query(None, description="Filtrar por CPF do paciente"),
-    data_inicio: str = Query(None, description="Data inicial (YYYY-MM-DD)"),
-    data_fim: str = Query(None, description="Data final (YYYY-MM-DD)"),
+    data_inicio: str = Query(None, description="Data inicial (DD/MM/AAAA ou YYYY-MM-DD)"),
+    data_fim: str = Query(None, description="Data final (DD/MM/AAAA ou YYYY-MM-DD)"),
     pagina: int = Query(1, ge=1),
     por_pagina: int = Query(50, ge=1, le=200),
 ) -> PaginatedResponse:
@@ -109,6 +118,14 @@ async def listar_atendimentos(
         pagina=pagina,
         por_pagina=por_pagina,
     )
+
+
+@router.post("/atendimentos", status_code=201)
+async def criar_atendimento(dados: AtendimentoCreate) -> dict:
+    payload = dados.model_dump(exclude_unset=True, exclude_none=True)
+    if not payload.get("cpf"):
+        raise HTTPException(status_code=422, detail="CPF é obrigatório")
+    return recepcao_service.criar_atendimento(payload)
 
 
 # ── ESTATÍSTICAS ─────────────────────────────────────────────

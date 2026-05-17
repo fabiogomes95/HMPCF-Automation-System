@@ -12,7 +12,7 @@ node_modules/
 dist/
 
 # Rust / Tauri
-desktop/tauri/target/
+target/
 
 # IDE
 .vscode/

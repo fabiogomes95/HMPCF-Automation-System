@@ -122,3 +122,21 @@
 
 ### Changed
 - `backlog.md` — type hints marcado como concluído, connection pool cancelado
+
+## [2026-05-17]
+
+### Added
+- **`hmcpf-system/scripts/limpar_banco.py`** — Script único de limpeza do banco: remove duplicatas (CPF e nome+DN), normaliza CPF/SUS, remove pacientes sem nome e com CPF inválido, religa atendimentos órfãos
+- Normalização de SUS (1.046 removidos formatação, 150 inválidos apagados)
+
+### Changed
+- **`registro/historicoatual.md`** — Atualizado com todas as etapas do DB cleanup
+- **`hmcpf-system/scripts/fix_cpf_duplicates.py`** → renomeado para `limpar_banco.py` (abrange mais que CPF)
+
+### Removed
+- `hmcpf-system/scripts/fix_cpf_duplicates.py` (substituído por `limpar_banco.py`)
+
+### Fixed
+- **Atendimentos órfãos**: 1.255 CPFs normalizados na tabela `atendimentos` (estavam formatados), religando todos ao paciente correto
+- **Último órfão**: atendimento rowid=186 religado à Leila Raquel (CPF `01211713377`)
+- **139 pacientes com CPF inválido** (tamanho ≠ 11) removidos

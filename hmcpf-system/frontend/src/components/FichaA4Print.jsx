@@ -37,11 +37,11 @@ export default function FichaA4Print({ paciente, onChange }) {
         <div className="row top-border spacer-row">
           <div className="field">
             <label> DATA DE ATENDIMENTO: </label>
-            <input type="text" value={new Date().toLocaleDateString("pt-BR")} readOnly />
+            <input type="text" name="data" value={p.data || new Date().toLocaleDateString("pt-BR")} readOnly />
           </div>
           <div className="field">
             <label> HORA:</label>
-            <input type="text" value={new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} readOnly />
+            <input type="text" name="hora" value={p.hora || new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} readOnly />
           </div>
           <div className="field">
             <label> REGISTRO: </label>

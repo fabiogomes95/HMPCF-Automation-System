@@ -153,8 +153,8 @@ table.tabela-risco td {
 .action-bar .btn-save:hover { background: #134070; }
 .action-bar .btn-print { background: #e67e22; color: #fff; }
 .action-bar .btn-print:hover { opacity: 0.9; }
-.action-bar .btn-clear { background: transparent; color: #666; border: 1px solid #ccc !important; }
-.action-bar .btn-clear:hover { background: #eee; }
+.action-bar .btn-clear { background: var(--color-danger, #ef4444); color: #fff; border: none; }
+.action-bar .btn-clear:hover { background: #dc2626; }
 
 /* ── IMPRESSÃO (MESMA ABA) ─────────────────────────── */
 @page { size: A4; margin: 0; }
@@ -165,7 +165,10 @@ table.tabela-risco td {
   .action-bar,
   .recepcao-toolbar,
   .result-list,
-  .result-count {
+  .result-count,
+  .screen-form,
+  .btn-family-inline,
+  .history-panel {
     display: none !important;
   }
 
@@ -187,7 +190,8 @@ table.tabela-risco td {
   }
 
   /* ── .page preenche o A4 ───────────────────────── */
-  .page {
+  .recepcao-page .page {
+    display: block !important;
     width: 100% !important;
     max-width: none !important;
     min-height: 297mm !important;
@@ -196,10 +200,9 @@ table.tabela-risco td {
     box-shadow: none !important;
     border-radius: 0 !important;
     font-size: 10pt !important;
-    display: block !important;
   }
 
-  .page form { display: block !important; }
+  .recepcao-page .page form { display: block !important; }
 
   /* ── Logo maior para impressão ─────────────────── */
   .header-logo img {

@@ -32,10 +32,14 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  clearScreen: false,
   server: {
     port: 5173,
+    strictPort: true,
+    watch: {
+      ignored: ["**/src-tauri/**"],
+    },
     proxy: {
-      // Toda requisição para /api é redirecionada ao backend
       "/api": {
         target: "http://127.0.0.1:8000",
         changeOrigin: true,
