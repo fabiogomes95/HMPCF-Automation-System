@@ -297,9 +297,9 @@
         try {
             const result = await Promise.race([
                 Promise.all([
-                    eel.consulta_listar_atendimentos(inicio, fim, pagina)(),
-                    eel.consulta_resumo_atendimentos(inicio, fim)(),
-                    eel.consulta_atendimentos_por_dia(inicio, fim)()
+                    eel.consulta_listar_atendimentos(inicio, fim, pagina),
+                    eel.consulta_resumo_atendimentos(inicio, fim),
+                    eel.consulta_atendimentos_por_dia(inicio, fim)
                 ]),
                 consultaTimeout(60000)
             ]);
@@ -511,7 +511,7 @@
 
     async function recarregar() {
         try {
-            const status = await eel.consulta_recarregar()();
+            const status = await eel.consulta_recarregar();
             document.getElementById('cacheStatus').textContent = '🔄 ' + status;
             mostrarToast('Cache recarregado: ' + status, 'info');
             consultar(1);
@@ -522,7 +522,7 @@
 
     async function atualizarCacheStatus() {
         try {
-            const status = await eel.consulta_status_cache()();
+            const status = await eel.consulta_status_cache();
             document.getElementById('cacheStatus').textContent = '📦 ' + status;
         } catch (e) {}
     }

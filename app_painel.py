@@ -26,7 +26,7 @@ import firebirdsql
 import sys
 from logging_setup import logger
 from config import FIREBIRD_PATH, FIREBIRD_USER, FIREBIRD_PASSWORD, get_admin_password, set_admin_password
-from auditoria_log import registrar as log_auditoria
+from auditoria_log import registrar as log_auditoria, listar
 from integracao.backup_utils import fazer_backup, listar_backups
 
 # =====================================================================

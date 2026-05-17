@@ -1,41 +1,128 @@
-"""
-BPA.PY — Endpoints do Boletim de Produção Ambulatorial.
-
-O BPA é um relatório do SUS que lista todos os procedimentos
-ambulatoriais realizados em um período.
-
-ESTE ARQUIVO É UM PLACEHOLDER (Fase 1).
-A implementação real virá quando migrarmos o módulo
-legado de integracao/exportar_bpa.py para este novo formato.
-
-ESTRUTURA FUTURA:
-  GET  /api/v1/bpa/                  → Listar BPA gerados
-  POST /api/v1/bpa/gerar             → Gerar novo BPA
-  GET  /api/v1/bpa/{id}              → Download de um BPA específico
-  POST /api/v1/bpa/exportar          → Exportar para formato do SUS
-"""
-
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
 
-# prefix="/bpa" → todas as rotas deste arquivo começam com /bpa
-# tags=["bpa"]  → agrupa no Swagger (/docs)
+from app.modules.bpa import service as bpa_service
+from pydantic import BaseModel
+
+from app.modules.bpa.schemas import (
+    CabecalhoCreate,
+    PacienteAdd,
+    PacienteBusca,
+    TriagemEnfermeirosRequest,
+    TriagemEnfermeirosResponse,
+    TriagemRequest,
+    TriagemResponse,
+    RoboPrepararResponse,
+)
+
+
+class RoboExecutarRequest(BaseModel):
+    medico: str
+    data: str
+    procedimento: str = "0301060029"
+    pacientes: list[str]
+
 router = APIRouter(prefix="/bpa", tags=["bpa"])
 
 
-@router.get("/")
-async def list_bpa() -> dict[str, str]:
-    """
-    Placeholder — listar BPA.
+# ── PRODUÇÕES (arquivos .txt) ──────────────────────────────
 
-    Futuramente vai retornar lista de BPA gerados com:
-      - Período
-      - Total de procedimentos
-      - Status (rascunho, finalizado, enviado)
-      - Data de criação
-    """
+
+@router.get("/producoes")
+async def listar_producoes() -> list[str]:
+    """Lista arquivos .txt da pasta automacao/."""
+    return bpa_service.listar_producoes()
+
+
+@router.get("/producoes/{nome_arquivo}")
+async def ler_producao(nome_arquivo: str) -> str:
+    """Lê conteúdo de um arquivo .txt."""
+    conteudo = bpa_service.ler_producao(nome_arquivo)
+    if not conteudo:
+        raise HTTPException(status_code=404, detail="Arquivo nao encontrado ou vazio")
+    return conteudo
+
+
+@router.put("/producoes/{nome_arquivo}")
+async def salvar_producao(nome_arquivo: str, dados: dict) -> dict:
+    """Sobrescreve conteúdo de um arquivo .txt."""
+    conteudo = dados.get("conteudo", "")
+    ok = bpa_service.salvar_producao(nome_arquivo, conteudo)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Erro ao salvar arquivo")
+    return {"status": "ok"}
+
+
+@router.post("/producoes/cabecalho")
+async def criar_cabecalho(dados: CabecalhoCreate) -> dict:
+    """Adiciona cabeçalho de lote (médico + data) num arquivo.
+    Se o último cabeçalho for igual, não duplica."""
+    resultado = bpa_service.criar_cabecalho(dados.arquivo, dados.medico, dados.data)
+    if resultado.get("erro"):
+        raise HTTPException(status_code=500, detail=resultado["erro"])
     return {
-        "message": "Módulo BPA — ainda não implementado",
-        "hint": "Endpoint reservado para a migração do módulo BPA",
+        "status": "ok",
+        "criado": resultado["criado"],
+        "header": resultado["header"],
+        "arquivo": dados.arquivo,
     }
+
+
+@router.post("/producoes/{nome_arquivo}/paciente")
+async def adicionar_paciente(nome_arquivo: str, dados: PacienteAdd) -> dict:
+    """Adiciona documento de paciente ao lote."""
+    ok = bpa_service.adicionar_paciente(nome_arquivo, dados.documento)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Erro ao adicionar paciente")
+    return {"status": "ok"}
+
+
+# ── BUSCA DE PACIENTES ────────────────────────────────────
+
+
+@router.get("/pacientes")
+async def buscar_pacientes(
+    termo: str = Query(..., min_length=2),
+) -> list[PacienteBusca]:
+    """Busca pacientes no hospital.db por nome, CPF ou SUS."""
+    return bpa_service.buscar_pacientes(termo)
+
+
+# ── TRIAGEM ────────────────────────────────────────────────
+
+
+@router.post("/triagem", response_model=TriagemResponse)
+async def triagem(dados: TriagemRequest) -> dict:
+    """Extrai CPF/SUS de texto bagunçado."""
+    return bpa_service.triagem_processar(dados.conteudo)
+
+
+@router.post("/triagem/enfermeiros", response_model=TriagemEnfermeirosResponse)
+async def triagem_enfermeiros(dados: TriagemEnfermeirosRequest) -> dict:
+    """Extrai CPF/SUS, valida contra Firebird e gera lotes para enfermeiros."""
+    return bpa_service.triagem_gerar_lotes(dados.conteudo, dados.enfermeiros, dados.data)
+
+
+# ── ROBÔ RPA ──────────────────────────────────────────────
+
+
+@router.post("/robo/preparar", response_model=RoboPrepararResponse)
+async def robo_preparar(dados: dict) -> dict:
+    """Prepara lotes para o RPA: lê .txt, valida contra hospital.db."""
+    nome_arquivo = dados.get("arquivo", "")
+    if not nome_arquivo:
+        raise HTTPException(status_code=422, detail="Campo 'arquivo' é obrigatório")
+    return bpa_service.robo_preparar(nome_arquivo)
+
+
+@router.post("/robo/executar")
+async def robo_executar(dados: RoboExecutarRequest) -> dict:
+    """Executa o RPA (PyAutoGUI) em background na máquina física."""
+    return bpa_service.robo_executar(dados.medico, dados.data, dados.procedimento, dados.pacientes)
+
+
+@router.get("/robo/status/{pid}")
+async def robo_status(pid: int) -> dict:
+    """Verifica se um processo RPA ainda está rodando."""
+    return bpa_service.robo_status(pid)

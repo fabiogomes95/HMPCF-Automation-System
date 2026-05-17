@@ -34,9 +34,9 @@ import "./Sidebar.css";
 const NAV_ITEMS = [
   { label: "Dashboard", path: "/", icon: "📊" },
   { label: "BPA", path: "/bpa", icon: "📋" },
+  { label: "Integração", path: "/integracao", icon: "🔌" },
   { label: "Relatórios", path: "/reports", icon: "📈" },
   { label: "Recepção", path: "/recepcao", icon: "🏥" },
-  { label: "Automações", path: "/automations", icon: "⚙️" },
 ];
 
 export default function Sidebar() {

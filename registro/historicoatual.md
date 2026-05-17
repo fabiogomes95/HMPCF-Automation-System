@@ -97,9 +97,37 @@ python scripts\limpar_banco.py
 - Build Rust compilado com sucesso (`cargo build`)
 - Comando para rodar: `npm run tauri:dev` (no frontend)
 
+## Módulo BPA (Automação) — implementado
+
+### Backend (FastAPI)
+- `service.py`: operações com arquivos .txt (listar, ler, criar cabeçalho, adicionar paciente)
+- `service.py`: busca de pacientes no hospital.db (por nome/CPF/SUS)
+- `service.py`: triagem (extrair CPF/SUS de texto sujo)
+- `service.py`: preparação de lotes para RPA (valida contra hospital.db)
+- Endpoints em `api/v1/bpa.py`:
+  - `GET  /api/v1/bpa/producoes` — listar .txt da pasta automacao/
+  - `GET  /api/v1/bpa/producoes/{arquivo}` — ler conteúdo
+  - `POST /api/v1/bpa/producoes/cabecalho` — criar cabeçalho médico+data
+  - `POST /api/v1/bpa/producoes/{arquivo}/paciente` — adicionar paciente ao lote
+  - `GET  /api/v1/bpa/pacientes?termo=` — buscar pacientes no hospital.db
+  - `POST /api/v1/bpa/triagem` — extrair CPF/SUS de dados bagunçados
+  - `POST /api/v1/bpa/robo/preparar` — preparar lotes para RPA
+- Script `start-all.ps1`: inicia backend + frontend + Tauri persistentes
+- Script `start-backend-and-vite.ps1`: não bloqueia mais (Start-Process)
+
+### Frontend (React)
+- `BPA.jsx`: hub de automação com 3 telas:
+  - **Principal**: cards de acesso (Digitação, Robô, Triagem) + visualizador de lotes .txt
+  - **Digitação**: assistente com busca de pacientes e gravação em lote
+  - **Robô**: preparação de lotes e instruções para executar RPA
+  - **Triagem**: extração de CPF/SUS de texto bagunçado
+
+### Correções
+- `DATABASE_URL` agora usa path absoluto (conserta SQLite)
+- Backend/frontend/Tauri iniciam como processos independentes (não morrem ao fechar terminal)
+
 ## Pendências para próxima sessão
 
-- **Módulo BPA** (backend + frontend)
 - **Módulo Relatórios** (PDF fpdf2, Excel openpyxl)
 - **Firebird** — integração BPAMAG.GDB legado
 - **Google Sheets** — "Gari da Nuvem"
@@ -108,12 +136,20 @@ python scripts\limpar_banco.py
 ## Como continuar
 
 ```powershell
+# Tudo de uma vez (persistente):
+cd C:\Users\Fabinho\Documents\Fabio\HMPCF\hmcpf-system
+.\scripts\start-all.ps1
+
+# Ou manualmente:
 # Terminal 1 — Backend
 cd C:\Users\Fabinho\Documents\Fabio\HMPCF\hmcpf-system\backend
-uvicorn app.main:app --reload
+python -m app.main
 
-# Terminal 2 — Frontend (ou Tauri desktop)
+# Terminal 2 — Frontend
 cd C:\Users\Fabinho\Documents\Fabio\HMPCF\hmcpf-system\frontend
-npm run dev        # só frontend no navegador
-npm run tauri:dev  # abre janela desktop nativa
+npm run dev
+
+# Terminal 3 — Tauri
+cd C:\Users\Fabinho\Documents\Fabio\HMPCF\hmcpf-system\frontend
+npm run tauri:dev
 ```

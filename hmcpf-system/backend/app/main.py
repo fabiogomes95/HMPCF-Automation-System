@@ -31,18 +31,28 @@ ORDEM DE INICIALIZAÇÃO:
 """
 
 from __future__ import annotations
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import bpa, health, recepcao, reports
+from app.api.v1 import bpa, health, integracao, recepcao, reports
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.database.base import Base
+from app.database.session import engine
 
 # ── Configura logging ANTES de qualquer outra coisa ────────
 # Se algo der errado na inicialização, queremos ver o erro
 setup_logging()
+
+# ── Lifespan (startup/shutdown) ────────────────────────────
+# Cria as tabelas no banco de dados ao iniciar o servidor
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
 
 # ── Criação da aplicação FastAPI ────────────────────────────
 # docs_url e redoc_url geram documentação interativa automática
@@ -51,6 +61,7 @@ app = FastAPI(
     version=settings.APP_VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # ── CORS (Cross-Origin Resource Sharing) ────────────────────
@@ -70,6 +81,7 @@ app.add_middleware(
 app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(bpa.router, prefix=settings.API_V1_PREFIX)
 app.include_router(reports.router, prefix=settings.API_V1_PREFIX)
+app.include_router(integracao.router, prefix=settings.API_V1_PREFIX)
 app.include_router(recepcao.router, prefix=settings.API_V1_PREFIX)
 
 # ── Entrypoint direto ───────────────────────────────────────

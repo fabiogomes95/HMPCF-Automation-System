@@ -67,8 +67,8 @@ class Settings(BaseSettings):
     ]
 
     # ── Banco de Dados ──────────────────────────────────────
-    DATABASE_URL: str = "sqlite:///./data/hmpcf.db"
     SQLITE_TIMEOUT: int = 5       # segundos
+    DB_FILENAME: str = "hmpcf.db"
 
     # ── Logging ─────────────────────────────────────────────
     LOG_LEVEL: str = "INFO"
@@ -89,6 +89,10 @@ class Settings(BaseSettings):
     # Caminho para o hospital.db existente no sistema HMPCF legado
     # Deixe vazio para usar detecção automática
     LEGACY_DB_PATH: str = ""
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return f"sqlite:///{self.DATA_DIR / self.DB_FILENAME}"
 
 
 # --- INSTÂNCIA ÚNICA (SINGLETON) ---

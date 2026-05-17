@@ -28,6 +28,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import AppLayout from "../layouts/AppLayout";
 import BPA from "../pages/BPA";
 import Dashboard from "../pages/Dashboard";
+import Integracao from "../pages/Integracao";
 import Recepcao from "../pages/Recepcao";
 import Reports from "../pages/Reports";
 
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },           // /
       { path: "bpa", element: <BPA /> },                  // /bpa
+      { path: "integracao", element: <Integracao /> },     // /integracao
       { path: "reports", element: <Reports /> },           // /reports
       { path: "recepcao", element: <Recepcao /> },          // /recepcao
       { path: "*", element: <Navigate to="/" replace /> }, // fallback

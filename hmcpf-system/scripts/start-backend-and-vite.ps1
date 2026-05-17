@@ -17,5 +17,11 @@ Write-Host "[start] Aguardando backend..." -ForegroundColor Green
 Start-Sleep -Seconds 4
 
 Write-Host "[start] Iniciando frontend (Vite dev server)..." -ForegroundColor Green
-Set-Location $frontendDir
-npm run dev
+$fp = Start-Process powershell -WindowStyle Hidden -PassThru -ArgumentList @(
+  "-NoExit",
+  "-Command",
+  "cd '$frontendDir'; npm run dev"
+)
+Write-Host "[start] Frontend PID: $($fp.Id)" -ForegroundColor Green
+Write-Host "[start] Aguardando servidores..." -ForegroundColor Green
+Start-Sleep -Seconds 6
