@@ -45,7 +45,7 @@ eel.init('web_painel')
 # =====================================================================
 # Trago os "trabalhadores" de cada módulo
 from automacao import executor_rpa
-from automacao import cpf_sus
+from automacao import limpeza
 from automacao import digitacao
 
 # Adiciono a pasta integracao ao sys.path pra importar os scripts
@@ -180,6 +180,7 @@ def carregar_base() -> None:
     Cada paciente vira um dicionário com: sus, nome, dtnasc, cpf
     """
     global BASE_PACIENTES
+    BASE_PACIENTES = []
     caminho_gdb = FIREBIRD_PATH
 
     try:
@@ -261,7 +262,7 @@ def rodar_limpador(data_lote: str, enfermeiros_str: str) -> str:
     caminho_sujo = os.path.join(PASTA_AUTOMACAO, "cpf_sus.txt")
 
     # Extrai CPF/SUS dos dados bagunçados
-    docs = cpf_sus.processar_lista(caminho_sujo)
+    docs = limpeza.processar_lista(caminho_sujo)
     if not docs:
         return "Erro: Nenhum paciente valido encontrado."
 
@@ -313,6 +314,7 @@ def preparar_rpa(nome_arquivo: str) -> dict:
     Lê o arquivo de produção e monta lotes de 99 pacientes
     com os dados completos (incluindo busca na RAM por nome).
     """
+    carregar_base()
     caminho_completo = os.path.join(PASTA_AUTOMACAO, nome_arquivo)
     if os.path.exists(caminho_completo):
         lotes, erro = executor_rpa.preparar_lotes(

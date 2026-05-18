@@ -79,3 +79,36 @@ def listar_duplicatas(con: Any) -> list[dict]:
 def deletar_por_db_key(con: Any, db_key: str) -> None:
     cur = con.cursor()
     cur.execute("DELETE FROM CADCNS WHERE RDB$DB_KEY = ?", [bytes.fromhex(db_key) if db_key else ""])
+
+
+def buscar_por_documento(con: Any, documento: str) -> dict | None:
+    if len(documento) == 15:
+        campo = "CNS"
+    elif len(documento) == 11:
+        campo = "NUM_CPF"
+    else:
+        return None
+    sql = f"""
+        SELECT FIRST 1
+            CNS, NUM_CPF, NOME, DTNASC, SEXO, RACA
+        FROM CADCNS
+        WHERE {campo} = ?
+          AND NOME   IS NOT NULL AND TRIM(NOME)   <> ''
+          AND DTNASC IS NOT NULL
+          AND SEXO   IS NOT NULL AND TRIM(SEXO)   <> ''
+          AND RACA   IS NOT NULL AND TRIM(RACA)   <> ''
+    """
+    cur = con.cursor()
+    cur.execute(sql, (documento,))
+    row = cur.fetchone()
+    if not row:
+        return None
+    return {
+        'cns':        row[0],
+        'cpf':        row[1],
+        'nome':       row[2],
+        'nascimento': row[3],
+        'sexo':       row[4],
+        'raca':       row[5],
+        'documento':  documento,
+    }

@@ -14,11 +14,15 @@ from app.services.bpa.producao_service import (
 from app.services.bpa.processamento_service import (
     triagem_processar,
     triagem_gerar_lotes,
+    processar_lista,
 )
 from app.services.bpa.robo_service import (
     robo_preparar,
     robo_executar,
     robo_status,
+    buscar_paciente_no_banco,
+    preparar_lotes,
+    executar_pyautogui,
 )
 
 __all__ = [
@@ -33,7 +37,11 @@ __all__ = [
     "buscar_pacientes",
     "triagem_processar",
     "triagem_gerar_lotes",
+    "processar_lista",
     "robo_preparar",
     "robo_executar",
     "robo_status",
+    "buscar_paciente_no_banco",
+    "preparar_lotes",
+    "executar_pyautogui",
 ]

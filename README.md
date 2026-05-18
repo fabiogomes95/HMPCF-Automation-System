@@ -17,20 +17,6 @@ painel de gestão, auditoria e sincronização com Google Sheets, reduzindo
 retrabalho manual e eliminando fichas em papel no Hospital Municipal
 Pres. Café Filho (Extremoz/RN).
 
-### Problema
-
-Antes do sistema, a recepção usava fichas de papel, os lançamentos BPA
-eram feitos manualmente um a um, a auditoria era feita em planilhas
-soltas e não havia sincronização entre os setores.
-
-### Solução
-
-Um sistema integrado que digitaliza o fluxo da recepção, automatiza a
-geração de lotes BPA/SUS, centraliza a auditoria e sincroniza os dados
-com a nuvem — tudo acessível via navegador nas estações do hospital.
-
----
-
 ## Funcionalidades
 
 - **Recepção Digital** — Cadastro de pacientes com busca por CPF, SUS ou
@@ -49,47 +35,57 @@ com a nuvem — tudo acessível via navegador nas estações do hospital.
 
 ## Arquitetura
 
-```mermaid
-flowchart LR
-A[Recepção Digital] --> B[SQLite Local]
-B --> C[Painel Administrativo]
-B --> D[Automação BPA/SUS]
-D --> F[Auditoria]
-F --> G[Relatórios Excel/PDF]
-B --> H[Google Sheets]
 ```
-
-```text
 📦 HMPCF-Automation-System
  ┣ 📂 analise/                 # BI — Dashboards, relatórios Excel e PDF
- ┣ 📂 automacao/               # RPA — Robô digitador, triagem e fila de lotes
- ┣ 📂 integracao/              # Integração SUS — conversores TXT e sincronizadores
- ┣ 📂 scripts/                 # Scripts administrativos e manutenção operacional
- ┣ 📂 web_recepcao/            # Frontend da Recepção (Eel, porta 8000)
- ┣ 📂 web_painel/              # Frontend do Painel de Gestão (Eel, porta 8001)
- ┣ 📂 screenshots/             # Capturas do sistema
- ┣ 📜 app_recepcao.py          # Servidor da Recepção (Eel — porta 8000)
- ┣ 📜 app_painel.py            # Servidor do Painel de Gestão (Eel — porta 8001)
+ ┣ 📂 automacao/               # RPA — Robô digitador + Scripts de reparo
+ ┃  ┣ 📜 executor_rpa.py      # Robô de digitação BPA (PyAutoGUI)
+ ┃  ┣ 📜 MIGRAR_PACIENTES.py   # Migração SQLite → Firebird (CADCNS)
+ ┃  ┣ 📜 REPARAR_FIREBIRD.py   # Reparo de registros corrompidos no Firebird
+ ┃  ┣ 📜 padronizar_firebird.py# Padronização de campos CADCNS
+ ┃  ┣ 📜 digitacao.py          # Geração de arquivos de produção TXT
+ ┃  ┗ 📜 limpeza.py            # Extração/validação de CPF e CNS
+ ┣ 📂 integracao/              # Integração SUS — conversores TXT
+ ┣ 📂 scripts/                 # Scripts administrativos e manutenção
+ ┣ 📂 web_recepcao/            # Frontend da Recepção (porta 8000)
+ ┣ 📂 web_painel/              # Frontend do Painel de Gestão (porta 8001)
+ ┣ 📂 hmcpf-system/            # Backend FastAPI (nova arquitetura)
+ ┣ 📜 app_recepcao.py          # Servidor da Recepção (Eel)
+ ┣ 📜 app_painel.py            # Servidor do Painel de Gestão (Eel)
  ┣ 📜 main.py                  # Launcher unificado
  ┣ 📜 config.py                # Configuração centralizada
- ┣ 📜 planilha_nuvem.py        # "Gari da Nuvem" — sincronizador Google Sheets
- ┣ 📜 utils.py                 # Motor de validações (CPF, CNS e regex)
- ┣ 📜 pyproject.toml           # Estrutura do pacote Python
- ┣ 📜 .env.example             # Template de configuração
- ┣ 📜 hospital.db              # Banco SQLite local (não versionado)
- ┣ 📜 credentials.json         # Chave de serviço Google Cloud (não versionado)
- ┣ 📜 requirements.txt         # Dependências do projeto
- ┣ 📜 backlog.md               # Pendências e ideias futuras
- ┣ 📜 CHANGELOG.md             # Histórico de alterações
- ┣ 📜 start_painel.vbs         # Inicializador silencioso — Painel
- ┣ 📜 start_recepcao.vbs       # Inicializador silencioso — Recepção
- ┣ 📜 iniciar_painel.bat       # Inicializador Painel (porta 8001)
- ┗ 📜 iniciar_recepcao.bat     # Inicializador Recepção (porta 8000)
+ ┣ 📜 planilha_nuvem.py        # Sincronizador Google Sheets
+ ┗ 📜 passo_a_passo.md         # Setup completo para nova máquina
 ```
 
 ---
 
-Desenvolvido por [Fabio Gomes](https://www.linkedin.com/in/fabiogsilva95/)
+## O que foi feito nesta sessão (18/05/2026)
+
+### Scripts criados
+
+| Script | Função |
+|--------|--------|
+| `automacao/MIGRAR_PACIENTES.py` | Migração definitiva SQLite → Firebird com geração manual de ID, valores fixos, tratamentos de nulos e verificação de duplicidade |
+| `automacao/REPARAR_FIREBIRD.py` | Ferramenta de reparo de registros corrompidos no CADCNS (IDs nulos, endereços vazios, sexo inválido, etc.) |
+| `automacao/padronizar_firebird.py` | Padronização standalone de campos do CADCNS (LOGPCN, NUMPCN, etc.) |
+| `integracao/padronizar.py` | Padronização da tabela SQLite |
+
+### Correções e melhorias
+
+| Arquivo | Mudança |
+|---------|---------|
+| `executor_rpa.py` | Troca `fdb` → `firebirdsql` (compatibilidade 64-bit). Adiciona `manter_acordado()` para evitar suspensão do Windows durante RPA Consulta em RAM (`_buscar_na_ram`) para acelerar preparação de lotes |
+| `limpeza.py` | Algoritmo de validação CNS corrigido (dígito verificador completo) |
+| `app_painel.py` | Import corrigido de `cpf_sus` → `limpeza`. Base de pacientes recarregada automaticamente |
+| `cadcns_repository.py` | Nova função `buscar_por_documento()` |
+| `robo_service.py` | Novas funções `buscar_paciente_no_banco()`, `preparar_lotes()`, `executar_pyautogui()` |
+| `processamento_service.py` | Nova função `processar_lista()` para extrair CPF/SUS |
+| `web_painel/robo.html` | Botão "Iniciar Automação" agora com `onclick` funcional |
+| `.env.example` | Configurações de produção descomentadas |
+| `requirements.txt` / `pyproject.toml` | Adicionadas dependências: `fdb`, `fastapi`, `uvicorn`, `pydantic`, `sqlalchemy` |
+
+---
 
 ## Licença
 

@@ -1,12 +1,20 @@
-# --- Interface Web (Substituiu o Flask) ---
+# --- Interface Web ---
 Eel
 
 # --- Automação e RPA ---
 pyautogui
 keyboard
 
-# --- Banco de Dados (BPA HMPCF) ---
+# --- Banco de Dados ---
 firebirdsql
+fdb
+
+# --- API REST (Nova Arquitetura) ---
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+sqlalchemy
 
 # --- Processamento e Análise de Dados (BI) ---
 pandas
@@ -23,4 +31,3 @@ fpdf2
 
 # --- Build do Instalador ---
 pyinstaller
-

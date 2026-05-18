@@ -1,4 +1,10 @@
+"""
+Processa listas de CPF/SUS extraindo documentos válidos.
+Remove duplicatas consecutivas (digitação dupla acidental).
+"""
+
 import re
+
 
 def apenas_numeros(valor):
     return re.sub(r'\D', '', str(valor))
@@ -6,8 +12,22 @@ def apenas_numeros(valor):
 def valida_cns(cns):
     if not cns or len(cns) != 15 or cns[0] not in '12789':
         return False
-    soma = sum(int(cns[i]) * (15 - i) for i in range(15))
-    return soma % 11 == 0
+    if cns[0] in '789':
+        return sum(int(cns[i]) * (15 - i) for i in range(15)) % 11 == 0
+    pis = cns[:11]
+    soma = sum(int(pis[i]) * (15 - i) for i in range(11))
+    resto = soma % 11
+    dv = 11 - resto
+    if dv == 11:
+        dv = 0
+    if dv == 10:
+        soma += 2
+        resto = soma % 11
+        dv = 11 - resto
+        resultado = pis + "001" + str(dv)
+    else:
+        resultado = pis + "000" + str(dv)
+    return cns == resultado
 
 def valida_cpf(cpf):
     if not cpf or len(cpf) != 11 or len(set(cpf)) == 1:
@@ -26,7 +46,7 @@ def processar_lista(caminho_arquivo_sujo):
         return []
 
     resultado_limpo = []
-    ultimo = None  # ✅ Guarda só o anterior imediato
+    ultimo = None
 
     for linha in linhas:
         if not linha.strip():
@@ -44,8 +64,6 @@ def processar_lista(caminho_arquivo_sujo):
 
         escolhido = sus_encontrado or cpf_encontrado
 
-        # Bloqueia só repetição CONSECUTIVA (digitação dupla acidental)
-        # Mesmo número em linhas diferentes = paciente veio 2x = permitido
         if escolhido and escolhido != ultimo:
             ultimo = escolhido
             resultado_limpo.append(escolhido)

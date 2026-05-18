@@ -2,22 +2,39 @@ import pyautogui
 import time
 import os
 import keyboard
-import fdb
+import firebirdsql
+import ctypes
+
+# ── IMPEDE QUE O WINDOWS SUSPENDA OU LIGUE PROTETOR DE TELA ──────────────────
+# Enquanto o robô estiver rodando, o Windows não vai dormir nem bloquear a tela.
+ES_CONTINUOUS      = 0x80000000
+ES_SYSTEM_REQUIRED = 0x00000001
+ES_DISPLAY_REQUIRED = 0x00000002
+
+_keep_awake_handle = None
+
+def manter_acordado(ativo: bool = True):
+    global _keep_awake_handle
+    if ativo:
+        _keep_awake_handle = ctypes.windll.kernel32.SetThreadExecutionState(
+            ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED
+        )
+    else:
+        ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS)
+        _keep_awake_handle = None
 
 # ==============================================================================
 # 🔥 CONEXÃO FIREBIRD
 # ==============================================================================
 
-FIREBIRD_CONFIG = {
-    'host':     'localhost',
-    'database': r'C:\BPA\BPAMAG.GDB',
-    'user':     'SYSDBA',
-    'password': 'masterkey',
-    'charset':  'WIN1252'
-}
-
 def conectar_firebird():
-    return fdb.connect(**FIREBIRD_CONFIG)
+    return firebirdsql.connect(
+        host='localhost',
+        database=r'C:\BPA\BPAMAG.GDB',
+        user='SYSDBA',
+        password='masterkey',
+        charset='WIN1252'
+    )
 
 # ==============================================================================
 # 🔍 VALIDAÇÃO NO BANCO (chamada dentro de preparar_lotes)
@@ -31,16 +48,7 @@ def buscar_paciente_no_banco(documento: str) -> dict | None:
     else:
         return None
 
-    sql = f"""
-        SELECT FIRST 1
-            CNS, NUM_CPF, NOME, DTNASC, SEXO, RACA
-        FROM CADCNS
-        WHERE {campo} = ?
-          AND NOME   IS NOT NULL AND TRIM(NOME)   <> ''
-          AND DTNASC IS NOT NULL
-          AND SEXO   IS NOT NULL AND TRIM(SEXO)   <> ''
-          AND RACA   IS NOT NULL AND TRIM(RACA)   <> ''
-    """
+    sql = f"SELECT FIRST 1 CNS, NUM_CPF, NOME FROM CADCNS WHERE {campo} = ?"
 
     try:
         con = conectar_firebird()
@@ -52,15 +60,7 @@ def buscar_paciente_no_banco(documento: str) -> dict | None:
         if not row:
             return None
 
-        return {
-            'cns':        row[0],
-            'cpf':        row[1],
-            'nome':       row[2],
-            'nascimento': row[3],
-            'sexo':       row[4],
-            'raca':       row[5],
-            'documento':  documento
-        }
+        return {'documento': documento}
 
     except Exception as e:
         print(f"[BANCO] Erro ao buscar '{documento}': {e}")
@@ -70,7 +70,13 @@ def buscar_paciente_no_banco(documento: str) -> dict | None:
 # 📦 PREPARAR LOTES  ←  lê o arquivo e chama buscar_paciente_no_banco pra cada linha
 # ==============================================================================
 
-def preparar_lotes(arq_leitura: str, callback=None) -> tuple[list, str]:
+def _buscar_na_ram(documento: str, base_pacientes: list[dict]) -> dict | None:
+    for p in base_pacientes:
+        if p['sus'] == documento or p['cpf'] == documento:
+            return {'documento': documento}
+    return None
+
+def preparar_lotes(arq_leitura: str, base_pacientes: list[dict] | None = None, callback=None) -> tuple[list, str]:
     if not os.path.exists(arq_leitura):
         return [], "Ficheiro não encontrado."
 
@@ -86,7 +92,6 @@ def preparar_lotes(arq_leitura: str, callback=None) -> tuple[list, str]:
         if not linha:
             continue
 
-        # --- Cabeçalho do lote (profissional + data) ---
         if "PROFISSIONAL:" in linha:
             if lote_atual:
                 lotes.append(lote_atual)
@@ -98,23 +103,27 @@ def preparar_lotes(arq_leitura: str, callback=None) -> tuple[list, str]:
             lote_atual = {
                 'medico':    medico,
                 'data':      data,
-                'pacientes': [],   # aprovados no banco ✅
-                'ignorados': []    # sem cadastro ou incompleto ⚠️
+                'pacientes': [],
+                'validados': [],
+                'ignorados': []
             }
 
-        # --- Linha de documento (CPF ou CNS) ---
         elif lote_atual:
-            paciente = buscar_paciente_no_banco(linha)  # ← aqui a mágica
+            if base_pacientes:
+                paciente = _buscar_na_ram(linha, base_pacientes)
+            else:
+                paciente = buscar_paciente_no_banco(linha)
 
             if paciente:
                 lote_atual['pacientes'].append(paciente)
+                lote_atual['validados'].append(paciente)
                 if callback:
-                    callback(f"✅ {paciente['nome']} ({linha})")
+                    callback(f"✅ ({linha})")
             else:
                 ignorados += 1
                 lote_atual['ignorados'].append(linha)
                 if callback:
-                    callback(f"⚠️  {linha} — sem cadastro ou campos obrigatórios vazios")
+                    callback(f"⚠️  {linha} — sem cadastro")
 
     if lote_atual:
         lotes.append(lote_atual)
@@ -131,40 +140,52 @@ def preparar_lotes(arq_leitura: str, callback=None) -> tuple[list, str]:
 pyautogui.FAILSAFE = True
 
 def executar_pyautogui(medico, data_atend, procedimento, pacientes: list[dict], callback=None):
+    # Mantem Windows acordado durante a automacao
+    manter_acordado(True)
     data_limpa = "".join(c for c in data_atend if c.isdigit())
     total      = len(pacientes)
 
-    for i, p in enumerate(pacientes, 1):
-        if keyboard.is_pressed('esc'):
+    try:
+        for i, p in enumerate(pacientes, 1):
+            if keyboard.is_pressed('esc'):
+                if callback:
+                    callback("INTERROMPIDO PELO USUARIO (ESC)")
+                break
+
+            doc = p['documento']
             if callback:
-                callback("🛑 INTERROMPIDO PELO USUÁRIO (ESC)")
-            break
+                callback(f"{medico} | {i}/{total} | Doc: {doc}")
 
-        doc = p['documento']
-        if callback:
-            callback(f"🚀 {medico} | {i}/{total} | {p['nome']} | Doc: {doc}")
+            try:
+                pyautogui.write(doc)
+                pyautogui.press('tab')
+                time.sleep(2.0)
+                pyautogui.press('f7')
+                time.sleep(2.0)
 
-        try:
-            pyautogui.write(doc)
-            pyautogui.press('f7')
-            time.sleep(1.0)
+                pyautogui.write(data_limpa)
+                pyautogui.press('tab')
 
-            pyautogui.write(data_limpa)
-            pyautogui.press('tab')
+                pyautogui.write(procedimento)
+                pyautogui.press('1')
+                time.sleep(1.5)
 
-            pyautogui.write(procedimento)
-            pyautogui.press('1')
-            time.sleep(0.5)
+                pyautogui.press(['tab', 'tab', 'tab'])
+                pyautogui.write('2')
+                time.sleep(1.5)
 
-            pyautogui.press(['tab', 'tab', 'tab'])
-            pyautogui.write('2')
-            time.sleep(0.3)
+                pyautogui.press(['tab', 'tab'])
+                pyautogui.press('enter')
+                time.sleep(2.0)
 
-            pyautogui.press(['tab', 'tab'])
-            pyautogui.press('enter')
-            time.sleep(1.0)
-
-        except Exception as e:
-            if callback:
-                callback(f"❌ Erro em {doc}: {e}")
-            continue
+            except pyautogui.FailSafeException:
+                if callback:
+                    callback("INTERROMPIDO (FAILSAFE - MOUSE NO CANTO)")
+                break
+            except Exception as e:
+                if callback:
+                    callback(f"Erro em {doc}: {e}")
+                continue
+    finally:
+        # Restaura comportamento normal do Windows apos a automacao
+        manter_acordado(False)

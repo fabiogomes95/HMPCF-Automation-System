@@ -62,3 +62,36 @@ def triagem_gerar_lotes(conteudo: str, enfermeiros: str, data: str) -> dict:
         "lotes": lotes,
         "erro": "",
     }
+
+
+def processar_lista(caminho_arquivo_sujo: str) -> list[str]:
+    try:
+        with open(caminho_arquivo_sujo, "r", encoding="utf-8") as f:
+            linhas = f.readlines()
+    except FileNotFoundError:
+        return []
+
+    resultado_limpo: list[str] = []
+    ultimo: str | None = None
+
+    for linha in linhas:
+        if not linha.strip():
+            continue
+
+        sus_encontrado = ""
+        cpf_encontrado = ""
+
+        for p in linha.split():
+            num = apenas_numeros(p)
+            if len(num) == 15 and valida_cns(num):
+                sus_encontrado = num
+            elif len(num) == 11 and valida_cpf(num):
+                cpf_encontrado = num
+
+        escolhido = sus_encontrado or cpf_encontrado
+
+        if escolhido and escolhido != ultimo:
+            ultimo = escolhido
+            resultado_limpo.append(escolhido)
+
+    return resultado_limpo
