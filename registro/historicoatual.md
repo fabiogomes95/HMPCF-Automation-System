@@ -126,6 +126,39 @@ python scripts\limpar_banco.py
 - `DATABASE_URL` agora usa path absoluto (conserta SQLite)
 - Backend/frontend/Tauri iniciam como processos independentes (não morrem ao fechar terminal)
 
+## Correção Final do Formato da Linha BPA (167 caracteres)
+
+### Problema
+- `gerar_linha_bpa()` produzia linhas com campos desalinhados (142 chars)
+- Campos faltando ou sobrando: COMPLEMENTO, TELEFONE, tamanho do BAIRRO
+- Após 3 tentativas, formato final validado.
+
+### Layout final (167 chars)
+```
+CNS(15) + NOME(30) + DATA(8) + SEXO(1) + IBGE(6) + NAC(3) + RACA(2) +
+5spaces + CEP(8) + COD_RUA(3) + RUA(30) + COMPLEMENTO(10) +
+NUM(5) + BAIRRO(30) + TEL(11) + CRLF
+```
+
+### O que mudou em utils.py
+| O que mudou | Detalhe |
+|-------------|---------|
+| `bairro.ljust(15)` → `bairro.ljust(30)` | BAIRRO 15→30 |
+| `endereco.ljust(30)` → `endereco.ljust(30)` | RUA mantido ljust |
+| `numero.ljust(5)` → `numero.ljust(5)` | NUM mantido ljust |
+| `f"     "` → `f"     "` | 5 espaços entre RACA e CEP |
+| `campo_complemento` criado | COMPLEMENTO(10) entre RUA e NUM |
+| `campo_tel` readicionado | TEL(11) no final |
+| Parâmetro `complemento: str = ""` | Opcional para preencher complemento |
+| Test: `142` → `167` | Assert atualizado |
+
+### Verificação
+- Todos os **11 testes** passam
+- Função consumida por: `converter_csv`, `gerar_conteudo_bpa`, `exportar_bpa` em `importacao_service.py`
+- Tarefas para próxima sessão inalteradas
+
+---
+
 ## Pendências para próxima sessão
 
 - **Módulo Relatórios** (PDF fpdf2, Excel openpyxl)

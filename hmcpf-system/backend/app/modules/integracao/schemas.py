@@ -1,21 +1,46 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
-class IntegracaoExecutarRequest(BaseModel):
-    """Parâmetros opcionais para cada ferramenta."""
-    mes_ano: str = ""
-    caminho_arquivo: str = ""
-    caminho_salvar: str = ""
-    separador: str = ";"
+class ExecutarExportarBPA(BaseModel):
+    mes_ano: str = Field("", description="Mês/Ano (MMAAAA) para filtrar")
+    caminho_salvar: str = Field("", description="Onde salvar o TXT")
+
+
+class ExecutarImportarCSV(BaseModel):
+    separador: str = Field(";", description="Delimitador do CSV")
+    caminho_arquivo: str = Field("", description="Caminho do CSV")
+
+
+class ExecutarConverterCSV(BaseModel):
+    caminho_arquivo: str = Field("", description="Caminho do CSV antigo")
+    caminho_salvar: str = Field("", description="Onde salvar o TXT")
+
+
+class ExecutarSincronizarContingencia(BaseModel):
+    caminho_arquivo: str = Field("", description="Caminho do CSV de contingência")
+
+
+class ExecutarSincronizarFirebird(BaseModel):
+    mes_ano: str = Field("", description="Opcional")
+    caminho_salvar: str = Field("", description="Opcional")
+
+
+class ExecutarCorrigirNulls(BaseModel):
+    caminho_arquivo: str = Field("", description="Opcional (não usado)")
+
+
+class ExecutarLimparDuplicatas(BaseModel):
+    caminho_arquivo: str = Field("", description="Opcional (não usado)")
+
+
+class ExecutarBackup(BaseModel):
+    caminho_arquivo: str = Field(..., description="Caminho do arquivo para backup")
 
 
 class IntegracaoResponse(BaseModel):
     saida: str
-    erro: str = ""
 
 
 class BackupInfo(BaseModel):
