@@ -24,10 +24,11 @@ hospital.db
 *.xls
 *.txt
 *.pdf
-*.png
+!web_recepcao/logo.png
 
 !requirements.txt   # Exceção: O requirements.txt DEVE subir para o GitHub
 /automacao/*.txt
+/scripts/*.txt
 /bpa/*.txt
 /bpa/LOG_*.txt
 Relatorio_Producao_*.xlsx
@@ -51,6 +52,14 @@ env/
 lib/
 bin/
 Include/
+
+# ==============================================================================
+# BUILD DO INSTALADOR PYINSTALLER
+# ==============================================================================
+# Pastas geradas pelo PyInstaller — não sobem pro repositório
+build/
+dist/
+*.spec
 
 # ==============================================================================
 # CACHE E ARQUIVOS DO SISTEMA (LIXO ELETRÔNICO)

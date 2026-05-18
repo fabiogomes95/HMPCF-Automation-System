@@ -1,0 +1,415 @@
+/*
+ * RECEPCAO.CSS — Estilos da página de cadastro (Ficha A4).
+ *
+ * LAYOUT:
+ *   .recepcao-page → container principal (ocupa largura total)
+ *   .a4-sheet      → simula uma folha A4 (centralizada, sombra, fundo branco)
+ *   .a4-header     → cabeçalho da ficha (logo + título + protocolo)
+ *   .form-grid     → grid 3 colunas para os campos
+ *
+ * IMPRESSÃO (@media print):
+ *   - Remove sidebar, botões, sombras
+ *   .a4-sheet ocupa a folha inteira sem margens extras
+ */
+
+.recepcao-page {
+  max-width: 100%;
+}
+
+.recepcao-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.recepcao-toolbar .search-box {
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  gap: 8px;
+}
+
+.recepcao-toolbar input[type="text"] {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.recepcao-toolbar input[type="text"]:focus {
+  border-color: var(--color-primary);
+}
+
+.recepcao-toolbar .btn-search {
+  padding: 10px 20px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  transition: background 0.15s;
+}
+
+.recepcao-toolbar .btn-search:hover {
+  background: var(--color-primary-hover);
+}
+
+.recepcao-toolbar .btn-new {
+  padding: 10px 20px;
+  background: var(--color-success);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+
+.recepcao-toolbar .btn-new:hover {
+  opacity: 0.9;
+}
+
+.result-count {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.result-list {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background 0.1s;
+  font-size: var(--font-size-sm);
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-item:hover {
+  background: var(--color-primary-light);
+}
+
+.result-item .nome {
+  font-weight: 600;
+}
+
+.result-item .cpf {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+/* ── ESCONDE A FICHA A4 NA TELA (só aparece na impressão) ── */
+@media screen {
+  .recepcao-page .page {
+    display: none !important;
+  }
+}
+
+/* ── ESCONDE O HISTÓRICO NA IMPRESSÃO ───────────────── */
+@media print {
+  .recepcao-page .history-panel {
+    display: none !important;
+  }
+}
+
+/* ── FOLHA A4 ─────────────────────────────────── */
+
+.a4-sheet {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 32px 36px;
+  margin-bottom: var(--spacing-xl);
+  /* Proporção aproximada A4 em tela */
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.a4-header {
+  text-align: center;
+  border-bottom: 2px solid var(--color-primary);
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.a4-header h2 {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.a4-header .subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+/* ── GRADE DO FORMULÁRIO ──────────────────────── */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group--full {
+  grid-column: 1 / -1;
+}
+
+.form-group--centered {
+  text-align: center;
+}
+
+.form-group--double {
+  grid-column: span 2;
+}
+
+.form-group label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.form-group input.input--invalid {
+  border-color: var(--color-danger, #ef4444);
+  outline-color: var(--color-danger, #ef4444);
+  background: var(--color-danger-bg, #fef2f2);
+}
+
+.form-group input,
+.form-group select {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.form-group input[readonly] {
+  background: var(--color-border);
+  cursor: not-allowed;
+}
+
+.form-group--narrow input {
+  max-width: 100px;
+}
+
+.form-group--dn input {
+  max-width: 145px;
+}
+
+.form-group--idade input {
+  max-width: 105px;
+}
+
+.radio-input-hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.radio-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.radio-group--centered {
+  justify-content: center;
+}
+
+.radio-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.radio-label:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.radio-input-hidden:checked + .radio-label {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* ── AÇÕES DO FORMULÁRIO ──────────────────────── */
+
+.form-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  justify-content: center;
+}
+
+.form-actions button {
+  padding: 10px 28px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  transition: all 0.15s;
+}
+
+.btn-save {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-save:hover {
+  background: var(--color-primary-hover);
+}
+
+.btn-print {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.btn-print:hover {
+  opacity: 0.9;
+}
+
+.btn-clear {
+  background: var(--color-danger);
+  color: #fff;
+  border: none;
+}
+
+.btn-clear:hover {
+  background: #dc2626;
+}
+
+.form-group--numero .input-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.form-group--numero .input-narrow {
+  max-width: 80px;
+}
+
+.btn-family-inline {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  line-height: 1.4;
+}
+
+.btn-family-inline:hover {
+  opacity: 0.9;
+}
+
+/* ── TOAST (notificação) ───────────────────────── */
+
+.toast-container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-panel {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--color-bg, #fff);
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: var(--radius-md, 8px);
+}
+
+.history-panel h3 {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #666);
+  text-transform: uppercase;
+}
+
+.history-panel .total-badge {
+  font-weight: 700;
+  color: var(--color-primary, #1a5b9c);
+}
+
+.history-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.history-panel th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 2px solid var(--color-border, #ddd);
+  color: var(--color-text-secondary, #666);
+  font-weight: 600;
+}
+
+.history-panel td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border, #ddd);
+}
+
+

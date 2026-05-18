@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Módulo Integração - HMPCF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script type="text/javascript" src="/eel.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar">
+    <a href="index.html" class="top-back-link">⬅️ Início</a>
+    <h4>🔌 MÓDULO DE INTEGRAÇÃO SUS</h4>
+    <div class="topbar-right">
+        <span id="adminStatus" class="badge bg-secondary">Admin: off</span>
+        <button id="adminLogoutBtn" class="btn btn-sm btn-outline-light d-none" onclick="logoutAdmin()">Logout</button>
+        <button id="adminChangeBtn" class="btn btn-sm btn-outline-light d-none" onclick="abrirChangePassword()">Alterar senha</button>
+    </div>
+</div>
+
+<!-- Admin unlocked banner (visible while admin session active) -->
+<div id="adminBanner" class="alert alert-success admin-banner d-none" role="alert">
+    🔓 Painel desbloqueado — acesso administrativo ativo.
+    <button type="button" class="btn-close float-end" aria-label="Close" onclick="document.getElementById('adminBanner').style.display='none'"></button>
+</div>
+
+<div class="container py-4">
+    <div id="integrationAreaWrapper">
+    <div class="row g-4 mb-4 justify-content-center" id="integrationArea">
+        <div class="col-md-4">
+            <div class="module-card module-card--pad" onclick="abrirModal('exportar_bpa')">
+                <div class="module-icon module-icon--lg">📤</div>
+                <h5>Exportar SQLite → TXT BPA</h5>
+                <p class="text-muted-small">Gera arquivo posicional para o Datasus</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="module-card module-card--pad" onclick="abrirModal('converter_csv')">
+                <div class="module-icon module-icon--lg">📂</div>
+                <h5>Converter CSV Antigo → TXT</h5>
+                <p class="text-muted-small">Converte CSVs legados para layout BPA</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="module-card module-card--pad" onclick="abrirModal('importar_lote')">
+                <div class="module-icon module-icon--lg">📥</div>
+                <h5>Importar CSV em Lote</h5>
+                <p class="text-muted-small">Importa CSVs com Smart Update</p>
+            </div>
+        </div>
+    </div>
+
+    </div>
+    <div class="row g-4 mb-4 justify-content-center">
+        <div class="col-md-4">
+            <div class="module-card module-card--pad" onclick="abrirModal('sincronizar_firebird')">
+                <div class="module-icon module-icon--lg">🔄</div>
+                <h5>Sincronizar SQLite → Firebird</h5>
+                <p class="text-muted-small">Integra hospital.db com BPAMAG.GDB</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="module-card module-card--pad" onclick="abrirModal('sincronizar_contingencia')">
+                <div class="module-icon module-icon--lg">🆘</div>
+                <h5>Sincronizar Contingência</h5>
+                <p class="text-muted-small">Importa planilhas manuais offline</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="module-card module-card--pad" onclick="pedirSenhaAdmin('aniquilar_nulls')">
+                <div class="module-icon module-icon--lg">💣</div>
+                    <h5>Aniquilar NULLs no Firebird</h5>
+                <p class="text-muted-small">Remove campos NULL do BPAMAG.GDB</p>
+            </div>
+        </div>
+    </div>
+    </div>
+    <div class="row g-4 mb-5 justify-content-center">
+        <div class="col-md-4">
+            <div class="module-card module-card--pad" onclick="pedirSenhaAdmin('limpar_duplicatas')">
+                <div class="module-icon module-icon--lg">🧹</div>
+                <h5>Limpar Duplicatas no Firebird</h5>
+                <p class="text-muted-small">Remove fichas duplicadas por pontuação</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="editor-container shadow-sm editor-container--wide">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-bold badge-primary">📋 Terminal de Saída:</span>
+            <button class="btn btn-sm btn-outline-secondary" onclick="limparLog()">Limpar</button>
+        </div>
+        <textarea id="log_output" class="form-control" rows="12" readonly placeholder="Clique em uma ferramenta acima para executar..."></textarea>
+    </div>
+</div>
+
+<div class="modal fade" id="paramModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paramModalLabel">Parâmetros</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="paramModalBody">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary-custom" onclick="executarModal()">Executar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin password modal -->
+<div class="modal fade" id="adminModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header modal-admin-header">
+                <h5 class="modal-title" id="adminModalLabel">Autenticação Administrativa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="adminModalBody">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-danger" onclick="submitAdminPassword()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change password modal (visible when admin is active) -->
+<div class="modal fade" id="changePassModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #0d6efd; color: white;">
+                <h5 class="modal-title">Alterar Senha Admin</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Nova Senha</label>
+                    <input type="password" id="new_admin_password" class="form-control" placeholder="Nova senha">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Confirmar Senha</label>
+                    <input type="password" id="new_admin_password_confirm" class="form-control" placeholder="Confirme a nova senha">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="submitChangePassword()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let comandoAtual = null;
+
+    const toolConfigs = {
+        exportar_bpa: {
+            label: 'Exportar SQLite → TXT BPA',
+            fields: [
+                { id: 'mes_ano', label: 'Mês/Ano (MMAAAA)', placeholder: 'Ex: 012025', required: false },
+                { id: 'caminho_salvar', label: 'Caminho para salvar', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        },
+        converter_csv: {
+            label: 'Converter CSV Antigo → TXT',
+            fields: [
+                { id: 'caminho_csv', label: 'Caminho do CSV', placeholder: 'Deixe vazio para padrão', required: false },
+                { id: 'caminho_salvar', label: 'Caminho para salvar', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        },
+        importar_lote: {
+            label: 'Importar CSV em Lote',
+            fields: [
+                { id: 'separador', label: 'Separador CSV', placeholder: 'Ex: ;', defaultValue: ';', required: false }
+            ]
+        },
+        sincronizar_firebird: {
+            label: 'Sincronizar SQLite → Firebird',
+            fields: [
+                { id: 'mes_ano', label: 'Mês/Ano (MMAAAA)', placeholder: 'Ex: 012025', required: false },
+                { id: 'caminho_gdb', label: 'Caminho do BPAMAG.GDB', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        },
+        sincronizar_contingencia: {
+            label: 'Sincronizar Contingência',
+            fields: [
+                { id: 'caminho_csv', label: 'Caminho do CSV', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        },
+        aniquilar_nulls: {
+            label: 'Aniquilar NULLs no Firebird',
+            fields: [
+                { id: 'caminho_gdb', label: 'Caminho do BPAMAG.GDB', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        },
+        limpar_duplicatas: {
+            label: 'Limpar Duplicatas no Firebird',
+            fields: [
+                { id: 'caminho_gdb', label: 'Caminho do BPAMAG.GDB', placeholder: 'Deixe vazio para padrão', required: false }
+            ]
+        }
+    };
+
+    function abrirModal(comando) {
+        comandoAtual = comando;
+        const cfg = toolConfigs[comando];
+        document.getElementById('paramModalLabel').textContent = `⚙️ ${cfg.label}`;
+        let html = '<div class="mb-3"><small class="text-muted">Preencha os campos desejados ou deixe vazio para usar valores padrão:</small></div>';
+        cfg.fields.forEach(f => {
+            const value = f.defaultValue || '';
+            html += `
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">${f.label}</label>
+                    <input type="text" class="form-control" id="param_${f.id}" placeholder="${f.placeholder}" value="${value}">
+                </div>`;
+        });
+        document.getElementById('paramModalBody').innerHTML = html;
+        const modal = new bootstrap.Modal(document.getElementById('paramModal'));
+        modal.show();
+    }
+
+    async function executarModal() {
+        const comando = comandoAtual;
+        const cfg = toolConfigs[comando];
+        const params = {};
+        cfg.fields.forEach(f => {
+            const val = document.getElementById(`param_${f.id}`).value.trim();
+            params[f.id] = val;
+        });
+        const modal = bootstrap.Modal.getInstance(document.getElementById('paramModal'));
+        modal.hide();
+        await executar(comando, params);
+    }
+
+    async function executar(comando, params) {
+        const log = document.getElementById('log_output');
+        const paramStr = Object.values(params).filter(v => v).join(', ') || '(padrão)';
+        log.value += `[${agora()}] 🚀 Executando ${comando} — ${paramStr}\n`;
+        log.scrollTop = log.scrollHeight;
+        try {
+            const fn = eel[`integracao_${comando}`];
+            const args = cfgToArgs[comando].map(k => params[k] || '');
+            const resultado = await fn(...args)();
+            log.value += `[${agora()}] ✅ Concluído: ${resultado}\n`;
+        } catch (e) {
+            log.value += `[${agora()}] ❌ Erro: ${e}\n`;
+        }
+        log.scrollTop = log.scrollHeight;
+    }
+
+    const cfgToArgs = {
+        exportar_bpa: ['mes_ano', 'caminho_salvar'],
+        converter_csv: ['caminho_csv', 'caminho_salvar'],
+        importar_lote: ['separador'],
+        sincronizar_firebird: ['mes_ano', 'caminho_gdb'],
+        sincronizar_contingencia: ['caminho_csv'],
+        aniquilar_nulls: ['caminho_gdb'],
+        limpar_duplicatas: ['caminho_gdb']
+    };
+
+    // Admin modal flow: opens modal to ask for admin password, then executes command
+    let adminPendingCommand = null;
+
+    async function pedirSenhaAdmin(comando) {
+        // If admin already active, execute immediately without prompting
+        try {
+            const active = await eel.is_admin()();
+            if (active) {
+                const cfg = toolConfigs[comando];
+                if (cfg && cfg.fields && cfg.fields.length > 0) {
+                    abrirModal(comando);
+                } else {
+                    await executar(comando, {});
+                }
+                return;
+            }
+        } catch (e) {
+            // fallback to normal flow
+        }
+        adminPendingCommand = comando;
+        // inject modal body
+        document.getElementById('adminModalBody').innerHTML = `
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Senha Admin</label>
+                <input type="password" class="form-control" id="admin_password" placeholder="Senha administrativa">
+            </div>`;
+        const modal = new bootstrap.Modal(document.getElementById('adminModal'));
+        modal.show();
+    }
+
+    async function submitAdminPassword() {
+        const senha = document.getElementById('admin_password').value || '';
+        try {
+            const res = await eel.set_admin(senha)();
+            if (typeof res === 'string' && res.toLowerCase().includes('enabled')) {
+                const comando = adminPendingCommand;
+                adminPendingCommand = null;
+                
+                const cfg = toolConfigs[comando];
+                if (cfg && cfg.fields && cfg.fields.length > 0) {
+                    abrirModal(comando);
+                } else {
+                    await executar(comando, {});
+                }
+                const bootstrapModal = bootstrap.Modal.getInstance(document.getElementById('adminModal'));
+                bootstrapModal.hide();
+                // update UI status immediately
+                updateAdminBadge();
+            } else {
+                alert(res || 'Senha inválida');
+            }
+        } catch (e) {
+            alert('Erro ao autenticar admin: ' + e);
+        }
+    }
+
+    function limparLog() {
+        document.getElementById('log_output').value = '';
+    }
+
+    function agora() {
+        return new Date().toLocaleTimeString('pt-BR');
+    }
+
+    // Admin status polling and logout
+    async function updateAdminBadge() {
+        try {
+            const active = await eel.is_admin()();
+            const badge = document.getElementById('adminStatus');
+            const logoutBtn = document.getElementById('adminLogoutBtn');
+            const changeBtn = document.getElementById('adminChangeBtn');
+            const banner = document.getElementById('adminBanner');
+            if (active) {
+                badge.textContent = 'Admin: on';
+                badge.className = 'badge bg-success';
+                logoutBtn.style.display = 'inline-block';
+                if (changeBtn) changeBtn.style.display = 'inline-block';
+                if (banner) banner.style.display = 'block';
+            } else {
+                badge.textContent = 'Admin: off';
+                badge.className = 'badge bg-secondary';
+                logoutBtn.style.display = 'none';
+                if (changeBtn) changeBtn.style.display = 'none';
+                if (banner) banner.style.display = 'none';
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    function abrirChangePassword() {
+        const modal = new bootstrap.Modal(document.getElementById('changePassModal'));
+        modal.show();
+    }
+
+    async function submitChangePassword() {
+        const a = document.getElementById('new_admin_password').value || '';
+        const b = document.getElementById('new_admin_password_confirm').value || '';
+        if (a !== b) {
+            alert('As senhas não coincidem');
+            return;
+        }
+        try {
+            const res = await eel.change_admin_password(a)();
+            alert(res || 'OK');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('changePassModal'));
+            if (modal) modal.hide();
+        } catch (e) {
+            alert('Erro ao alterar senha: ' + e);
+        }
+    }
+
+    async function logoutAdmin() {
+        try {
+            const res = await eel.logout_admin()();
+            updateAdminBadge();
+            alert(res || 'Deslogado');
+        } catch (e) {
+            alert('Erro no logout: ' + e);
+        }
+    }
+
+    // start polling and ensure we prompt for admin on page load if not active
+    setInterval(updateAdminBadge, 20000);
+    (async function initIntegration() {
+        await updateAdminBadge();
+        try {
+            const active = await eel.is_admin()();
+            if (!active) {
+                // show admin modal to request password immediately
+                document.getElementById('adminModalBody').innerHTML = `
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Senha Admin</label>
+                        <input type="password" class="form-control" id="admin_password" placeholder="Senha administrativa">
+                    </div>`;
+                const modal = new bootstrap.Modal(document.getElementById('adminModal'));
+                modal.show();
+            }
+        } catch (e) {
+            // ignore
+        }
+    })();
+</script>
+</body>
+</html>

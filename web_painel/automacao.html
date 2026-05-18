@@ -11,7 +11,7 @@
 <body>
 
 <div class="topbar">
-    <a href="index.html" style="position: absolute; left: 30px; color: white; text-decoration: none; font-weight: 600;">⬅️ Início</a>
+    <a href="index.html" class="top-back-link">⬅️ Início</a>
     <h4>🏥 MÓDULO DE AUTOMAÇÃO BPA</h4>
 </div>
 
@@ -19,28 +19,28 @@
     
     <div class="row g-4 mb-5 justify-content-center">
         <div class="col-md-4">
-            <a href="digitacao.html" class="module-card" style="padding: 20px;">
-                <div class="module-icon" style="font-size: 2rem;">✍️</div>
+            <a href="digitacao.html" class="module-card module-card--pad">
+                <div class="module-icon module-icon--lg">✍️</div>
                 <h5>Digitação Médicos</h5>
             </a>
         </div>
         <div class="col-md-4">
-            <a href="triagem.html" class="module-card" style="padding: 20px;">
-                <div class="module-icon" style="font-size: 2rem;">🩺</div>
+            <a href="triagem.html" class="module-card module-card--pad">
+                <div class="module-icon module-icon--lg">🩺</div>
                 <h5>Triagem Enfermeiros</h5>
             </a>
         </div>
         <div class="col-md-4">
-            <a href="robo.html" class="module-card" style="padding: 20px;">
-                <div class="module-icon" style="font-size: 2rem;">🚀</div>
+            <a href="robo.html" class="module-card module-card--pad">
+                <div class="module-icon module-icon--lg">🚀</div>
                 <h5>Execução Robô</h5>
             </a>
         </div>
     </div>
 
-    <div class="editor-container shadow-sm" style="max-width: 900px; margin: 0 auto; border-top: 5px solid var(--extremoz-yellow);">
+    <div class="editor-container shadow-sm editor-container--wide rounded-top-border">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <span class="fw-bold" style="color: var(--primary-blue);">🔍 Verificação de Lote (.txt):</span>
+            <span class="fw-bold badge-primary">🔍 Verificação de Lote (.txt):</span>
             <select id="combo_producao" class="form-select w-50" onchange="carregarProducaoSelecionada()"></select>
         </div>
         <textarea id="texto_lote" class="form-control" rows="15" readonly placeholder="Selecione um arquivo acima para acompanhar o conteúdo..."></textarea>

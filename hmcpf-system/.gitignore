@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.db
+data/
+
+# Node
+node_modules/
+dist/
+
+# Rust / Tauri
+target/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env
+.env
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db

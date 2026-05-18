@@ -6,7 +6,7 @@ echo     GERADOR DE PLANILHA EXCEL (MENSAL/BPA)
 echo ===================================================
 echo.
 REM Chama o script Python que constroi o Excel
-python relatorio_mensal.py
+python planilha_producao.py
 echo.
 echo ===================================================
 echo Relatorio finalizado! Abrindo a pasta para voce...

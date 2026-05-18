@@ -1,351 +1,306 @@
-<!--
-=========================================================================
-SISTEMA DE BOLETIM DE ATENDIMENTO - HOSPITAL CAFÉ FILHO
-Arquivo de Estrutura (HTML) - Guia de Referência Didática
-=========================================================================
--->
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <!-- Configurações base do navegador (Invisíveis para o usuário) -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Boletim de Atendimento - Hospital Café Filho </title>
-    
-    <!-- Link vital: Conecta este esqueleto de HTML à "roupa" visual do seu CSS -->
+    <title>Boletim de Atendimento - Hospital Café Filho</title>
+    <link rel="stylesheet" href="assets/bootstrap.min.css">
     <link rel="stylesheet" href="style.css">
-    <!-- MÁGICA DO EEL: Conecta o Python e o JS -->
     <script type="text/javascript" src="/eel.js"></script>
 </head>
 <body>
 
-    <!--
-    =========================================================================
-    SEÇÃO 1: PROCEDÊNCIA E CONTROLES (FORA DO PAPEL A4)
-    A classe 'no-print' avisa ao CSS para esconder tudo isso na hora de imprimir
-    =========================================================================
-    -->
-    <div class="no-print procedencia-container">
-        <label class="procedencia-titulo">Procedência / Observação:</label>
-        <div class="procedencia-botoes">
-            <!-- O 'name="procedencia"' avisa ao navegador que eles são do mesmo grupo (escolha única) -->
-            <label class="btn-proc btn-samu">
-                <input type="radio" name="procedencia" value="SAMU">
-                <strong>SAMU</strong>
-            </label>
-            <label class="btn-proc btn-troca">
-                <input type="radio" name="procedencia" value="TROCA">
-                <strong>TROCA</strong>
-            </label>
-            <label class="btn-proc btn-obs">
-                <input type="radio" name="procedencia" value="OBS">
-                <strong>UBS</strong>
-            </label>
-            <label class="btn-proc btn-guarda">
-                <input type="radio" name="procedencia" value="GUARDA">
-                <strong>GUARDA</strong>
-            </label>
-            <label class="btn-proc btn-normal">
-                <!-- O atributo 'checked' faz este botão já nascer marcado por padrão -->
-                <input type="radio" name="procedencia" value="" id="radioNormal" checked>
-                <strong>NORMAL</strong>
-            </label>
+<div class="status-bar no-print">
+    <div class="status-left">
+        <span id="statusConexao">
+            <span class="status-dot online"></span> Servidor Online
+        </span>
+        <span id="statusGari">
+            <span class="status-dot offline"></span> Gari: --
+        </span>
+    </div>
+    <div class="status-right">
+        <span id="statusUltimoSave" style="font-size:11px; opacity:0.8;"></span>
+        <button class="btn-darkmode" id="btnDarkMode" onclick="toggleDarkMode()">🌙 Escuro</button>
+    </div>
+</div>
+
+<div class="no-print procedencia-container">
+    <label class="procedencia-titulo">Procedência / Observação:</label>
+    <div class="procedencia-botoes">
+        <label class="btn-proc btn-samu">
+            <input type="radio" name="procedencia" value="SAMU">
+            <strong>SAMU</strong>
+        </label>
+        <label class="btn-proc btn-troca">
+            <input type="radio" name="procedencia" value="TROCA">
+            <strong>TROCA</strong>
+        </label>
+        <label class="btn-proc btn-obs">
+            <input type="radio" name="procedencia" value="OBS">
+            <strong>UBS</strong>
+        </label>
+        <label class="btn-proc btn-guarda">
+            <input type="radio" name="procedencia" value="GUARDA">
+            <strong>GUARDA</strong>
+        </label>
+        <label class="btn-proc btn-normal">
+            <input type="radio" name="procedencia" value="" id="radioNormal" checked>
+            <strong>NORMAL</strong>
+        </label>
+    </div>
+</div>
+
+<div class="controls no-print">
+    <button type="button" class="btn-action btn-save" onclick="salvarPaciente()">💾 Salvar (F2)</button>
+    <button type="button" class="btn-action btn-print" onclick="window.print()">🖨 Imprimir</button>
+    <button type="button" class="btn-action btn-danger" onclick="limparTudo()">🧹 Limpar</button>
+</div>
+
+<div class="history-panel no-print" id="historyPanel">
+    <h6>📋 Últimos Atendimentos</h6>
+    <div id="historyList"></div>
+</div>
+
+<div class="page">
+    <form id="formBoletim">
+
+        <div class="header-container">
+            <div class="header-logo">
+                <img src="logo.png" alt="Logo">
+            </div>
+            <div class="header-text">
+                PREFEITURA MUNICIPAL DE EXTREMOZ <br>
+                SECRETARIA MUNICIPAL DE SAÚDE <br>
+                HOSPITAL M. PRES. CAFÉ FILHO <br>
+                <strong> BOLETIM DE ATENDIMENTO </strong><br>
+            </div>
+            <div class="header-priority">
+                <strong>PRIORIDADE:</strong><br>
+                <div class="priority-grid">
+                    <div class="priority-item"> Gestante <input type="checkbox"></div>
+                    <div class="priority-item"> Criança <input type="checkbox"></div>
+                    <div class="priority-item"> TEA/PCD <input type="checkbox"></div>
+                    <div class="priority-item"> Idoso <input type="checkbox"></div>
+                    <div class="priority-item"> Outros <input type="checkbox"></div>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <!-- Botões de Ação do Sistema -->
-    <div class="controls no-print">
-        <!-- O atributo 'onclick' é o gatilho que dispara a função no JavaScript -->
-        <button type="button" class="btn btn-save" onclick="salvarPaciente()"> 💾 Salvar (F2)</button>
-        <button type="button" class="btn btn-print" onclick="window.print()">🖨 Imprimir</button>
-        <button type="button" class="btn btn-danger" onclick="limparTudo()">🧹 Limpar</button>
-    </div>
+        <div class="row top-border spacer-row">
+            <div class="field">
+                <label> DATA DE ATENDIMENTO: </label>
+                <input type="date" id="data_atendimento">
+            </div>
+            <div class="field">
+                <label> HORA:</label>
+                <input type="time" id="hora_atendimento">
+            </div>
+            <div class="field">
+                <label> REGISTRO: </label>
+                <input type="text" id="db_registro">
+            </div>
+        </div>
 
-    <!--
-    =========================================================================
-    SEÇÃO 2: A FOLHA DE PAPEL A4 E O FORMULÁRIO
-    =========================================================================
-    -->
-    <!-- Essa div "page" é a que o CSS transforma em uma folha branca flutuante -->
-    <div class="page">
-        <!-- O 'form' é a caixa-mestre: ele empacota todos os dados preenchidos -->
-        <form id="formBoletim">
-            
-            <!-- BLOCO 1: CABEÇALHO (Logomarca, Título e Prioridades) -->
-            <div class="header-container">
-                <div class="header-logo">
-                    <img src="logo.png" alt="Logo">
-                </div>
-                <div class="header-text">
-                    PREFEITURA MUNICIPAL DE EXTREMOZ <br>
-                    SECRETARIA MUNICIPAL DE SAÚDE <br>
-                    HOSPITAL M. PRES. CAFÉ FILHO <br>
-                    <strong> BOLETIM DE ATENDIMENTO </strong><br>
-                </div>
-                <div class="header-priority">
-                    <strong>PRIORIDADE:</strong><br>
-                    <div class="priority-grid">
-                        <div class="priority-item"> Gestante <input type="checkbox"></div>
-                        <div class="priority-item"> Criança <input type="checkbox"></div>
-                        <div class="priority-item"> TEA/PCD <input type="checkbox"></div>
-                        <div class="priority-item"> Idoso <input type="checkbox"></div>
-                        <div class="priority-item"> Outros <input type="checkbox"></div>
-                    </div>
+        <div class="row top-border">
+            <div class="field" style="display:flex; align-items:center;">
+                <label> NOME COMPLETO: </label>
+                <input type="text" id="db_nome" oninput="pausarRelogio(); this.value = this.value.toUpperCase()" autocomplete="off">
+                <button type="button" class="btn-familia no-print" id="btnFamilia" onclick="copiarEndereco()" title="Copiar endereço do último paciente">👪 Família</button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="field">
+                <label> NOME SOCIAL: </label>
+                <input type="text" id="db_nome_social" oninput="this.value = this.value.toUpperCase()">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="field" style="flex: 2;">
+                <label> NATURALIDADE: </label>
+                <input type="text" id="db_naturalidade" oninput="this.value = this.value.toUpperCase()">
+            </div>
+            <div class="field" style="flex: 1.2;">
+                <label> DN: </label>
+                <input type="text" id="db_dn" maxlength="10" placeholder="DD/MM/AAAA" onblur="calcularIdade()">
+            </div>
+            <div class="field" style="flex: 0.8;">
+                <label> IDADE: </label>
+                <input type="text" id="db_idade" readonly style="color: var(--text-primary);">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="field" style="flex: 1.5;">
+                <label> CPF: </label>
+                <input type="text" id="db_cpf" placeholder="000.000.000-00" maxlength="14" oninput="executarCpf(this)" onblur="validarCpfFinal(this)" autocomplete="off">
+            </div>
+            <div class="field" style="flex: 1.5;">
+                <label> CARTÃO SUS: </label>
+                <input type="text" id="db_sus" placeholder="000 0000 0000 0000" maxlength="18" oninput="soNumerosSus(this)" onblur="validarSusFinal(this)" autocomplete="off">
+            </div>
+            <div class="field" style="flex: 1;">
+                <label> SEXO: </label>
+                <label> M <input type="radio" name="sexo" id="db_sexo_m" value="M"> </label>
+                <label> F <input type="radio" name="sexo" id="db_sexo_f" value="F"> </label>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="field">
+                <label>ESTADO CIVIL:</label>
+                <div class="checkbox-group" id="db_civil_group">
+                    <label> SOLTEIRO <input type="radio" name="civil" value="SOLTEIRO"></label>
+                    <label> CASADO <input type="radio" name="civil" value="CASADO"></label>
+                    <label> UNIÃO ESTÁVEL <input type="radio" name="civil" value="UNIÃO ESTÁVEL"></label>
+                    <label> DIVORCIADO <input type="radio" name="civil" value="DIVORCIADO"></label>
+                    <label> VIÚVO <input type="radio" name="civil" value="VIÚVO"></label>
                 </div>
             </div>
+        </div>
 
-            <!--
-            =========================================================================
-            INÍCIO DOS DADOS DO PACIENTE (Linhas e Caixas)
-            =========================================================================
-            -->
-            <!-- BLOCO 2: DADOS DO ATENDIMENTO -->
-            <!-- 'top-border' fecha a caixa por cima; 'spacer-row' dá um respiro visual -->
-            <div class="row top-border spacer-row">
-                <div class="field">
-                    <label> DATA DE ATENDIMENTO: </label>
-                    <input type="date" id="data_atendimento">
-                </div>
-                <div class="field">
-                    <label> HORA:</label>
-                    <input type="time" id="hora_atendimento">
-                </div>
-                <div class="field">
-                    <label> REGISTRO: </label>
-                    <input type="text" id="db_registro">
+        <div class="row">
+            <div class="field" style="flex: 2.5;">
+                <label> RAÇA/COR: </label>
+                <div class="checkbox-group" id="db_raca_group">
+                    <label> BRANCA <input type="radio" name="cor" value="BRANCA"></label>
+                    <label> PRETA <input type="radio" name="cor" value="PRETA"></label>
+                    <label> PARDA <input type="radio" name="cor" value="PARDA"></label>
+                    <label> AMARELA <input type="radio" name="cor" value="AMARELA"></label>
+                    <label> INDÍGENA <input type="radio" name="cor" value="INDÍGENA"></label>
                 </div>
             </div>
+            <div class="field" style="flex: 1.5;">
+                <label> OCUPAÇÃO: </label>
+                <input type="text" id="db_ocupacao" oninput="this.value = this.value.toUpperCase()">
+            </div>
+        </div>
 
-            <!-- BLOCO 3: NOME COMPLETO -->
-            <div class="row top-border">
-                <div class="field">
-                    <label> NOME COMPLETO: </label>
-                    <!-- INTELIGÊNCIA (oninput): Dispara a cada letra digitada.
-                         1. pausarRelogio() congela a hora exata.
-                         2. toUpperCase() força letras maiúsculas. -->
-                    <input type="text" id="db_nome" oninput="pausarRelogio(); this.value = this.value.toUpperCase()">
+        <div class="row">
+            <div class="field">
+                <label> NOME DA MÃE: </label>
+                <input type="text" id="db_mae" oninput="this.value = this.value.toUpperCase()">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="field" style="flex: 2.5;">
+                <label> RESPONSÁVEL: </label>
+                <input type="text" id="db_responsavel" oninput="this.value = this.value.toUpperCase()">
+            </div>
+            <div class="field" style="flex: 1.5;">
+                <label> TEL: </label>
+                <input type="text" id="db_tel" placeholder="(00) 00000-0000" maxlength="15" oninput="mascaraTel(this)">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="field" style="flex: 3.2;">
+                <label> ENDEREÇO: </label>
+                <input type="text" id="db_endereco" oninput="this.value = this.value.toUpperCase()">
+            </div>
+            <div class="field" style="flex: 0.8;">
+                <label> Nº: </label>
+                <input type="text" id="db_numero">
+            </div>
+        </div>
+
+        <div class="row spacer-row">
+            <div class="field" style="flex: 1.5;">
+                <label> BAIRRO: </label>
+                <input type="text" id="db_bairro" oninput="this.value = this.value.toUpperCase()">
+            </div>
+            <div class="field" style="flex: 1.5;">
+                <label> CIDADE: </label>
+                <input type="text" id="db_cidade" value="EXTREMOZ" oninput="this.value = this.value.toUpperCase()">
+            </div>
+            <div class="field" style="flex: 0.5;">
+                <label> UF: </label>
+                <input type="text" id="db_estado" value="RN" maxlength="2" style="width: 30px; border-bottom:none;" oninput="this.value = this.value.toUpperCase()">
+            </div>
+        </div>
+
+        <div class="section-title">CLASSIFICAÇÃO DE RISCO SSVV</div>
+        <table class="tabela-risco">
+            <tr>
+                <td class="color-box">VERMELHO</td>
+                <td>PA: <input type="text" class="input-ssvv no-print"></td>
+                <td>SPO²: <input type="text" class="input-ssvv no-print"></td>
+                <td>AO: <input type="text" class="input-ssvv no-print"></td>
+            </tr>
+            <tr>
+                <td class="color-box">LARANJA</td>
+                <td>FC: <input type="text" class="input-ssvv no-print"></td>
+                <td>HGT: <input type="text" class="input-ssvv no-print"></td>
+                <td>RV: <input type="text" class="input-ssvv no-print"></td>
+            </tr>
+            <tr>
+                <td class="color-box">AMARELO</td>
+                <td>FR: <input type="text" class="input-ssvv no-print"></td>
+                <td>DOR: <input type="text" class="input-ssvv no-print"></td>
+                <td>RM: <input type="text" class="input-ssvv no-print"></td>
+            </tr>
+            <tr>
+                <td class="color-box">VERDE</td>
+                <td>TEMP: <input type="text" class="input-ssvv no-print"></td>
+                <td>PESO: <input type="text" class="input-ssvv no-print"></td>
+                <td>TOTAL: <input type="text" class="input-ssvv no-print"></td>
+            </tr>
+            <tr>
+                <td class="color-box">AZUL</td>
+                <td colspan="3"></td>
+            </tr>
+        </table>
+
+        <div class="row" style="border-top: none;">
+            <div class="field">
+                <label>COMORBIDADES:</label>
+                <div class="checkbox-group">
+                    <label>HAS <input type="checkbox"></label>
+                    <label>DM <input type="checkbox"></label>
+                    <label>DISLIPIDEMIA <input type="checkbox"></label>
+                    <label>ETILISTA <input type="checkbox"></label>
+                    <label>TABAGISTA <input type="checkbox"></label>
+                    <label>OUTROS <input type="checkbox"></label>
                 </div>
             </div>
+        </div>
 
-            <!-- BLOCO 4: NOME SOCIAL -->
-            <div class="row">
-                <div class="field">
-                    <label> NOME SOCIAL: </label>
-                    <input type="text" id="db_nome_social" oninput="this.value = this.value.toUpperCase()">
-                </div>
+        <div class="row">
+            <div class="field">
+                <label>MEDICAMENTOS EM USO?</label>
+                <label>NÃO <input type="radio" name="medicamento"></label>
+                <label>SIM <input type="radio" name="medicamento"></label>
+                <input type="text" style="margin-left:10px;">
             </div>
-
-            <!-- BLOCO 5: NASCIMENTO E IDADE -->
-            <div class="row">
-                <!-- style="flex: X": É a proporção da caixa em relação ao resto da linha -->
-                <div class="field" style="flex: 2;">
-                    <label> NATURALIDADE: </label>
-                    <input type="text" id="db_naturalidade" oninput="this.value = this.value.toUpperCase()">
-                </div>
-                <div class="field" style="flex: 1.2;">
-                    <label> DN: </label>
-                    <!-- INTELIGÊNCIA (onblur): Dispara ao sair do campo e calcula a idade. -->
-                    <input type="date" id="db_dn" onblur="calcularIdade()">
-                </div>
-                <div class="field" style="flex: 0.8;">
-                    <label> IDADE: </label>
-                    <!-- Campo bloqueado logicamente (preenchido via JavaScript) -->
-                    <input type="text" id="db_idade" readonly style="color: #000;">
-                </div>
+        </div>
+        <div class="row spacer-row">
+            <div class="field">
+                <label>ALERGIAS?</label>
+                <label>NÃO <input type="radio" name="alergia"></label>
+                <label>SIM <input type="radio" name="alergia"></label>
+                <input type="text" style="margin-left:10px;">
             </div>
+        </div>
 
-            <!-- BLOCO 6: DOCUMENTOS E SEXO -->
-            <div class="row">
-                <div class="field" style="flex: 1.5;">
-                    <label> CPF: </label>
-                    <!-- executingCpf() coloca a máscara enquanto digita.
-                         validarCpfFinal() testa a matemática ao sair do campo. -->
-                    <input type="text" id="db_cpf" placeholder="000.000.000-00" maxlength="14" oninput="executarCpf(this)" onblur="validarCpfFinal(this)">
-                </div>
-                <div class="field" style="flex: 1.5;">
-                    <label> CARTÃO SUS: </label>
-                    <input type="text" id="db_sus" placeholder="000 0000 0000 0000" maxlength="18" oninput="soNumerosSus(this)" onblur="validarSusFinal(this)">
-                </div>
-                <div class="field" style="flex: 1;">
-                    <label> SEXO: </label>
-                    <label> M <input type="radio" name="sexo" id="db_sexo_m" value="M"> </label>
-                    <label> F <input type="radio" name="sexo" id="db_sexo_f" value="F"> </label>
-                </div>
-            </div>
+        <div class="section-title">ANOTAÇÕES DA CLASSIFICAÇÃO</div>
+        <div class="handwriting-area" style="height: 75px;"></div>
 
-            <!-- BLOCO 7: ESTADO CIVIL -->
-            <div class="row">
-                <div class="field">
-                    <label>ESTADO CIVIL:</label>
-                    <!-- checkbox-group: Classe do CSS que alinha os botões perfeitamente -->
-                    <div class="checkbox-group" id="db_civil_group">
-                        <label> SOLTEIRO <input type="radio" name="civil" value="SOLTEIRO"></label>
-                        <label> CASADO <input type="radio" name="civil" value="CASADO"></label>
-                        <label> UNIÃO ESTÁVEL <input type="radio" name="civil" value="UNIÃO ESTÁVEL"></label>
-                        <label> DIVORCIADO <input type="radio" name="civil" value="DIVORCIADO"></label>
-                        <label> VIÚVO <input type="radio" name="civil" value="VIÚVO"></label>
-                    </div>
-                </div>
-            </div>
+        <div class="section-title">RESUMO DA HISTÓRIA CLÍNICA</div>
+        <div class="handwriting-area" style="height: 125px;"></div>
 
-            <!-- BLOCO 8: RAÇA/COR E OCUPAÇÃO -->
-            <div class="row">
-                <div class="field" style="flex: 2.5;">
-                    <label> RAÇA/COR: </label>
-                    <div class="checkbox-group" id="db_raca_group">
-                        <label> BRANCA <input type="radio" name="cor" value="BRANCA"></label>
-                        <label> PRETA <input type="radio" name="cor" value="PRETA"></label>
-                        <label> PARDA <input type="radio" name="cor" value="PARDA"></label>
-                        <label> INDÍGENA <input type="radio" name="cor" value="INDÍGENA"></label>
-                    </div>
-                </div>
-                <div class="field" style="flex: 1.5;">
-                    <label> OCUPAÇÃO: </label>
-                    <input type="text" id="db_ocupacao" oninput="this.value = this.value.toUpperCase()">
-                </div>
-            </div>
+        <div class="section-title">HIPÓTESE DIAGNÓSTICA</div>
+        <div class="handwriting-area" style="height: 125px; border-bottom: 1px solid var(--border-color);"></div>
 
-            <!-- BLOCO 9: NOME DA MÃE -->
-            <div class="row">
-                <div class="field">
-                    <label> NOME DA MÃE: </label>
-                    <input type="text" id="db_mae" oninput="this.value = this.value.toUpperCase()">
-                </div>
-            </div>
+    </form>
+</div>
 
-            <!-- BLOCO 10: RESPONSÁVEL E TELEFONE -->
-            <div class="row">
-                <div class="field" style="flex: 2.5;">
-                    <label> RESPONSÁVEL: </label>
-                    <input type="text" id="db_responsavel" oninput="this.value = this.value.toUpperCase()">
-                </div>
-                <div class="field" style="flex: 1.5;">
-                    <label> TEL: </label>
-                    <!-- mascaraTel(this) envia a caixa pro JS formatar com DDD e traço -->
-                    <input type="text" id="db_tel" placeholder="(00) 00000-0000" maxlength="15" oninput="mascaraTel(this)">
-                </div>
-            </div>
+<div class="toast-container" id="toastContainer"></div>
 
-            <!-- BLOCO 11: RUA E NÚMERO -->
-            <div class="row">
-                <div class="field" style="flex: 3.2;">
-                    <label> ENDEREÇO: </label>
-                    <input type="text" id="db_endereco" oninput="this.value = this.value.toUpperCase()">
-                </div>
-                <div class="field" style="flex: 0.8;">
-                    <label> Nº: </label>
-                    <input type="text" id="db_numero">
-                </div>
-            </div>
-
-            <!-- BLOCO 12: BAIRRO, CIDADE E UF -->
-            <div class="row spacer-row">
-                <div class="field" style="flex: 1.5;">
-                    <label> BAIRRO: </label>
-                    <input type="text" id="db_bairro" oninput="this.value = this.value.toUpperCase()">
-                </div>
-                <div class="field" style="flex: 1.5;">
-                    <label> CIDADE: </label>
-                    <!-- O value="EXTREMOZ" garante que inicie com essa cidade preenchida -->
-                    <input type="text" id="db_cidade" value="EXTREMOZ" oninput="this.value = this.value.toUpperCase()">
-                </div>
-                <div class="field" style="flex: 0.5;">
-                    <label> UF: </label>
-                    <input type="text" id="db_estado" value="RN" maxlength="2" style="width: 30px; border-bottom:none;" oninput="this.value = this.value.toUpperCase()">
-                </div>
-            </div>
-
-            <!--
-            =========================================================================
-            INÍCIO DOS DADOS CLÍNICOS E SINAIS VITAIS
-            =========================================================================
-            -->
-            <!-- BLOCO 13: TABELA DE CLASSIFICAÇÃO DE RISCO -->
-            <!-- Apenas carcaças visuais a serem preenchidas à caneta -->
-            <div class="section-title">CLASSIFICAÇÃO DE RISCO SSVV</div>
-            <table class="tabela-risco">
-                <tr>
-                    <td class="color-box">VERMELHO</td>
-                    <td>PA: <input type="text" class="input-ssvv no-print"></td>
-                    <td>SPO²: <input type="text" class="input-ssvv no-print"></td>
-                    <td>AO: <input type="text" class="input-ssvv no-print"></td>
-                </tr>
-                <tr>
-                    <td class="color-box">LARANJA</td>
-                    <td>FC: <input type="text" class="input-ssvv no-print"></td>
-                    <td>HGT: <input type="text" class="input-ssvv no-print"></td>
-                    <td>RV: <input type="text" class="input-ssvv no-print"></td>
-                </tr>
-                <tr>
-                    <td class="color-box">AMARELO</td>
-                    <td>FR: <input type="text" class="input-ssvv no-print"></td>
-                    <td>DOR: <input type="text" class="input-ssvv no-print"></td>
-                    <td>RM: <input type="text" class="input-ssvv no-print"></td>
-                </tr>
-                <tr>
-                    <td class="color-box">VERDE</td>
-                    <td>TEMP: <input type="text" class="input-ssvv no-print"></td>
-                    <td>PESO: <input type="text" class="input-ssvv no-print"></td>
-                    <td>TOTAL: <input type="text" class="input-ssvv no-print"></td>
-                </tr>
-                <tr>
-                    <td class="color-box">AZUL</td>
-                    <td colspan="3"></td>
-                </tr>
-            </table>
-
-            <!-- BLOCO 14: COMORBIDADES -->
-            <!-- border-top: none para colar diretamente embaixo da tabela -->
-            <div class="row" style="border-top: none;">
-                <div class="field">
-                    <label>COMORBIDADES:</label>
-                    <div class="checkbox-group">
-                        <label>HAS <input type="checkbox"></label>
-                        <label>DM <input type="checkbox"></label>
-                        <label>DISLIPIDEMIA <input type="checkbox"></label>
-                        <label>ETILISTA <input type="checkbox"></label>
-                        <label>TABAGISTA <input type="checkbox"></label>
-                        <label>OUTROS <input type="checkbox"></label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- BLOCO 15: MEDICAMENTOS E ALERGIAS -->
-            <div class="row">
-                <div class="field">
-                    <label>MEDICAMENTOS EM USO?</label>
-                    <label>NÃO <input type="radio" name="medicamento"></label>
-                    <label>SIM <input type="radio" name="medicamento"></label>
-                    <!-- Linha pontilhada genérica -->
-                    <input type="text" style="margin-left:10px;">
-                </div>
-            </div>
-            <div class="row spacer-row">
-                <div class="field">
-                    <label>ALERGIAS?</label>
-                    <label>NÃO <input type="radio" name="alergia"></label>
-                    <label>SIM <input type="radio" name="alergia"></label>
-                    <input type="text" style="margin-left:10px;">
-                </div>
-            </div>
-
-            <!-- BLOCO 16: ÁREAS DE ESCRITA CLÍNICA (O CADERNO ESPIRAL) -->
-            <!-- A classe 'handwriting-area' no CSS cuida de desenhar as linhas contínuas -->
-            <div class="section-title">ANOTAÇÕES DA CLASSIFICAÇÃO</div>
-            <div class="handwriting-area" style="height: 75px;"></div>
-
-            <div class="section-title">RESUMO DA HISTÓRIA CLÍNICA</div>
-            <div class="handwriting-area" style="height: 125px;"></div>
-
-            <div class="section-title">HIPÓTESE DIAGNÓSTICA</div>
-            <!-- O border-bottom garante o fechamento final da folha A4 -->
-            <div class="handwriting-area" style="height: 125px; border-bottom: 1px solid #000;"></div>
-
-        </form> <!-- Fim do Formulário -->
-    </div> <!-- Fim da Folha A4 -->
-
-    <!-- CONEXÃO COM O CÉREBRO: Importação do arquivo JavaScript -->
-    <script src="script.js"></script>
+<script src="assets/bootstrap.bundle.min.js"></script>
+<script src="script.js"></script>
 
 </body>
 </html>

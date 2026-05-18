@@ -1,0 +1,63 @@
+/*
+ * GLOBAL.CSS — Estilos globais do sistema.
+ *
+ * DIFERENÇA ENTRE global.css E variables.css:
+ *   variables.css → define as variáveis (cores, tamanhos)
+ *   global.css    → usa as variáveis para estilizar elementos HTML
+ *
+ * AQUI DEFINIMOS:
+ *   - Reset CSS (remove margens/paddings padrão do navegador)
+ *   - Fonte Inter (importada do Google Fonts)
+ *   - Estilos base para html, body, #root
+ *   - Estilos padrão para links, botões e inputs
+ *
+ * POR QUE UM RESET CSS?
+ *   Cada navegador tem estilos padrão diferentes:
+ *   - Chrome adiciona 8px de margin no body
+ *   - Firefox adiciona padding diferente em botões
+ *   - Safari tem font-family diferente
+ *
+ *   O reset elimina essas diferenças para que o layout
+ *   fique idêntico em qualquer navegador.
+ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import "./variables.css";
+@import "./theme.css";
+
+/* ── Reset CSS ───────────────────────────────────── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ── Base ────────────────────────────────────────── */
+html,
+body,
+#root {
+  height: 100%;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased; /* Deixa fonte mais suave no Chrome/Edge */
+}
+
+/* ── Elementos HTML ──────────────────────────────── */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+}

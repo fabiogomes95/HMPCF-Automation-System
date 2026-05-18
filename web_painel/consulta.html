@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Consulta Atendimentos - HMPCF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .stats-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+        .stats-card .numero {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary-blue);
+        }
+        .stats-card .rotulo {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stats-card.procedencia {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+        }
+        .stats-card.procedencia .nome-proc {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .stats-card.procedencia .qtd-proc {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--primary-blue);
+        }
+        .filtros-bar {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px 24px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: end;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .filtros-bar label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 2px;
+        }
+        .filtros-bar input[type="date"] {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            background: var(--bg-color);
+            color: var(--text-main);
+        }
+        .graf-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .tabela-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .tabela-container table {
+            font-size: 0.85rem;
+        }
+        .tabela-container thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .badge-proc {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .badge-samu { background: #ff6200; color: white; }
+        .badge-troca { background: #027bd8; color: white; }
+        .badge-ubs { background: #17a2b8; color: white; }
+        .badge-guarda { background: #28a745; color: white; }
+        .badge-normal { background: #6c757d; color: white; }
+        .chart-wrapper {
+            position: relative;
+            height: 250px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <a href="analise.html" class="top-back-link">⬅️ Análise</a>
+    <h4>📋 CONSULTA — ATENDIMENTOS</h4>
+</div>
+
+<div class="container py-4">
+
+    <div class="filtros-bar mb-4">
+        <div>
+            <label>De</label>
+            <input type="date" id="filtro_inicio">
+        </div>
+        <div>
+            <label>Até</label>
+            <input type="date" id="filtro_fim">
+        </div>
+        <div>
+            <button class="btn btn-primary btn-pill" onclick="consultar()">🔍 Consultar</button>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-yellow" onclick="definirHoje()">📅 Hoje</button>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-yellow" onclick="definirSemana()">📅 Esta Semana</button>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-yellow" onclick="definirMes()">📅 Este Mês</button>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-success" onclick="recarregar()">🔄 Recarregar</button>
+        </div>
+        <div id="loadingSpinner" class="d-none">
+            <span class="spinner-border spinner-border-sm text-primary" role="status"></span> Carregando...
+        </div>
+    </div>
+    <div id="cacheStatus" class="text-muted small text-center mb-2"></div>
+
+    <div id="resultArea" class="d-none">
+
+        <div class="row g-3 mb-4" id="statsCards"></div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="graf-container">
+                    <h6 class="section-title">📊 Por Procedência</h6>
+                    <div class="chart-wrapper"><canvas id="chartProcedencia"></canvas></div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="graf-container">
+                    <h6 class="section-title">📈 Atendimentos por Dia</h6>
+                    <div class="chart-wrapper"><canvas id="chartDias"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="editor-container shadow-sm editor-container--wide">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold badge-primary" id="tabelaTitulo">📋 Atendimentos</span>
+                <span id="tabelaCount" class="text-muted small"></span>
+            </div>
+            <div class="tabela-container">
+                <table class="table table-hover table-sm">
+                    <thead class="table-head-primary">
+                        <tr>
+                            <th>#</th>
+                            <th>Data</th>
+                            <th>Hora</th>
+                            <th>Registro</th>
+                            <th>Procedência</th>
+                            <th>Paciente</th>
+                            <th>CPF</th>
+                            <th>DN</th>
+                            <th>Tel</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaBody"></tbody>
+                </table>
+            </div>
+            <div id="paginacaoNav" class="d-flex justify-content-center align-items-center py-2"></div>
+            <div id="semResultados" class="text-center text-muted py-4 d-none">
+                Nenhum atendimento encontrado no período.
+            </div>
+        </div>
+
+    </div>
+
+    <div id="emptyState" class="text-center py-5 center-empty">
+        <div class="emoji-large">📋</div>
+        <h5>Selecione um período e clique em <strong>Consultar</strong></h5>
+        <p class="text-muted">Os dados são carregados diretamente do hospital.db da recepção.</p>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let chartProcedencia = null;
+    let chartDias = null;
+    const _POR_PAGINA = 100;
+    let _paginaAtual = 1;
+    let _totalPaginas = 1;
+    let _totalRegistros = 0;
+    let _ultimoInicio = '';
+    let _ultimoFim = '';
+
+    function mostrarToast(mensagem, tipo) {
+        tipo = tipo || 'info';
+        const container = document.getElementById('toastContainer') || (function() {
+            const div = document.createElement('div');
+            div.id = 'toastContainer';
+            div.className = 'toast-container';
+            document.body.appendChild(div);
+            return div;
+        })();
+        const bgMap = { success: '#28a745', danger: '#dc3545', warning: '#ffc107', info: '#0d6efd' };
+        const el = document.createElement('div');
+        el.className = 'toast align-items-center text-white border-0 mb-2';
+        el.style.backgroundColor = bgMap[tipo] || bgMap.info;
+        el.innerHTML = `<div class="d-flex"><div class="toast-body">${mensagem}</div></div>`;
+        container.appendChild(el);
+        setTimeout(() => { el.remove(); }, 4000);
+    }
+
+    function hojeISO() {
+        return new Date().toISOString().split('T')[0];
+    }
+
+    function definirHoje() {
+        const h = hojeISO();
+        document.getElementById('filtro_inicio').value = h;
+        document.getElementById('filtro_fim').value = h;
+        consultar(1);
+    }
+
+    function definirSemana() {
+        const fim = new Date();
+        const inicio = new Date(fim);
+        inicio.setDate(inicio.getDate() - inicio.getDay());
+        document.getElementById('filtro_inicio').value = inicio.toISOString().split('T')[0];
+        document.getElementById('filtro_fim').value = fim.toISOString().split('T')[0];
+        consultar(1);
+    }
+
+    function definirMes() {
+        const hoje = new Date();
+        const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        document.getElementById('filtro_inicio').value = inicio.toISOString().split('T')[0];
+        document.getElementById('filtro_fim').value = hoje.toISOString().split('T')[0];
+        consultar(1);
+    }
+
+    function badgeProcedencia(proc) {
+        const map = {
+            'SAMU': 'badge-samu', 'TROCA': 'badge-troca',
+            'OBS': 'badge-ubs', 'GUARDA': 'badge-guarda'
+        };
+        const cls = map[proc] || 'badge-normal';
+        return `<span class="badge-proc ${cls}">${proc || 'NORMAL'}</span>`;
+    }
+
+    function consultaTimeout(ms) {
+        return new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms));
+    }
+
+    async function consultar(pagina) {
+        const inicio = document.getElementById('filtro_inicio').value;
+        const fim = document.getElementById('filtro_fim').value;
+        if (!inicio || !fim) {
+            alert('Selecione a data de início e fim.');
+            return;
+        }
+
+        pagina = pagina || 1;
+        _ultimoInicio = inicio;
+        _ultimoFim = fim;
+        _paginaAtual = pagina;
+
+        document.getElementById('loadingSpinner').style.display = 'inline-block';
+        document.getElementById('resultArea').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+
+        try {
+            const result = await Promise.race([
+                Promise.all([
+                    eel.consulta_listar_atendimentos(inicio, fim, pagina),
+                    eel.consulta_resumo_atendimentos(inicio, fim),
+                    eel.consulta_atendimentos_por_dia(inicio, fim)
+                ]),
+                consultaTimeout(60000)
+            ]);
+
+            if (!result) throw new Error('Sem resposta do servidor');
+
+            const [paginaDados, resumo, porDia] = result;
+
+            if (!resumo || typeof resumo.total !== 'number') {
+                throw new Error('Resumo inválido');
+            }
+
+            _totalRegistros = paginaDados.total || 0;
+            _totalPaginas = paginaDados.total_paginas || 1;
+
+            preencherStats(resumo);
+            preencherGraficoPizza(resumo.por_procedencia || {});
+            preencherGraficoBarras(porDia || []);
+            preencherTabela(paginaDados);
+
+            document.getElementById('resultArea').style.display = 'block';
+        } catch (e) {
+            console.error('Erro na consulta:', e);
+            document.getElementById('resultArea').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+            document.getElementById('emptyState').innerHTML = `
+                <div class="text-center py-5">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">⏳</div>
+                    <strong>Erro ao consultar</strong>
+                    <p class="text-muted mt-2">A consulta excedeu o tempo limite ou o servidor não respondeu.<br>
+                    Verifique se o hospital.db está acessível e tente novamente.</p>
+                    <button class="btn btn-outline-primary btn-sm" onclick="recarregar()">🔄 Recarregar Cache</button>
+                </div>
+            `;
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+    }
+
+    function preencherStats(resumo) {
+        const container = document.getElementById('statsCards');
+        let html = `
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="numero">${resumo.total}</div>
+                    <div class="rotulo">Total Atendimentos</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="numero">${resumo.media_dia}</div>
+                    <div class="rotulo">Média / Dia</div>
+                </div>
+            </div>
+        `;
+
+        const cores = { 'SAMU': '#ff6200', 'TROCA': '#027bd8', 'OBS': '#17a2b8', 'GUARDA': '#28a745' };
+        let procHtml = '';
+        for (const [proc, qtd] of Object.entries(resumo.por_procedencia)) {
+            const cor = cores[proc] || '#6c757d';
+            procHtml += `
+                <div class="stats-card procedencia">
+                    <span class="nome-proc">${proc}</span>
+                    <span class="qtd-proc" style="color: ${cor};">${qtd}</span>
+                </div>
+            `;
+        }
+        if (!procHtml) procHtml = '<div class="text-muted text-center py-2">Nenhum</div>';
+
+        html += `
+            <div class="col-md-3">
+                <div class="stats-card stats-card--compact">
+                    <div class="rotulo mb-2">Por Procedência</div>
+                    ${procHtml}
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="numero">${Object.keys(resumo.por_procedencia).length}</div>
+                    <div class="rotulo">Tipos de Procedência</div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    function preencherGraficoPizza(porProcedencia) {
+        const ctx = document.getElementById('chartProcedencia').getContext('2d');
+        if (chartProcedencia) chartProcedencia.destroy();
+
+        const labels = Object.keys(porProcedencia);
+        const dados = Object.values(porProcedencia);
+        const cores = {
+            'SAMU': '#ff6200', 'TROCA': '#027bd8',
+            'OBS': '#17a2b8', 'GUARDA': '#28a745'
+        };
+        const bg = labels.map(l => cores[l] || '#6c757d');
+
+        chartProcedencia = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: dados,
+                    backgroundColor: bg,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { size: 11 }, padding: 8 }
+                    }
+                }
+            }
+        });
+    }
+
+    function preencherGraficoBarras(porDia) {
+        const ctx = document.getElementById('chartDias').getContext('2d');
+        if (chartDias) chartDias.destroy();
+
+        chartDias = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: porDia.map(d => d.data),
+                datasets: [{
+                    label: 'Atendimentos',
+                    data: porDia.map(d => d.qtd),
+                    backgroundColor: '#1A5B9C',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, font: { size: 11 } }
+                    },
+                    x: {
+                        ticks: { font: { size: 10 }, maxRotation: 45 }
+                    }
+                }
+            }
+        });
+    }
+
+    function preencherTabela(paginaDados) {
+        const semRes = document.getElementById('semResultados');
+        const count = document.getElementById('tabelaCount');
+        const nav = document.getElementById('paginacaoNav');
+        const tbody = document.getElementById('tabelaBody');
+
+        const atendimentos = paginaDados.atendimentos || [];
+        _totalRegistros = paginaDados.total || 0;
+        _totalPaginas = paginaDados.total_paginas || 1;
+
+        if (_totalRegistros === 0) {
+            semRes.style.display = 'block';
+            count.textContent = '0 registros';
+            nav.innerHTML = '';
+            tbody.innerHTML = '';
+            return;
+        }
+
+        semRes.style.display = 'none';
+        count.textContent = `${_totalRegistros} registros (pág ${_paginaAtual}/${_totalPaginas})`;
+
+        tbody.innerHTML = '';
+        atendimentos.forEach((a, i) => {
+            const tr = document.createElement('tr');
+            const numLinha = (_paginaAtual - 1) * _POR_PAGINA + i + 1;
+            tr.innerHTML = `
+                <td>${numLinha}</td>
+                <td>${a.data_atendimento || ''}</td>
+                <td>${a.hora_atendimento || ''}</td>
+                <td><strong>${a.registro || ''}</strong></td>
+                <td>${badgeProcedencia(a.procedencia)}</td>
+                <td>${a.nome || '<em class="text-muted">sem nome</em>'}</td>
+                <td>${a.cpf || ''}</td>
+                <td>${a.dn || ''}</td>
+                <td>${a.tel || ''}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        nav.innerHTML = `
+            <button class="btn btn-sm btn-outline-secondary" onclick="mudarPagina(1)" ${_paginaAtual <= 1 ? 'disabled' : ''}>⏮</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="mudarPagina(${_paginaAtual - 1})" ${_paginaAtual <= 1 ? 'disabled' : ''}>◀</button>
+            <span class="mx-2" style="font-size: 0.85rem;">Pág ${_paginaAtual} de ${_totalPaginas}</span>
+            <button class="btn btn-sm btn-outline-secondary" onclick="mudarPagina(${_paginaAtual + 1})" ${_paginaAtual >= _totalPaginas ? 'disabled' : ''}>▶</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="mudarPagina(${_totalPaginas})" ${_paginaAtual >= _totalPaginas ? 'disabled' : ''}>⏭</button>
+        `;
+    }
+
+    function mudarPagina(pag) {
+        if (pag < 1 || pag > _totalPaginas || pag === _paginaAtual) return;
+        consultar(pag);
+    }
+
+    async function recarregar() {
+        try {
+            const status = await eel.consulta_recarregar();
+            document.getElementById('cacheStatus').textContent = '🔄 ' + status;
+            mostrarToast('Cache recarregado: ' + status, 'info');
+            consultar(1);
+        } catch (e) {
+            console.error('Erro ao recarregar:', e);
+        }
+    }
+
+    async function atualizarCacheStatus() {
+        try {
+            const status = await eel.consulta_status_cache();
+            document.getElementById('cacheStatus').textContent = '📦 ' + status;
+        } catch (e) {}
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        definirHoje();
+        atualizarCacheStatus();
+    });
+</script>
+
+</body>
+</html>

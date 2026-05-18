@@ -1,9 +1,5 @@
 import re
 
-# ==============================================================================
-# 🛡️ FUNÇÕES DE VALIDAÇÃO OFICIAIS (DATASUS / RECEITA FEDERAL)
-# ==============================================================================
-
 def apenas_numeros(valor):
     return re.sub(r'\D', '', str(valor))
 
@@ -22,10 +18,6 @@ def valida_cpf(cpf):
     digito_2 = (soma_2 * 10 % 11) % 10
     return str(digito_1) == cpf[9] and str(digito_2) == cpf[10]
 
-# ==============================================================================
-# 🧹 PROCESSAMENTO NA MEMÓRIA (Sem arquivos de lixo)
-# ==============================================================================
-
 def processar_lista(caminho_arquivo_sujo):
     try:
         with open(caminho_arquivo_sujo, "r", encoding="utf-8") as f:
@@ -34,7 +26,7 @@ def processar_lista(caminho_arquivo_sujo):
         return []
 
     resultado_limpo = []
-    vistos = set()  # ✅ Controle de duplicatas
+    ultimo = None  # ✅ Guarda só o anterior imediato
 
     for linha in linhas:
         if not linha.strip():
@@ -50,12 +42,12 @@ def processar_lista(caminho_arquivo_sujo):
             elif len(num) == 11 and valida_cpf(num):
                 cpf_encontrado = num
 
-        # Prioriza SUS. Se não tiver, vai o CPF.
         escolhido = sus_encontrado or cpf_encontrado
 
-        # ✅ Só adiciona se for válido e ainda não visto
-        if escolhido and escolhido not in vistos:
-            vistos.add(escolhido)
+        # Bloqueia só repetição CONSECUTIVA (digitação dupla acidental)
+        # Mesmo número em linhas diferentes = paciente veio 2x = permitido
+        if escolhido and escolhido != ultimo:
+            ultimo = escolhido
             resultado_limpo.append(escolhido)
 
     return resultado_limpo

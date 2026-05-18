@@ -4,19 +4,35 @@
    ========================================================================== */
 
 :root {
-    --primary-blue: #0A3A70;     /* Azul profundo (Logo/Bandeira) */
-    --secondary-blue: #1A5B9C;   /* Azul intermediário para hovers */
-    --hmpcf-red: #D92332;        /* Vermelho urgência (Cruz do Logo) */
-    --extremoz-yellow: #F2C230;  /* Amarelo vibrante (Sol da Bandeira) */
-    
-    --bg-color: #F0F4F8;         /* Fundo cinza bem claro/gelo */
-    --card-bg: #FFFFFF;          /* Fundo branco para os painéis */
-    --text-main: #2C3E50;        /* Texto escuro padrão */
-    --text-muted: #6c757d;       /* Texto secundário */
-    --border-color: #E1E8ED;     /* Bordas suaves */
-    
-    --terminal-bg: #1E293B;      /* Fundo escuro elegante para as caixas de texto */
-    --terminal-text: #F8FAFC;    /* Texto claro no terminal */
+    --primary-blue: #0A3A70;
+    --secondary-blue: #1A5B9C;
+    --hmpcf-red: #D92332;
+    --extremoz-yellow: #F2C230;
+
+    --bg-color: #F0F4F8;
+    --card-bg: #FFFFFF;
+    --text-main: #2C3E50;
+    --text-muted: #6c757d;
+    --border-color: #E1E8ED;
+
+    --terminal-bg: #1E293B;
+    --terminal-text: #F8FAFC;
+}
+
+body.dark-mode {
+    --primary-blue: #1a5b9c;
+    --secondary-blue: #2d7cd4;
+    --hmpcf-red: #e84858;
+    --extremoz-yellow: #e6b020;
+
+    --bg-color: #121212;
+    --card-bg: #1e1e1e;
+    --text-main: #e0e0e0;
+    --text-muted: #a0a0a0;
+    --border-color: #333333;
+
+    --terminal-bg: #0d1117;
+    --terminal-text: #c9d1d9;
 }
 
 body {
@@ -51,6 +67,57 @@ body {
     font-size: 1.6rem;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
 }
+
+/* Marca / ícone do topo */
+.brand-icon {
+    background: white;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--hmpcf-red);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    font-size: 1.4rem;
+}
+
+/* Botão de modo escuro no topo */
+.btn-darkmode {
+    background: rgba(255,255,255,0.08);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 16px;
+    padding: 4px 14px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+/* Cabeçalho do dashboard */
+.dashboard-header h2 { font-weight: 800; color: var(--primary-blue); }
+.dashboard-header p { color: var(--text-muted); }
+
+/* Label ativo no terminal */
+.terminal-active { color: var(--extremoz-yellow); font-weight: 700; }
+
+/* Utility classes moved from inline usage */
+.top-back-link {
+    position: absolute;
+    left: 30px;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+}
+.module-card--pad { padding: 20px; }
+.module-icon--lg { font-size: 2rem; }
+.editor-container--wide { max-width: 900px; margin: 0 auto; }
+.btn-primary-custom { background: var(--primary-blue); color: white; border-radius: 8px; padding: 8px 24px; font-weight: 600; }
+.btn-yellow { background: var(--extremoz-yellow); color: #5C4A00; border-radius: 8px; padding: 8px 16px; font-weight: 600; }
+.terminal-card--compact { margin-top: 0; }
+.badge-primary { color: var(--primary-blue); }
+.text-muted-small { color: var(--text-muted); font-size: 0.9rem; }
+.center-empty { text-align: center; color: var(--text-muted); }
+.rounded-top-border { border-top: 4px solid var(--extremoz-yellow); border-radius: 12px; }
 
 #alerta-status {
     position: absolute;
@@ -261,3 +328,51 @@ textarea.form-control:focus {
 .modal-body select { border-radius: 8px; border: 2px solid var(--border-color); padding: 10px; font-weight: 500; }
 .passo-a-passo { background-color: var(--bg-color); border-left: 4px solid var(--hmpcf-red); padding: 15px; border-radius: 0 8px 8px 0; margin-top: 20px; font-size: 0.9rem; color: var(--text-muted); }
 .modal-footer { border-top: 1px solid var(--border-color); background-color: var(--bg-color); border-radius: 0 0 16px 16px; }
+
+/* Additional utility classes used during migration */
+.card--accent-top { border-top: 4px solid var(--extremoz-yellow); border-radius: 12px; }
+.rounded-lg { border-radius: 12px; }
+.text-uppercase { text-transform: uppercase; }
+.btn-pill { background: var(--primary-blue); color: white; border-radius: 8px; padding: 8px 24px; font-weight: 600; }
+.btn-yellow { background: var(--extremoz-yellow); color: #5C4A00; border-radius: 8px; padding: 8px 16px; font-weight: 600; }
+.table-head-primary { background: var(--primary-blue); color: white; }
+.topbar-status { position: absolute; right: 30px; color: white; font-weight: bold; }
+.text-center { text-align: center; }
+.small { font-size: 0.85rem; }
+
+/* Topbar right utilities */
+.topbar-right { position: absolute; right: 30px; top: 12px; display: flex; gap: 8px; align-items: center; }
+
+/* Admin unlocked banner */
+.admin-banner { position: fixed; right: 20px; top: 64px; z-index: 1200; box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+
+/* Modal header variants */
+.modal-admin-header { background: #b02a37; color: white; border-radius: 16px 16px 0 0; border-bottom: 4px solid var(--extremoz-yellow); }
+.modal-change-header { background: #0d6efd; color: white; border-radius: 16px 16px 0 0; border-bottom: 4px solid var(--extremoz-yellow); }
+
+/* Accent module card (used for exportação consolidated) */
+.module-card--accent { background: linear-gradient(135deg, var(--primary-blue), #052244); color: white; cursor: pointer; }
+.module-card--accent .module-icon { background: rgba(255,255,255,0.15); color: white; font-size: 2rem; }
+.module-card--accent h5 { color: white; }
+.accent-desc { font-size: 0.9rem; color: rgba(255,255,255,0.9); opacity: 0.9; }
+.text-white { color: white; }
+
+/* Section titles */
+.section-title { font-weight: 700; color: var(--primary-blue); margin-bottom: 12px; }
+.emoji-large { font-size: 3rem; margin-bottom: 10px; }
+
+/* Search results container */
+.search-results { max-height: 400px; overflow-y: auto; }
+
+/* Spinner large */
+.spinner-lg { width: 3rem; height: 3rem; }
+
+/* Status title in modals */
+.status-title { color: var(--primary-blue); font-weight: bold; }
+
+/* Attention title */
+.attention-title { color: var(--hmpcf-red); }
+
+/* Stats card compact */
+.stats-card--compact { padding: 12px 16px; }
+.qtd-proc-colored { font-weight: 800; font-size: 1.1rem; color: var(--primary-blue); }
