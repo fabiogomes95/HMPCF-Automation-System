@@ -1,5 +1,5 @@
 # ==============================================================================
-# 👻 CAÇA-FANTASMAS: REMOVEDOR DE DUPLICATAS (BPA)
+# 👻 CAÇA-FANTASMAS: REMOVEDOR DE DUPLICATAS (SEM UDF / SEM TRIM)
 # ==============================================================================
 
 import firebirdsql
@@ -14,44 +14,53 @@ def iniciar_limpeza():
         con = firebirdsql.connect(host='localhost', database=CAMINHO_GDB, user=USER, password=PASS, charset='WIN1252')
         cur = con.cursor()
 
-        # Mostra quantos pacientes têm o mesmo nome repetido
+        # Mostra quantos pacientes têm o mesmo NOME + CNS repetidos
+        # Trocamos o TRIM por verificações diretas de nulo e vazio
         cur.execute("""
-            SELECT NOME, COUNT(*) 
+            SELECT NOME, CNS, COUNT(*) 
             FROM CADCNS 
-            GROUP BY NOME 
+            WHERE CNS IS NOT NULL AND CNS <> '' AND CNS <> '               '
+            GROUP BY NOME, CNS 
             HAVING COUNT(*) > 1 
             ORDER BY COUNT(*) DESC
         """)
         repetidos = cur.fetchall()
 
         if not repetidos:
-            print("✅ Tudo certo! Nenhuma duplicata encontrada no banco.")
+            print("✅ Tudo certo! Nenhuma duplicata exata encontrada no banco.")
             con.close()
             return
 
-        print("\n⚠️ ATENÇÃO! Encontrei os seguintes registros clonados no banco:")
-        for nome, qtd in repetidos:
-            nome_exibicao = nome if nome else "[CADASTRO EM BRANCO / FANTASMA]"
-            print(f" -> {qtd} repetições: {nome_exibicao}")
+        print("\n⚠️ ATENÇÃO! Encontrei os seguintes registros clonados (Nome + Documento):")
+        for nome, cns, qtd in repetidos:
+            nome_exibicao = nome if nome else "[NOME EM BRANCO]"
+            cns_exibicao = cns if cns else "[SEM SUS]"
+            print(f" -> {qtd} repetições: {nome_exibicao} (SUS: {cns_exibicao})")
 
         escolha = input("\nQuer que eu apague os clones e deixe apenas UMA cópia de cada? (S/N): ")
 
         if escolha.upper() == 'S':
             print("\n⏳ Apagando clones... (Isso pode levar alguns segundos)")
             
-            # Deleta os repetidos e mantém apenas o registro mais atual
+            # Deleta os repetidos sem usar COALESCE ou TRIM
+            # Comparamos diretamente os campos e tratamos os vazios com IS NOT NULL
             cur.execute("""
                 DELETE FROM CADCNS A
                 WHERE EXISTS (
                     SELECT 1 FROM CADCNS B
-                    WHERE COALESCE(B.NOME, '') = COALESCE(A.NOME, '')
-                    AND COALESCE(B.DTNASC, '') = COALESCE(A.DTNASC, '')
+                    WHERE B.NOME = A.NOME
+                    AND B.DTNASC = A.DTNASC
+                    AND (
+                        (B.CNS = A.CNS AND A.CNS IS NOT NULL AND A.CNS <> '' AND A.CNS <> '               ')
+                        OR 
+                        (B.NUM_CPF = A.NUM_CPF AND A.NUM_CPF IS NOT NULL AND A.NUM_CPF <> '' AND A.NUM_CPF <> '           ')
+                    )
                     AND B.RDB$DB_KEY > A.RDB$DB_KEY
                 )
             """)
             
             con.commit()
-            print("✅ Limpeza cirúrgica concluída! Todos os clones e fantasmas foram removidos.")
+            print("✅ Limpeza cirúrgica concluída! Todos os clones foram removidos com segurança.")
         else:
             print("❌ Operação cancelada.")
 
