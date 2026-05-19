@@ -31,19 +31,32 @@ def conectar_banco() -> sqlite3.Connection:
     return conn
 
 
+MAPA_COLUNAS = {
+    'CNS': 'sus', 'NUM_CPF': 'cpf', 'NOME': 'nome',
+    'NOME_SOCIAL': 'nomeSocial', 'DTNASC': 'dn', 'IDADE': 'idade',
+    'SEXO': 'sexo', 'ESTADO_CIVIL': 'civil', 'RACA': 'raca',
+    'OCUPACAO': 'ocupacao', 'MAEPCN': 'mae', 'RESPONSAVEL': 'responsavel',
+    'TELEFONE': 'tel', 'LOGPCN': 'endereco', 'NUMPCN': 'numero',
+    'BAIRRO_PCNTE': 'bairro', 'NACIONALIDADE': 'naturalidade',
+    'CIDADE': 'cidade', 'ESTADO': 'estado',
+    'CEPPCN': 'ceppcn', 'IBGE': 'ibge', 'ETNIA': 'etnia'
+}
+MAPA_REVERSO = {v: k for k, v in MAPA_COLUNAS.items()}
+
+
 def init_db() -> None:
     conn = conectar_banco()
     cursor = conn.cursor()
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS pacientes (
-            cpf TEXT PRIMARY KEY,
-            sus TEXT, nome TEXT, nomeSocial TEXT,
-            naturalidade TEXT, dn TEXT, idade TEXT,
-            sexo TEXT, civil TEXT, raca TEXT,
-            ocupacao TEXT, mae TEXT, responsavel TEXT,
-            tel TEXT, endereco TEXT, numero TEXT,
-            bairro TEXT, cidade TEXT, estado TEXT
+            CNS TEXT, NUM_CPF TEXT, NOME TEXT, DTNASC TEXT,
+            SEXO TEXT, RACA TEXT, MAEPCN TEXT, LOGPCN TEXT,
+            NUMPCN TEXT, BAIRRO_PCNTE TEXT, CEPPCN TEXT,
+            IBGE TEXT, ETNIA TEXT, NACIONALIDADE TEXT,
+            NOME_SOCIAL TEXT, IDADE TEXT, ESTADO_CIVIL TEXT,
+            OCUPACAO TEXT, RESPONSAVEL TEXT, TELEFONE TEXT,
+            CIDADE TEXT, ESTADO TEXT
         )
     ''')
 
@@ -108,13 +121,16 @@ def buscar_paciente(id_procurado: str) -> dict:
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT * FROM pacientes WHERE cpf=? OR sus=?",
+            "SELECT * FROM pacientes WHERE NUM_CPF=? OR CNS=?",
             (id_limpo, id_limpo)
         )
         row = cursor.fetchone()
 
         if row:
-            dados = {k: row[k] for k in row.keys()}
+            dados = {}
+            for db_key in row.keys():
+                front_key = MAPA_COLUNAS.get(db_key, db_key)
+                dados[front_key] = row[db_key]
             dados['dn'] = converter_data_para_web(dados.get('dn', ''))
             return dados
         else:
@@ -143,8 +159,8 @@ def buscar_por_nome(termo: str) -> list[dict]:
         # Sanitiza % e _ que são curingas do LIKE
         termo_sanitizado = termo.upper().replace('%', '\\%').replace('_', '\\_')
         cursor.execute(
-            "SELECT nome, cpf, sus, dn FROM pacientes"
-            " WHERE nome LIKE ? ESCAPE '\\' LIMIT 20",
+            "SELECT NOME, NUM_CPF, CNS, DTNASC FROM pacientes"
+            " WHERE NOME LIKE ? ESCAPE '\\' LIMIT 20",
             (f"%{termo_sanitizado}%",)
         )
         rows = cursor.fetchall()
@@ -155,10 +171,10 @@ def buscar_por_nome(termo: str) -> list[dict]:
         resultados = []
         for row in rows:
             resultados.append({
-                'nome': row['nome'],
-                'cpf': row['cpf'] or '',
-                'sus': row['sus'] or '',
-                'dn': converter_data_para_web(row['dn'] or '')
+                'nome': row['NOME'],
+                'cpf': row['NUM_CPF'] or '',
+                'sus': row['CNS'] or '',
+                'dn': converter_data_para_web(row['DTNASC'] or '')
             })
         return resultados
 
@@ -227,7 +243,7 @@ def verificar_duplicata(nome: str, dn: str) -> list[dict]:
         conn = conectar_banco()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT nome, cpf, sus, dn FROM pacientes WHERE nome=? AND dn=?",
+            "SELECT NOME, NUM_CPF, CNS, DTNASC FROM pacientes WHERE NOME=? AND DTNASC=?",
             (nome_upper, dn_iso)
         )
         rows = cursor.fetchall()
@@ -266,10 +282,10 @@ def salvar(dados: dict) -> dict:
 
         cursor.execute('''
             INSERT OR REPLACE INTO pacientes
-            (cpf, sus, nome, nomeSocial, naturalidade,
-             dn, idade, sexo, civil, raca, ocupacao,
-             mae, responsavel, tel, endereco, numero,
-             bairro, cidade, estado)
+            (NUM_CPF, CNS, NOME, NOME_SOCIAL, NACIONALIDADE,
+             DTNASC, IDADE, SEXO, ESTADO_CIVIL, RACA, OCUPACAO,
+             MAEPCN, RESPONSAVEL, TELEFONE, LOGPCN, NUMPCN,
+             BAIRRO_PCNTE, CIDADE, ESTADO)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ''', (
             apenas_numeros(dados.get('cpf', '')),

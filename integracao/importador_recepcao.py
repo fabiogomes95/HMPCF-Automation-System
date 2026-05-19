@@ -98,7 +98,7 @@ def executar_importacao_lote(separador: str = ";") -> str:
 
                     # --- VERIFICO SE JÁ EXISTE NO BANCO ---
                     cursor.execute(
-                        "SELECT cpf, nome, dn, sexo FROM pacientes WHERE sus = ?",
+                        "SELECT NUM_CPF, NOME, DTNASC, SEXO FROM pacientes WHERE CNS = ?",
                         (sus_csv,)
                     )
                     paciente_banco = cursor.fetchone()
@@ -112,30 +112,30 @@ def executar_importacao_lote(separador: str = ";") -> str:
 
                         # CPF: só atualiza se o banco estiver vazio
                         if (not db_cpf or db_cpf.strip() == "") and cpf_csv:
-                            campos_para_atualizar.append("cpf = ?")
+                            campos_para_atualizar.append("NUM_CPF = ?")
                             valores_para_atualizar.append(cpf_csv)
 
                         # Nome: só atualiza se o banco estiver vazio
                         if (not db_nome or db_nome.strip() == "") and nome_csv:
-                            campos_para_atualizar.append("nome = ?")
+                            campos_para_atualizar.append("NOME = ?")
                             valores_para_atualizar.append(nome_csv)
 
                         # Data de nascimento: só se vazio
                         if (not db_dn or db_dn.strip() == "") and dn_csv:
-                            campos_para_atualizar.append("dn = ?")
+                            campos_para_atualizar.append("DTNASC = ?")
                             valores_para_atualizar.append(dn_csv)
 
                         # Sexo: só se vazio E for M/F/I
                         if (not db_sexo or db_sexo.strip() == "") \
                                 and sexo_csv in ['M', 'F', 'I']:
-                            campos_para_atualizar.append("sexo = ?")
+                            campos_para_atualizar.append("SEXO = ?")
                             valores_para_atualizar.append(sexo_csv)
 
                         if campos_para_atualizar:
                             sql_update = (
                                 f"UPDATE pacientes SET "
                                 f"{', '.join(campos_para_atualizar)} "
-                                f"WHERE sus = ?"
+                                f"WHERE CNS = ?"
                             )
                             valores_para_atualizar.append(sus_csv)
                             try:
@@ -150,7 +150,7 @@ def executar_importacao_lote(separador: str = ";") -> str:
                         # --- NOVO PACIENTE ---
                         try:
                             cursor.execute('''
-                                INSERT INTO pacientes (sus, cpf, nome, dn, sexo)
+                                INSERT INTO pacientes (CNS, NUM_CPF, NOME, DTNASC, SEXO)
                                 VALUES (?, ?, ?, ?, ?)
                             ''', (sus_csv, cpf_csv, nome_csv, dn_csv, sexo_csv))
                             inseridos_novos += 1

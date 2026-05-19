@@ -39,10 +39,10 @@ for campo, valor in PADROES.items():
         print(f"  {campo:15s} OK  nenhum vazio")
         continue
 
-        cur.execute(f"UPDATE CADCNS SET {campo} = ? WHERE {campo} IS NULL OR {campo} = ''", (valor,))
-        con.commit()
-        print(f"  {campo:15s} OK  {vazios} registros -> '{valor}'")
-        total_afetados += vazios
+    cur.execute(f"UPDATE CADCNS SET {campo} = ? WHERE {campo} IS NULL OR {campo} = ''", (valor,))
+    con.commit()
+    print(f"  {campo:15s} OK  {vazios} registros -> '{valor}'")
+    total_afetados += vazios
 
 # CO_LOGRAD deve ser 081 em TODOS os registros
 cur.execute("SELECT COUNT(*) FROM CADCNS")

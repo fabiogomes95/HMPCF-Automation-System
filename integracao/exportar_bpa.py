@@ -53,8 +53,8 @@ def exportar_dados(mes_ano: str = "", caminho_salvar: str = "") -> str:
         # --- CONSULTA PRINCIPAL ---
         # Pego DISTINCT pra não repetir paciente
         query = """
-            SELECT DISTINCT p.sus, p.nome, p.dn, p.sexo,
-                   p.endereco, p.numero, p.bairro, p.tel
+            SELECT DISTINCT p.CNS, p.NOME, p.DTNASC, p.SEXO,
+                   p.LOGPCN, p.NUMPCN, p.BAIRRO_PCNTE, p.TELEFONE
             FROM pacientes p
         """
         params = []
@@ -62,7 +62,7 @@ def exportar_dados(mes_ano: str = "", caminho_salvar: str = "") -> str:
         # Se filtrou por mês, faço JOIN com atendimentos
         if mes_ano:
             query += """
-                JOIN atendimentos a ON p.sus = a.sus
+                JOIN atendimentos a ON p.CNS = a.sus
                 WHERE a.data_atendimento LIKE ?
                    OR a.data_atendimento LIKE ?
             """
