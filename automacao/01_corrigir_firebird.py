@@ -129,20 +129,56 @@ def main():
     total_mantidos = 0
 
     # ===================================================================
-    # FASE 0: Validar CPF/CNS — limpar invalidos, deletar sem nenhum
+    # FASE 0: Validar CPF/CNS com algoritmos oficiais matematicos
     # ===================================================================
     print("=" * 60)
-    print("FASE 0: Validando CPF/CNS no Firebird...")
+    print("FASE 0: Validando CPF/CNS (algoritmo oficial)...")
     print("=" * 60)
+
+    def valida_cpf(cpf):
+        if not cpf or len(cpf) != 11 or len(set(cpf)) == 1:
+            return False
+        try:
+            soma_1 = sum(int(cpf[i]) * (10 - i) for i in range(9))
+            digito_1 = (soma_1 * 10 % 11) % 10
+            soma_2 = sum(int(cpf[i]) * (11 - i) for i in range(10))
+            digito_2 = (soma_2 * 10 % 11) % 10
+            return str(digito_1) == cpf[9] and str(digito_2) == cpf[10]
+        except (ValueError, IndexError):
+            return False
+
+    def valida_cns(cns):
+        if not cns or len(cns) != 15 or cns[0] not in '12789':
+            return False
+        try:
+            if cns[0] in '789':
+                return sum(int(cns[i]) * (15 - i) for i in range(15)) % 11 == 0
+            pis = cns[:11]
+            soma = sum(int(pis[i]) * (15 - i) for i in range(11))
+            resto = soma % 11
+            dv = 11 - resto
+            if dv == 11:
+                dv = 0
+            if dv == 10:
+                soma += 2
+                resto = soma % 11
+                dv = 11 - resto
+                resultado = pis + "001" + str(dv)
+            else:
+                resultado = pis + "000" + str(dv)
+            return cns == resultado
+        except (ValueError, IndexError):
+            return False
 
     cur.execute("SELECT ID_CADCNS, CNS, NUM_CPF, NOME FROM CADCNS")
     limpos_cpf = limpos_cns = deletados_sem_doc = 0
     for r in cur.fetchall():
         cns = (r[1] or '').strip()
         cpf = (r[2] or '').strip()
-        nome = (r[3] or '').strip()
-        cpf_valido = len(cpf) == 11
-        cns_valido = len(cns) == 15
+        cns_clean = limpar_numero(cns)
+        cpf_clean = limpar_numero(cpf)
+        cpf_valido = valida_cpf(cpf_clean) if cpf_clean else False
+        cns_valido = valida_cns(cns_clean) if cns_clean else False
 
         if cpf and not cpf_valido:
             cur.execute("UPDATE CADCNS SET NUM_CPF = '' WHERE ID_CADCNS = ?", (r[0],))
@@ -156,10 +192,10 @@ def main():
 
     con.commit()
     total_removidos += deletados_sem_doc
-    print(f"  CPF invalidos limpos:   {limpos_cpf}")
-    print(f"  CNS invalidos limpos:   {limpos_cns}")
-    print(f"  Registros deletados     {deletados_sem_doc}")
-    print(f"  (sem CPF nem CNS validos)\n")
+    print(f"  CPF invalidos limpos (algoritmo oficial):   {limpos_cpf}")
+    print(f"  CNS invalidos limpos (algoritmo oficial):   {limpos_cns}")
+    print(f"  Registros deletados (sem doc valido):       {deletados_sem_doc}")
+    print(f"  (CPF/CNS com digito verificador errado)\n")
 
     # ===================================================================
     # FASE 1: Duplicatas por NOME + DTNASC
