@@ -320,11 +320,11 @@ try:
 
     fb_cur.execute("""
         SELECT
-            COUNT(CASE WHEN LOGPCN IS NULL OR TRIM(LOGPCN) = '' THEN 1 END) AS sem_log,
-            COUNT(CASE WHEN NUMPCN IS NULL OR TRIM(NUMPCN) = '' THEN 1 END) AS sem_num,
-            COUNT(CASE WHEN BAIRRO_PCNTE IS NULL OR TRIM(BAIRRO_PCNTE) = '' THEN 1 END) AS sem_bairro,
-            COUNT(CASE WHEN CEPPCN IS NULL OR TRIM(CEPPCN) = '' THEN 1 END) AS sem_cep,
-            COUNT(CASE WHEN CO_LOGRAD IS NULL OR TRIM(CO_LOGRAD) = '' THEN 1 END) AS sem_co_lograd,
+            COUNT(CASE WHEN LOGPCN IS NULL OR LOGPCN = '' THEN 1 END) AS sem_log,
+            COUNT(CASE WHEN NUMPCN IS NULL OR NUMPCN = '' THEN 1 END) AS sem_num,
+            COUNT(CASE WHEN BAIRRO_PCNTE IS NULL OR BAIRRO_PCNTE = '' THEN 1 END) AS sem_bairro,
+            COUNT(CASE WHEN CEPPCN IS NULL OR CEPPCN = '' THEN 1 END) AS sem_cep,
+            COUNT(CASE WHEN CO_LOGRAD IS NULL OR CO_LOGRAD = '' THEN 1 END) AS sem_co_lograd,
             COUNT(CASE WHEN SEXO NOT IN ('M', 'F') THEN 1 END) AS sexo_invalido
         FROM CADCNS
     """)
