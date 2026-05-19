@@ -336,6 +336,11 @@ try:
     print(f"  CO_LOGRAD vazio:            {r[4]}")
     print(f"  Sexo invalido:              {r[5]}")
 
+    if r[5] > 0:
+        fb_cur.execute("UPDATE CADCNS SET SEXO = 'I' WHERE SEXO NOT IN ('M', 'F')")
+        fb_con.commit()
+        print(f"  >> Sexo invalido corrigido para 'I' em {r[5]} registro(s)")
+
 except Exception as e:
     print(f"  Erro na verificacao: {e}")
 
