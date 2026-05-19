@@ -41,14 +41,19 @@ def merge_group_fb(rowids, cursor, grupo_nome):
     if len(rowids) < 2:
         return 0, 0
 
-    placeholders = ','.join('?' for _ in rowids)
-    cursor.execute(f"""
-        SELECT ID_CADCNS, CNS, NUM_CPF, NOME, DTNASC, SEXO, RACA, MAEPCN,
-               LOGPCN, NUMPCN, BAIRRO_PCNTE, CEPPCN, IBGE, ETNIA,
-               NACIONALIDADE, DDTEL_PCNTE, TEL_PCNTE, CO_LOGRAD
-        FROM CADCNS WHERE ID_CADCNS IN ({placeholders})
-    """, rowids)
-    rows = cursor.fetchall()
+    # Firebird limita IN a ~1500 valores — busca em lotes de 1000
+    BATCH = 1000
+    rows = []
+    for i in range(0, len(rowids), BATCH):
+        batch = rowids[i:i + BATCH]
+        placeholders = ','.join('?' for _ in batch)
+        cursor.execute(f"""
+            SELECT ID_CADCNS, CNS, NUM_CPF, NOME, DTNASC, SEXO, RACA, MAEPCN,
+                   LOGPCN, NUMPCN, BAIRRO_PCNTE, CEPPCN, IBGE, ETNIA,
+                   NACIONALIDADE, DDTEL_PCNTE, TEL_PCNTE, CO_LOGRAD
+            FROM CADCNS WHERE ID_CADCNS IN ({placeholders})
+        """, batch)
+        rows.extend(cursor.fetchall())
     cols = [desc[0] for desc in cursor.description]
 
     # Escolhe o melhor (mais campos preenchidos, menor ID como desempate)
@@ -57,9 +62,14 @@ def merge_group_fb(rowids, cursor, grupo_nome):
     manter_id = manter[0]
     manter_dict = dict(zip(cols, manter))
 
-    deletados = 0
+    # Acumula todos os campos para update unico no final
+    updates = {}
+    novos_cns = None
+    novos_cpf = None
+    cns_m = limpar_numero(manter_dict.get('CNS'))
+    cpf_m = limpar_numero(manter_dict.get('NUM_CPF'))
+
     for r in rows[1:]:
-        r_id = r[0]
         r_dict = dict(zip(cols, r))
 
         # Copia campos vazios do mantido que existem no secundario
@@ -68,49 +78,53 @@ def merge_group_fb(rowids, cursor, grupo_nome):
                 continue
             db_val = manter_dict.get(col)
             if (db_val is None or str(db_val).strip() == '') and r_dict.get(col):
-                cursor.execute(
-                    f"UPDATE CADCNS SET {col} = ? WHERE ID_CADCNS = ?",
-                    (r_dict[col], manter_id)
-                )
+                updates[col] = r_dict[col]
 
         # CNS: prefere 15 digitos
-        cns_m = limpar_numero(manter_dict.get('CNS'))
         cns_r = limpar_numero(r_dict.get('CNS'))
         if cns_r and (not cns_m or len(cns_m) != 15) and len(cns_r) == 15:
-            cursor.execute("UPDATE CADCNS SET CNS = ? WHERE ID_CADCNS = ?", (cns_r, manter_id))
+            cns_m = cns_r
+            updates['CNS'] = cns_r
 
         # CPF: prefere 11 digitos
-        cpf_m = limpar_numero(manter_dict.get('NUM_CPF'))
         cpf_r = limpar_numero(r_dict.get('NUM_CPF'))
         if cpf_r and (not cpf_m or len(cpf_m) != 11) and len(cpf_r) == 11:
-            cursor.execute("UPDATE CADCNS SET NUM_CPF = ? WHERE ID_CADCNS = ?", (cpf_r, manter_id))
+            cpf_m = cpf_r
+            updates['NUM_CPF'] = cpf_r
 
-        # Atualiza tabelas que referenciam CADCNS
+    # Aplica todos os updates de uma vez
+    if updates:
+        set_clause = ', '.join(f"{col} = ?" for col in updates)
+        cursor.execute(
+            f"UPDATE CADCNS SET {set_clause} WHERE ID_CADCNS = ?",
+            list(updates.values()) + [manter_id]
+        )
+
+    # Deleta duplicatas e atualiza referencias
+    def safe_update(tabela, coluna, valor_novo, valor_velho):
+        if not valor_velho or not valor_novo or valor_velho == valor_novo:
+            return
+        try:
+            cursor.execute(
+                f"UPDATE {tabela} SET {coluna} = ? WHERE {coluna} = ?",
+                (valor_novo, valor_velho)
+            )
+        except Exception:
+            pass
+
+    cns_final = (manter_dict.get('CNS') or '').strip()
+    cpf_final = (manter_dict.get('NUM_CPF') or '').strip()
+    deletados = 0
+    for r in rows[1:]:
+        r_id = r[0]
+        r_dict = dict(zip(cols, r))
         cns_old = (r_dict.get('CNS') or '').strip()
-        cns_new = (manter_dict.get('CNS') or '').strip()
         cpf_old = (r_dict.get('NUM_CPF') or '').strip()
-        cpf_new = (manter_dict.get('NUM_CPF') or '').strip()
-
-        def safe_update(tabela, coluna, valor_novo, valor_velho):
-            """Atualiza com seguranca — pula se valores forem vazios ou iguais."""
-            if not valor_velho or not valor_novo or valor_velho == valor_novo:
-                return
-            try:
-                cursor.execute(
-                    f"UPDATE {tabela} SET {coluna} = ? WHERE {coluna} = ?",
-                    (valor_novo, valor_velho)
-                )
-            except Exception:
-                pass  # coluna pode ser CHAR com tamanho fixo, ignora
-
-        if cns_old and cns_new:
-            safe_update('S_PA', 'PA_CNSPCN', cns_new, cns_old)
-            safe_update('S_CDN', 'CDN_CNS', cns_new, cns_old)
-
-        if cpf_old and cpf_new:
-            safe_update('S_PASRV', 'PASRV_CPF', cpf_new, cpf_old)
-
-        # Deleta o registro duplicado
+        if cns_old and cns_final:
+            safe_update('S_PA', 'PA_CNSPCN', cns_final, cns_old)
+            safe_update('S_CDN', 'CDN_CNS', cns_final, cns_old)
+        if cpf_old and cpf_final:
+            safe_update('S_PASRV', 'PASRV_CPF', cpf_final, cpf_old)
         cursor.execute("DELETE FROM CADCNS WHERE ID_CADCNS = ?", (r_id,))
         deletados += 1
 
