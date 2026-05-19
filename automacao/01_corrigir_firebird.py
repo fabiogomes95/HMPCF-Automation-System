@@ -202,7 +202,7 @@ def main():
     cur.execute("""
         SELECT NUM_CPF, COUNT(*) as cnt
         FROM CADCNS
-        WHERE NUM_CPF IS NOT NULL AND NUM_CPF != '' AND CHAR_LENGTH(NUM_CPF) >= 11
+        WHERE NUM_CPF IS NOT NULL AND NUM_CPF != ''
         GROUP BY NUM_CPF
         HAVING COUNT(*) > 1
     """)
@@ -232,7 +232,7 @@ def main():
     cur.execute("""
         SELECT CNS, COUNT(*) as cnt
         FROM CADCNS
-        WHERE CNS IS NOT NULL AND CNS != '' AND CHAR_LENGTH(CNS) >= 15
+        WHERE CNS IS NOT NULL AND CNS != ''
         GROUP BY CNS
         HAVING COUNT(*) > 1
     """)
@@ -268,32 +268,32 @@ def main():
     print(f"  Diferenca:                {total_inicial - total_final}")
     print("=" * 60)
 
-    # Verifica se ainda restam duplicatas
+    # Verifica se ainda restam duplicatas (sem subquery — Firebird antigo)
     cur.execute("""
-        SELECT COUNT(*) FROM (
-            SELECT NUM_CPF FROM CADCNS
-            WHERE NUM_CPF IS NOT NULL AND NUM_CPF != '' AND CHAR_LENGTH(NUM_CPF) >= 11
-            GROUP BY NUM_CPF HAVING COUNT(*) > 1
-        )
+        SELECT NUM_CPF, COUNT(*) as cnt
+        FROM CADCNS
+        WHERE NUM_CPF IS NOT NULL AND NUM_CPF != ''
+        GROUP BY NUM_CPF
+        HAVING COUNT(*) > 1
     """)
-    restam_cpf = cur.fetchone()[0]
+    restam_cpf = len(cur.fetchall())
     cur.execute("""
-        SELECT COUNT(*) FROM (
-            SELECT CNS FROM CADCNS
-            WHERE CNS IS NOT NULL AND CNS != '' AND CHAR_LENGTH(CNS) >= 15
-            GROUP BY CNS HAVING COUNT(*) > 1
-        )
+        SELECT CNS, COUNT(*) as cnt
+        FROM CADCNS
+        WHERE CNS IS NOT NULL AND CNS != ''
+        GROUP BY CNS
+        HAVING COUNT(*) > 1
     """)
-    restam_cns = cur.fetchone()[0]
+    restam_cns = len(cur.fetchall())
     cur.execute("""
-        SELECT COUNT(*) FROM (
-            SELECT NOME, DTNASC FROM CADCNS
-            WHERE NOME IS NOT NULL AND NOME != ''
-              AND DTNASC IS NOT NULL AND DTNASC != ''
-            GROUP BY NOME, DTNASC HAVING COUNT(*) > 1
-        )
+        SELECT NOME, DTNASC, COUNT(*) as cnt
+        FROM CADCNS
+        WHERE NOME IS NOT NULL AND NOME != ''
+          AND DTNASC IS NOT NULL AND DTNASC != ''
+        GROUP BY NOME, DTNASC
+        HAVING COUNT(*) > 1
     """)
-    restam_nome = cur.fetchone()[0]
+    restam_nome = len(cur.fetchall())
 
     if restam_cpf or restam_cns or restam_nome:
         print(f"\n  ATENCAO: ainda restam duplicatas!")
