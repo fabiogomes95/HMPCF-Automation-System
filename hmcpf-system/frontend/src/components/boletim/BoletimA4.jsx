@@ -1,9 +1,13 @@
 import HeaderHospital from "./HeaderHospital";
+import { formatCPF, formatCNS, formatTelefone } from "../../utils";
 import "./boletim.css";
 
-/* ─── helpers ─── */
-const racasLegado = [
-  "BRANCA", "PRETA", "PARDA", "AMARELA", "INDÍGENA",
+const racasBoletim = [
+  { cod: "01", label: "BRANCA" },
+  { cod: "02", label: "PRETA" },
+  { cod: "03", label: "PARDA" },
+  { cod: "04", label: "AMARELA" },
+  { cod: "05", label: "INDÍGENA" },
 ];
 
 const civisLegado = [
@@ -15,15 +19,23 @@ const comorbidades = [
 ];
 
 export default function BoletimA4({
-  paciente = {},
+  form = {},
   idade = "",
   atdInfo = {},
   onDataChange,
   onHoraChange,
   onRegistroChange,
+  onCPFChange,
+  onCNSChange,
+  onDtnascChange,
+  onTelChange,
+  onRacaChange,
+  onSexoChange,
+  onFieldChange,
+  cpfRef,
+  erroCpf,
+  erroCns,
 }) {
-  const p = paciente;
-
   return (
     <div className="page">
       <form id="formBoletim">
@@ -49,7 +61,7 @@ export default function BoletimA4({
         <div className="row top-border">
           <div className="field">
             <label>NOME COMPLETO:</label>
-            <input type="text" value={p.nome || ""} readOnly />
+            <input type="text" name="nome" value={form.nome || ""} onChange={onFieldChange} />
           </div>
         </div>
 
@@ -57,7 +69,7 @@ export default function BoletimA4({
         <div className="row">
           <div className="field">
             <label>NOME SOCIAL:</label>
-            <input type="text" value={p.nome_social || ""} readOnly />
+            <input type="text" name="nome_social" value={form.nome_social || ""} onChange={onFieldChange} />
           </div>
         </div>
 
@@ -65,15 +77,21 @@ export default function BoletimA4({
         <div className="row">
           <div className="field" style={{ flex: 2 }}>
             <label>NATURALIDADE:</label>
-            <input type="text" value={p.naturalidade || ""} readOnly />
+            <input type="text" name="nacionalidade" value={form.nacionalidade || ""} onChange={onFieldChange} />
           </div>
           <div className="field" style={{ flex: 1.2 }}>
             <label>DN:</label>
-            <input type="text" value={p.dtnasc || ""} readOnly />
+            <input
+              type="text"
+              value={form.dtnasc || ""}
+              onChange={onDtnascChange}
+              placeholder="DD/MM/AAAA"
+              maxLength={10}
+            />
           </div>
           <div className="field" style={{ flex: 0.8 }}>
             <label>IDADE:</label>
-            <input type="text" value={idade} readOnly />
+            <input type="text" value={idade} readOnly tabIndex={-1} />
           </div>
         </div>
 
@@ -81,16 +99,51 @@ export default function BoletimA4({
         <div className="row">
           <div className="field" style={{ flex: 1.5 }}>
             <label>CPF:</label>
-            <input type="text" value={p.num_cpf || ""} readOnly />
+            <input
+              ref={cpfRef}
+              type="text"
+              value={formatCPF(form.num_cpf)}
+              onChange={onCPFChange}
+              placeholder="000.000.000-00"
+              maxLength={14}
+              autoFocus
+            />
+            {erroCpf && <span style={{ color: "#dc2626", fontSize: 10, whiteSpace: "nowrap" }}>{erroCpf}</span>}
           </div>
           <div className="field" style={{ flex: 1.5 }}>
             <label>CARTÃO SUS:</label>
-            <input type="text" value={p.cns || ""} readOnly />
+            <input
+              type="text"
+              value={formatCNS(form.cns)}
+              onChange={onCNSChange}
+              placeholder="000 0000 0000 0000"
+              maxLength={18}
+            />
+            {erroCns && <span style={{ color: "#dc2626", fontSize: 10, whiteSpace: "nowrap" }}>{erroCns}</span>}
           </div>
           <div className="field" style={{ flex: 1 }}>
             <label>SEXO:</label>
-            <label> M <input type="radio" name="bol-sexo" value="M" checked={p.sexoNome === "MASCULINO"} readOnly /> </label>
-            <label> F <input type="radio" name="bol-sexo" value="F" checked={p.sexoNome === "FEMININO"} readOnly /> </label>
+            <label>
+              M{" "}
+              <input
+                type="radio"
+                name="bol-sexo"
+                value="M"
+                checked={form.sexo === "M"}
+                onChange={() => onSexoChange("M")}
+              />
+            </label>
+            {" "}
+            <label>
+              F{" "}
+              <input
+                type="radio"
+                name="bol-sexo"
+                value="F"
+                checked={form.sexo === "F"}
+                onChange={() => onSexoChange("F")}
+              />
+            </label>
           </div>
         </div>
 
@@ -106,8 +159,8 @@ export default function BoletimA4({
                     type="radio"
                     name="bol-civil"
                     value={c}
-                    checked={p.estadoCivil === c}
-                    readOnly
+                    checked={form.estado_civil === c}
+                    onChange={() => onFieldChange({ target: { name: "estado_civil", value: c } })}
                   />
                 </label>
               ))}
@@ -120,15 +173,15 @@ export default function BoletimA4({
           <div className="field" style={{ flex: 2.5 }}>
             <label>RAÇA/COR:</label>
             <div className="checkbox-group">
-              {racasLegado.map((r) => (
-                <label key={r}>
-                  {r}{" "}
+              {racasBoletim.map((r) => (
+                <label key={r.cod}>
+                  {r.label}{" "}
                   <input
                     type="radio"
                     name="bol-raca"
-                    value={r}
-                    checked={p.racaNome === r}
-                    readOnly
+                    value={r.cod}
+                    checked={form.raca === r.cod}
+                    onChange={() => onRacaChange(r.cod)}
                   />
                 </label>
               ))}
@@ -136,7 +189,7 @@ export default function BoletimA4({
           </div>
           <div className="field" style={{ flex: 1.5 }}>
             <label>OCUPAÇÃO:</label>
-            <input type="text" value={p.ocupacao || ""} readOnly />
+            <input type="text" name="ocupacao" value={form.ocupacao || ""} onChange={onFieldChange} />
           </div>
         </div>
 
@@ -144,7 +197,7 @@ export default function BoletimA4({
         <div className="row">
           <div className="field">
             <label>NOME DA MÃE:</label>
-            <input type="text" value={p.maepcn || ""} readOnly />
+            <input type="text" name="maepcn" value={form.maepcn || ""} onChange={onFieldChange} />
           </div>
         </div>
 
@@ -152,11 +205,16 @@ export default function BoletimA4({
         <div className="row">
           <div className="field" style={{ flex: 2.5 }}>
             <label>RESPONSÁVEL:</label>
-            <input type="text" value={p.responsavel || ""} readOnly />
+            <input type="text" name="responsavel" value={form.responsavel || ""} onChange={onFieldChange} />
           </div>
           <div className="field" style={{ flex: 1.5 }}>
             <label>TEL:</label>
-            <input type="text" value={p.telefone || ""} readOnly />
+            <input
+              type="text"
+              value={formatTelefone(form.telefone)}
+              onChange={onTelChange}
+              maxLength={15}
+            />
           </div>
         </div>
 
@@ -164,11 +222,11 @@ export default function BoletimA4({
         <div className="row">
           <div className="field" style={{ flex: 3.2 }}>
             <label>ENDEREÇO:</label>
-            <input type="text" value={p.logpcn || ""} readOnly />
+            <input type="text" name="logpcn" value={form.logpcn || ""} onChange={onFieldChange} />
           </div>
           <div className="field" style={{ flex: 0.8 }}>
             <label>Nº:</label>
-            <input type="text" value={p.numpcn || ""} readOnly />
+            <input type="text" name="numpcn" value={form.numpcn || ""} onChange={onFieldChange} />
           </div>
         </div>
 
@@ -176,15 +234,15 @@ export default function BoletimA4({
         <div className="row spacer-row">
           <div className="field" style={{ flex: 1.5 }}>
             <label>BAIRRO:</label>
-            <input type="text" value={p.bairro_pcnte || ""} readOnly />
+            <input type="text" name="bairro_pcnte" value={form.bairro_pcnte || ""} onChange={onFieldChange} />
           </div>
           <div className="field" style={{ flex: 1.5 }}>
             <label>CIDADE:</label>
-            <input type="text" value={p.cidade || ""} readOnly />
+            <input type="text" name="cidade" value={form.cidade || ""} onChange={onFieldChange} />
           </div>
           <div className="field" style={{ flex: 0.5 }}>
             <label>UF:</label>
-            <input type="text" value={p.estado || ""} maxLength={2} readOnly />
+            <input type="text" name="estado" value={form.estado || ""} maxLength={2} onChange={onFieldChange} />
           </div>
         </div>
 

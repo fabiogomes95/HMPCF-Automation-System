@@ -22,11 +22,11 @@ def criar_atendimento(dados: AtendimentoIn):
     try:
         cur = conn.cursor()
 
-        # Busca cpf/sus do paciente para manter compatibilidade com schema legado
-        cur.execute("SELECT NUM_CPF, CNS FROM pacientes WHERE rowid=?", (dados.paciente_id,))
+        # Busca cpf/sus do paciente
+        cur.execute("SELECT cpf, sus FROM pacientes WHERE rowid=?", (dados.paciente_id,))
         row = cur.fetchone()
-        cpf = row["NUM_CPF"] if row else ""
-        sus = row["CNS"] if row else ""
+        cpf = row["cpf"] if row else ""
+        sus = row["sus"] if row else ""
 
         cur.execute("""
             INSERT INTO atendimentos

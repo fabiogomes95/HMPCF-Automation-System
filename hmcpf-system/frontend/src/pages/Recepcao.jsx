@@ -9,13 +9,10 @@ import {
 } from "../services/api";
 import {
   apenasNumeros,
-  formatCPF,
-  formatCNS,
   formatDateBR,
   parseDateToDB,
   parseDateFromDB,
   formatTelefone,
-  getRacas,
   calcularIdade,
   formatarIdade,
   validarCPF,
@@ -74,9 +71,6 @@ export default function Recepcao() {
   const debounceRef = useRef(null);
   const pacienteEncontradoRef = useRef(false);
   const cpfRef = useRef(null);
-  const nomeRef = useRef(null);
-  const sexoRef = useRef(null);
-  const racas = getRacas();
   const ultimoRegistroRef = useRef(null);
   const ultimoTurnoRef = useRef(null);
 
@@ -197,15 +191,13 @@ export default function Recepcao() {
   }
 
   function handleDtnascChange(e) {
-    const raw = e.target.value;
-    const fmt = formatDateBR(raw);
+    const fmt = formatDateBR(e.target.value);
     setForm((prev) => ({ ...prev, dtnasc: fmt }));
     calcIdade(fmt);
   }
 
   function handleTelChange(e) {
-    const raw = e.target.value;
-    const fmt = formatTelefone(raw);
+    const fmt = formatTelefone(e.target.value);
     setForm((prev) => ({ ...prev, telefone: fmt }));
   }
 
@@ -267,23 +259,10 @@ export default function Recepcao() {
     return erros;
   }
 
-  function focusErro(erros) {
-    const refs = { nome: nomeRef, sexo: sexoRef, num_cpf: cpfRef };
-    const alvo = refs[erros[0].campo];
-    if (alvo?.current) {
-      if (alvo.current.focus) alvo.current.focus();
-      else if (alvo.current.querySelector) {
-        const el = alvo.current.querySelector("input, select, button");
-        el?.focus();
-      }
-    }
-  }
-
   async function handleAtendimento() {
     const erros = validar();
     if (erros.length > 0) {
       setMsg(erros[0].msg);
-      focusErro(erros);
       return;
     }
     setLoading(true);
@@ -298,16 +277,14 @@ export default function Recepcao() {
         id = res.data.id;
         setPacienteId(id);
       }
-      const data = atdInfo.data;
-      const hora = atdInfo.hora;
       await criarAtendimento({
         paciente_id: id,
-        data_atendimento: data,
-        hora_atendimento: hora,
+        data_atendimento: atdInfo.data,
+        hora_atendimento: atdInfo.hora,
         registro: atdInfo.registro,
         procedencia,
       });
-      const turno = calcularTurno(hora);
+      const turno = calcularTurno(atdInfo.hora);
       const regNum = parseInt(atdInfo.registro, 10);
       if (!isNaN(regNum)) {
         ultimoRegistroRef.current = regNum;
@@ -339,29 +316,6 @@ export default function Recepcao() {
     window.print();
   }
 
-  const racaNome = racas.find((r) => r.cod === form.raca)?.label || "";
-  const pacienteBoletim = {
-    nome: form.nome,
-    nome_social: form.nome_social,
-    num_cpf: formatCPF(form.num_cpf),
-    cns: formatCNS(form.cns),
-    dtnasc: form.dtnasc,
-    naturalidade: form.nacionalidade,
-    sexoNome:
-      form.sexo === "M" ? "MASCULINO" : form.sexo === "F" ? "FEMININO" : "",
-    racaNome,
-    estadoCivil: form.estado_civil,
-    ocupacao: form.ocupacao,
-    maepcn: form.maepcn,
-    responsavel: form.responsavel,
-    telefone: form.telefone,
-    logpcn: form.logpcn,
-    numpcn: form.numpcn,
-    bairro_pcnte: form.bairro_pcnte,
-    cidade: form.cidade,
-    estado: form.estado,
-  };
-
   return (
     <div className="recepcao">
       <header className="recepcao-header no-print">
@@ -389,262 +343,23 @@ export default function Recepcao() {
         />
       </div>
 
-      <div className="recepcao-form no-print">
-        <div className="form-grid">
-          <div className="campo">
-            <label>CPF</label>
-            <input
-              ref={cpfRef}
-              type="text"
-              name="num_cpf"
-              value={formatCPF(form.num_cpf)}
-              onChange={handleCPFChange}
-              placeholder="000.000.000-00"
-              maxLength={14}
-              className={erroCpf ? "campo-invalido" : ""}
-              autoFocus
-            />
-            {erroCpf && <span className="texto-erro-inline">{erroCpf}</span>}
-          </div>
-
-          <div className="campo">
-            <label>CNS</label>
-            <input
-              type="text"
-              name="cns"
-              value={formatCNS(form.cns)}
-              onChange={handleCNSChange}
-              placeholder="000 0000 0000 0000"
-              maxLength={18}
-              className={erroCns ? "campo-invalido" : ""}
-            />
-            {erroCns && <span className="texto-erro-inline">{erroCns}</span>}
-          </div>
-
-          <div className="campo" style={{ gridColumn: "1 / -1" }}>
-            <label>Nome</label>
-            <input
-              ref={nomeRef}
-              type="text"
-              name="nome"
-              value={form.nome}
-              onChange={handleChange}
-              placeholder="Nome completo"
-            />
-          </div>
-
-          <div className="campo">
-            <label>Nome Social</label>
-            <input
-              type="text"
-              name="nome_social"
-              value={form.nome_social}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="campo">
-            <label>Data Nascimento</label>
-            <input
-              type="text"
-              name="dtnasc"
-              value={form.dtnasc}
-              onChange={handleDtnascChange}
-              placeholder="DD/MM/AAAA"
-              maxLength={10}
-            />
-          </div>
-
-          <div className="campo">
-            <label>Idade</label>
-            <input
-              type="text"
-              className="campo-idade"
-              value={idade}
-              readOnly
-              placeholder="—"
-              tabIndex={-1}
-            />
-          </div>
-
-          <div className="campo">
-            <label>Telefone</label>
-            <input
-              type="text"
-              name="telefone"
-              value={form.telefone}
-              onChange={handleTelChange}
-              placeholder="(84) 99999-9999"
-              maxLength={15}
-            />
-          </div>
-
-          <div className="campo">
-            <label>Estado Civil</label>
-            <input
-              type="text"
-              name="estado_civil"
-              value={form.estado_civil}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="campo" style={{ gridColumn: "1 / -1" }}>
-            <label>Raça / Cor</label>
-            <div className="opcao-group">
-              {racas.map((r) => (
-                <label
-                  key={r.cod}
-                  className={`opcao-btn ${form.raca === r.cod ? "ativo" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="raca"
-                    value={r.cod}
-                    checked={form.raca === r.cod}
-                    onChange={() => handleRacaChange(r.cod)}
-                  />
-                  {r.cod} - {r.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="campo" style={{ gridColumn: "1 / -1" }}>
-            <label>Sexo</label>
-            <div className="opcao-group" ref={sexoRef}>
-              {[
-                { v: "M", label: "MASCULINO" },
-                { v: "F", label: "FEMININO" },
-              ].map((opt) => (
-                <label
-                  key={opt.v}
-                  className={`opcao-btn ${form.sexo === opt.v ? "ativo" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="sexo"
-                    value={opt.v}
-                    checked={form.sexo === opt.v}
-                    onChange={() => handleSexoChange(opt.v)}
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="campo">
-            <label>Ocupação</label>
-            <input
-              type="text"
-              name="ocupacao"
-              value={form.ocupacao}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="campo">
-            <label>Nacionalidade</label>
-            <input
-              type="text"
-              name="nacionalidade"
-              value={form.nacionalidade}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="campo" style={{ gridColumn: "1 / -1" }}>
-            <label>Nome da Mãe</label>
-            <input
-              type="text"
-              name="maepcn"
-              value={form.maepcn}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="campo" style={{ gridColumn: "1 / -1" }}>
-            <label>Endereço</label>
-            <input
-              type="text"
-              name="logpcn"
-              value={form.logpcn}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="campo">
-            <label>Número</label>
-            <input
-              type="text"
-              name="numpcn"
-              value={form.numpcn}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="campo">
-            <label>Bairro</label>
-            <input
-              type="text"
-              name="bairro_pcnte"
-              value={form.bairro_pcnte}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="campo">
-            <label>CEP</label>
-            <input
-              type="text"
-              name="ceppcn"
-              value={form.ceppcn}
-              onChange={handleChange}
-              maxLength={9}
-            />
-          </div>
-
-          <div className="campo">
-            <label>Cidade</label>
-            <input
-              type="text"
-              name="cidade"
-              value={form.cidade}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="campo">
-            <label>Estado</label>
-            <input
-              type="text"
-              name="estado"
-              value={form.estado}
-              onChange={handleChange}
-              maxLength={2}
-            />
-          </div>
-
-          <div className="campo" style={{ gridColumn: "1 / -1" }}>
-            <label>Responsável</label>
-            <input
-              type="text"
-              name="responsavel"
-              value={form.responsavel}
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-      </div>
-
       <BoletimA4
-        paciente={pacienteBoletim}
+        form={form}
         idade={idade}
         atdInfo={atdInfo}
         onDataChange={handleAtdDataChange}
         onHoraChange={handleAtdHoraChange}
         onRegistroChange={handleAtdRegistroChange}
+        onCPFChange={handleCPFChange}
+        onCNSChange={handleCNSChange}
+        onDtnascChange={handleDtnascChange}
+        onTelChange={handleTelChange}
+        onRacaChange={handleRacaChange}
+        onSexoChange={handleSexoChange}
+        onFieldChange={handleChange}
+        cpfRef={cpfRef}
+        erroCpf={erroCpf}
+        erroCns={erroCns}
       />
 
       <div className="recepcao-acoes no-print">

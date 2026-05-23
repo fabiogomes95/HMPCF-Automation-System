@@ -21,13 +21,13 @@ def init_db() -> None:
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS pacientes (
-            CNS TEXT, NUM_CPF TEXT, NOME TEXT, DTNASC TEXT,
-            SEXO TEXT, RACA TEXT, MAEPCN TEXT, LOGPCN TEXT,
-            NUMPCN TEXT, BAIRRO_PCNTE TEXT, CEPPCN TEXT,
-            IBGE TEXT, ETNIA TEXT, NACIONALIDADE TEXT,
-            NOME_SOCIAL TEXT, IDADE TEXT, ESTADO_CIVIL TEXT,
-            OCUPACAO TEXT, RESPONSAVEL TEXT, TELEFONE TEXT,
-            CIDADE TEXT, ESTADO TEXT
+            cpf TEXT PRIMARY KEY,
+            sus TEXT, nome TEXT, nomeSocial TEXT,
+            naturalidade TEXT, dn TEXT, idade TEXT,
+            sexo TEXT, civil TEXT, raca TEXT,
+            ocupacao TEXT, mae TEXT, responsavel TEXT,
+            tel TEXT, endereco TEXT, numero TEXT,
+            bairro TEXT, cidade TEXT, estado TEXT
         )
     """)
 
