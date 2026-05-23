@@ -316,16 +316,22 @@ export default function BoletimA4({
         </div>
 
         {/* ─── Anotações da Classificação ─── */}
-        <div className="section-title">ANOTAÇÕES DA CLASSIFICAÇÃO</div>
-        <div className="handwriting-area" style={{ height: 75 }}></div>
+        <div className="writing-section">
+          <div className="section-title">ANOTAÇÕES DA CLASSIFICAÇÃO</div>
+          <div className="handwriting-area"></div>
+        </div>
 
         {/* ─── Resumo da História Clínica ─── */}
-        <div className="section-title">RESUMO DA HISTÓRIA CLÍNICA</div>
-        <div className="handwriting-area" style={{ height: 125 }}></div>
+        <div className="writing-section">
+          <div className="section-title">RESUMO DA HISTÓRIA CLÍNICA</div>
+          <div className="handwriting-area"></div>
+        </div>
 
         {/* ─── Hipótese Diagnóstica ─── */}
-        <div className="section-title">HIPÓTESE DIAGNÓSTICA</div>
-        <div className="handwriting-area" style={{ height: 125 }}></div>
+        <div className="writing-section">
+          <div className="section-title">HIPÓTESE DIAGNÓSTICA</div>
+          <div className="handwriting-area"></div>
+        </div>
       </form>
     </div>
   );

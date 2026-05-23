@@ -20,7 +20,8 @@ body {
 .recepcao-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  position: relative;
   margin-bottom: 8px;
   min-height: 44px;
 }
@@ -43,6 +44,8 @@ body {
 }
 
 .header-right {
+  position: absolute;
+  right: 0;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -89,11 +92,12 @@ body {
   color: #991b1b;
 }
 
-/* ─── Action buttons (above A4) ─── */
+/* ─── Action buttons (above A4, centered) ─── */
 .recepcao-acoes {
   display: flex;
   gap: 8px;
   margin-bottom: 10px;
+  justify-content: center;
 }
 
 .btn-atendimento,
@@ -106,10 +110,11 @@ body {
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
+  white-space: nowrap;
 }
 
 .btn-atendimento {
-  flex: 2;
+  width: 220px;
   background: #2563eb;
   color: #fff;
 }
@@ -119,7 +124,7 @@ body {
 }
 
 .btn-imprimir {
-  flex: 1;
+  width: 110px;
   background: #ea580c;
   color: #fff;
 }
@@ -129,7 +134,7 @@ body {
 }
 
 .btn-limpar {
-  flex: 1;
+  width: 110px;
   background: #e5e7eb;
   color: #374151;
 }

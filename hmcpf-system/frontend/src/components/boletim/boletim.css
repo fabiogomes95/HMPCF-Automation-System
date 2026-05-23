@@ -185,8 +185,18 @@ table.tabela-risco td {
   font-family: Arial, sans-serif;
 }
 
+/* ─── Writing Sections (equal flex distribution) ─── */
+.writing-section {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 /* ─── Handwriting Area ─── */
 .handwriting-area {
+  flex: 1 1 0;
+  min-height: 50px;
   border-top: 1px solid #000;
   border-bottom: 1px solid #000;
   border-left: none;
@@ -198,8 +208,6 @@ table.tabela-risco td {
     #000 25px
   );
   line-height: 25px;
-  min-height: 25px;
-  display: flex;
   box-sizing: border-box;
 }
 
@@ -312,14 +320,11 @@ table.tabela-risco td {
   .section-title {
     page-break-after: avoid;
   }
-  .handwriting-area {
+  .writing-section {
     page-break-inside: avoid;
   }
-  .handwriting-area[style*="height: 75"] {
-    height: 55px !important;
-  }
-  .handwriting-area[style*="height: 125"] {
-    height: 90px !important;
+  .handwriting-area {
+    min-height: 50px;
   }
   .spacer-row {
     margin-bottom: 4px;
