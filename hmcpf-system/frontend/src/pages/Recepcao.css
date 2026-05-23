@@ -11,20 +11,33 @@ body {
 }
 
 .recepcao {
-  max-width: 960px;
+  max-width: 1060px;
   margin: 0 auto;
-  padding: 14px;
+  padding: 10px 14px;
 }
 
+/* ─── Header ─── */
 .recepcao-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  min-height: 44px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-brasao {
+  height: 36px;
+  width: auto;
 }
 
 .recepcao-header h1 {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #1a3a5c;
 }
@@ -33,6 +46,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .badge-ok {
@@ -42,6 +56,7 @@ body {
   background: #dcfce7;
   padding: 2px 10px;
   border-radius: 10px;
+  white-space: nowrap;
 }
 
 .badge-loading {
@@ -53,145 +68,39 @@ body {
   50% { opacity: 0.3; }
 }
 
-.recepcao-msg {
-  border-radius: 6px;
-  padding: 7px 12px;
-  font-size: 0.8rem;
-  margin-bottom: 8px;
-  background: #eff6ff;
-  border: 1px solid #93c5fd;
-  color: #1e40af;
+.msg-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.msg-sucesso {
+.msg-badge-ok {
   background: #dcfce7;
-  border-color: #86efac;
   color: #166534;
 }
 
-.msg-erro {
+.msg-badge-erro {
   background: #fef2f2;
-  border-color: #fca5a5;
   color: #991b1b;
 }
 
-.recepcao-form {
-  background: #fff;
-  border: 1px solid #d0d5dd;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 10px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 7px;
-}
-
-.campo {
-  display: flex;
-  flex-direction: column;
-}
-
-.campo label {
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: 2px;
-}
-
-.campo input,
-.campo select {
-  padding: 7px 9px;
-  font-size: 0.82rem;
-  border: 1px solid #d0d5dd;
-  border-radius: 5px;
-  outline: none;
-  background: #fff;
-  color: #1a1a2e;
-}
-
-.campo input:focus,
-.campo select:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-}
-
-.campo select {
-  cursor: pointer;
-}
-
-.campo input.campo-invalido {
-  border: 2px solid #dc2626;
-  background: #fef2f2;
-}
-
-.campo input.campo-invalido:focus {
-  border-color: #dc2626;
-  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
-}
-
-.texto-erro-inline {
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: #dc2626;
-  margin-top: 2px;
-  padding-left: 2px;
-}
-
-.campo-idade {
-  background: #f3f4f6 !important;
-  color: #6b7280 !important;
-  font-weight: 700 !important;
-  cursor: default !important;
-}
-
-.opcao-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.opcao-btn {
-  padding: 5px 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border: 1px solid #d0d5dd;
-  border-radius: 5px;
-  cursor: pointer;
-  background: #f9fafb;
-  color: #374151;
-  transition: all 0.15s;
-  user-select: none;
-}
-
-.opcao-btn input {
-  display: none;
-}
-
-.opcao-btn.ativo {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
-}
-
-.opcao-btn:hover:not(.ativo) {
-  background: #e5e7eb;
-}
-
+/* ─── Action buttons (above A4) ─── */
 .recepcao-acoes {
   display: flex;
   gap: 8px;
+  margin-bottom: 10px;
 }
 
 .btn-atendimento,
 .btn-imprimir,
 .btn-limpar {
-  padding: 12px;
-  font-size: 0.9rem;
+  padding: 10px 12px;
+  font-size: 0.88rem;
   font-weight: 700;
   border: none;
   border-radius: 8px;
@@ -234,6 +143,49 @@ body {
   cursor: not-allowed;
 }
 
+/* ─── Main layout: sidebar + A4 ─── */
+.recepcao-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.recepcao-sidebar {
+  flex: 0 0 auto;
+  width: 88px;
+}
+
+/* Override procedência to vertical inside sidebar */
+.recepcao-sidebar .procedencia-container {
+  margin: 0;
+  width: 100%;
+  align-items: stretch;
+}
+
+.recepcao-sidebar .procedencia-titulo {
+  font-size: 11px;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.recepcao-sidebar .procedencia-botoes {
+  flex-direction: column;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
+.recepcao-sidebar .btn-proc {
+  width: 100%;
+  justify-content: center;
+  padding: 5px 4px;
+}
+
+.recepcao-sidebar .btn-proc strong {
+  font-size: 11px;
+}
+
+/* ─── Print ─── */
 .no-print {
   display: block;
 }
@@ -246,18 +198,7 @@ body {
     padding: 0;
     max-width: 100%;
   }
-  .recepcao-header h1 {
-    font-size: 1rem;
-  }
-  .campo input,
-  .campo select {
-    border: 1px solid #ccc;
-    background: #fff;
-  }
-  .campo-idade {
-    background: #f3f4f6 !important;
-  }
-  .opcao-btn {
-    border: 1px solid #ccc;
+  .recepcao-main {
+    display: block;
   }
 }

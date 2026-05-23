@@ -251,31 +251,31 @@ export default function BoletimA4({
         <table className="tabela-risco">
           <tbody>
             <tr>
-              <td className="color-box" style={{ color: "#fff", background: "#dc3545" }}>VERMELHO</td>
+              <td className="color-box">VERMELHO</td>
               <td>PA: <input type="text" className="input-ssvv" /></td>
               <td>SPO²: <input type="text" className="input-ssvv" /></td>
               <td>AO: <input type="text" className="input-ssvv" /></td>
             </tr>
             <tr>
-              <td className="color-box" style={{ color: "#fff", background: "#fd7e14" }}>LARANJA</td>
+              <td className="color-box">LARANJA</td>
               <td>FC: <input type="text" className="input-ssvv" /></td>
               <td>HGT: <input type="text" className="input-ssvv" /></td>
               <td>RV: <input type="text" className="input-ssvv" /></td>
             </tr>
             <tr>
-              <td className="color-box" style={{ color: "#000", background: "#ffc107" }}>AMARELO</td>
+              <td className="color-box">AMARELO</td>
               <td>FR: <input type="text" className="input-ssvv" /></td>
               <td>DOR: <input type="text" className="input-ssvv" /></td>
               <td>RM: <input type="text" className="input-ssvv" /></td>
             </tr>
             <tr>
-              <td className="color-box" style={{ color: "#fff", background: "#28a745" }}>VERDE</td>
+              <td className="color-box">VERDE</td>
               <td>TEMP: <input type="text" className="input-ssvv" /></td>
               <td>PESO: <input type="text" className="input-ssvv" /></td>
               <td>TOTAL: <input type="text" className="input-ssvv" /></td>
             </tr>
             <tr>
-              <td className="color-box" style={{ color: "#fff", background: "#007bff" }}>AZUL</td>
+              <td className="color-box">AZUL</td>
               <td colSpan={3}></td>
             </tr>
           </tbody>

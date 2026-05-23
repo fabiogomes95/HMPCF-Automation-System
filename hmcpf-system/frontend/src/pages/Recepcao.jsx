@@ -152,10 +152,10 @@ export default function Recepcao() {
         calcIdade(dtnasc);
         setMsg("✓ Paciente encontrado");
       } else if (!pacienteEncontradoRef.current) {
-        setMsg("+ Novo paciente — preencha os dados");
+        setMsg("+ Novo paciente");
       }
     } catch {
-      setMsg("Erro ao buscar paciente");
+      setMsg("Erro ao buscar");
     } finally {
       setLoading(false);
     }
@@ -290,7 +290,7 @@ export default function Recepcao() {
         ultimoRegistroRef.current = regNum;
         ultimoTurnoRef.current = turno;
       }
-      setMsg("✓ Atendimento registrado!");
+      setMsg("✓ Registrado!");
     } catch (err) {
       const detail = err.response?.data?.detail || "Erro ao registrar";
       setMsg(typeof detail === "string" ? detail : JSON.stringify(detail));
@@ -316,51 +316,25 @@ export default function Recepcao() {
     window.print();
   }
 
+  const msgOk = msg.startsWith("✓");
+
   return (
     <div className="recepcao">
       <header className="recepcao-header no-print">
-        <h1>HMPCF — Recepção</h1>
+        <div className="header-left">
+          <img src="/img/brasao-extremoz.png" className="header-brasao" alt="Brasão" />
+          <h1>HMPCF — Recepção</h1>
+        </div>
         <div className="header-right">
           {pacienteId && <span className="badge-ok">✓ Paciente</span>}
           {loading && <span className="badge-loading">⏳</span>}
+          {msg && (
+            <span className={`msg-badge ${msgOk ? "msg-badge-ok" : "msg-badge-erro"}`}>
+              {msg}
+            </span>
+          )}
         </div>
       </header>
-
-      {msg && (
-        <div
-          className={`recepcao-msg no-print ${
-            msg.startsWith("✓") ? "msg-sucesso" : "msg-erro"
-          }`}
-        >
-          {msg}
-        </div>
-      )}
-
-      <div className="no-print">
-        <ProcedenciaSelector
-          value={procedencia}
-          onChange={handleProcedenciaChange}
-        />
-      </div>
-
-      <BoletimA4
-        form={form}
-        idade={idade}
-        atdInfo={atdInfo}
-        onDataChange={handleAtdDataChange}
-        onHoraChange={handleAtdHoraChange}
-        onRegistroChange={handleAtdRegistroChange}
-        onCPFChange={handleCPFChange}
-        onCNSChange={handleCNSChange}
-        onDtnascChange={handleDtnascChange}
-        onTelChange={handleTelChange}
-        onRacaChange={handleRacaChange}
-        onSexoChange={handleSexoChange}
-        onFieldChange={handleChange}
-        cpfRef={cpfRef}
-        erroCpf={erroCpf}
-        erroCns={erroCns}
-      />
 
       <div className="recepcao-acoes no-print">
         <button
@@ -376,6 +350,34 @@ export default function Recepcao() {
         <button onClick={handleLimpar} className="btn-limpar">
           Limpar
         </button>
+      </div>
+
+      <div className="recepcao-main">
+        <div className="recepcao-sidebar no-print">
+          <ProcedenciaSelector
+            value={procedencia}
+            onChange={handleProcedenciaChange}
+          />
+        </div>
+
+        <BoletimA4
+          form={form}
+          idade={idade}
+          atdInfo={atdInfo}
+          onDataChange={handleAtdDataChange}
+          onHoraChange={handleAtdHoraChange}
+          onRegistroChange={handleAtdRegistroChange}
+          onCPFChange={handleCPFChange}
+          onCNSChange={handleCNSChange}
+          onDtnascChange={handleDtnascChange}
+          onTelChange={handleTelChange}
+          onRacaChange={handleRacaChange}
+          onSexoChange={handleSexoChange}
+          onFieldChange={handleChange}
+          cpfRef={cpfRef}
+          erroCpf={erroCpf}
+          erroCns={erroCns}
+        />
       </div>
     </div>
   );
