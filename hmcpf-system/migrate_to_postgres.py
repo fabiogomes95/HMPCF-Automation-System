@@ -78,7 +78,10 @@ def _setup_logging() -> logging.Logger:
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(fmt)
 
-    ch = logging.StreamHandler(sys.stdout)
+    ch = logging.StreamHandler(
+        open(sys.stdout.fileno(), mode="w", encoding="utf-8", errors="replace", closefd=False)
+        if hasattr(sys.stdout, "fileno") else sys.stdout
+    )
     ch.setLevel(logging.INFO)
     ch.setFormatter(fmt)
 

@@ -17,21 +17,12 @@ export function atualizarPaciente(id, dados) {
   return api.put(`/pacientes/${id}`, dados);
 }
 
-export function criarAtendimento(dados) {
-  return api.post("/atendimentos", dados);
+export function criarRecepcao(dados) {
+  return api.post("/recepcao/", dados);
 }
 
-export function iniciarSessao(nome, ip) {
-  return api.post("/terminal/start", {
-    terminal_nome: nome,
-    ip_address: ip,
-  });
-}
-
-export function pingSessao(nome) {
-  return api.post("/terminal/ping", null, {
-    params: { terminal_nome: nome },
-  });
+export function atualizarRecepcao(id, dados) {
+  return api.put(`/recepcao/${id}`, dados);
 }
 
 export default api;
