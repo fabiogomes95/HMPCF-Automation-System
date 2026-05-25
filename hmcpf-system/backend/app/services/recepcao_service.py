@@ -29,6 +29,29 @@ class RecepcaoService:
 
     # ── Consultas ──────────────────────────────────────────────────────────────
 
+    async def listar(
+        self,
+        page: int,
+        page_size: int,
+        q: Optional[str] = None,
+    ) -> PaginatedResponse[RecepcaoListResponse]:
+        """Lista atendimentos com busca opcional por nome/CPF do paciente."""
+        offset = (page - 1) * page_size
+        if q and q.strip():
+            items = await self._repo.list_by_query(q.strip(), limit=page_size, offset=offset)
+            total = await self._repo.count_by_query(q.strip())
+        else:
+            items = await self._repo.list_recent(limit=page_size, offset=offset)
+            total = await self._repo.count_all()
+        pages = max(1, (total + page_size - 1) // page_size)
+        return PaginatedResponse(
+            items=[RecepcaoListResponse.model_validate(a) for a in items],
+            total=total,
+            page=page,
+            page_size=page_size,
+            pages=pages,
+        )
+
     async def listar_recentes(
         self,
         page: int,

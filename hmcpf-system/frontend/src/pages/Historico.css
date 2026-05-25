@@ -1,0 +1,345 @@
+.historico {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: #1e293b;
+}
+
+/* ── Cabeçalho ────────────────────────────────────────────────────────── */
+.historico-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.historico-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.historico-titulo h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: 0.5px;
+}
+
+.historico-total {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.historico-busca {
+  padding: 7px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  width: 260px;
+  background: #fff;
+  color: #1e293b;
+}
+
+.historico-busca:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px #bfdbfe;
+}
+
+/* ── Tabela ───────────────────────────────────────────────────────────── */
+.historico-tabela-wrap {
+  position: relative;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.historico-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
+  color: #64748b;
+  z-index: 2;
+  letter-spacing: 0.5px;
+}
+
+.historico-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.historico-tabela thead tr {
+  background: #1e293b;
+}
+
+.historico-tabela th {
+  padding: 9px 12px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.historico-row {
+  cursor: pointer;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.08s;
+}
+
+.historico-row:nth-child(even) {
+  background: #fafafa;
+}
+
+.historico-row:hover {
+  background: #f0f9ff;
+}
+
+.historico-row.expandida {
+  background: #dbeafe;
+}
+
+.historico-tabela td {
+  padding: 8px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cel-id    { color: #94a3b8; font-size: 11px; }
+.cel-nome  { font-weight: 600; }
+.cel-cpf   { color: #475569; font-size: 12px; }
+.cel-cns   { color: #475569; font-size: 12px; letter-spacing: 0.5px; }
+.cel-data  { font-size: 12px; color: #334155; }
+.cel-proc  { font-size: 12px; color: #475569; }
+
+.historico-vazio {
+  text-align: center;
+  padding: 36px 12px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* ── Detalhe expandido ────────────────────────────────────────────────── */
+.detalhe-row td {
+  padding: 0 !important;
+  background: #f8fafc;
+  border-bottom: 2px solid #bfdbfe;
+}
+
+.detalhe-corpo {
+  padding: 14px 18px;
+}
+
+.detalhe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px 20px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.detalhe-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  margin-bottom: 1px;
+}
+
+.detalhe-rodape {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.detalhe-hint {
+  font-size: 11px;
+  color: #64748b;
+  flex: 1;
+}
+
+.btn-ir-recepcao {
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  background: #1e293b;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.btn-ir-recepcao:hover {
+  background: #0f172a;
+}
+
+/* ── Paginação ────────────────────────────────────────────────────────── */
+.historico-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.historico-paginacao button {
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #1e293b;
+}
+
+.historico-paginacao button:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.historico-paginacao button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ── Botão editar inline ──────────────────────────────────────────────────── */
+.cel-acao { text-align: center; }
+
+.btn-editar-inline {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  background: transparent;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-editar-inline:hover { background: #2563eb; color: #fff; }
+
+/* ── Badge de entradas recorrentes ───────────────────────────────────────── */
+.badge-entradas {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 10px;
+  border: 1px solid #fde68a;
+  vertical-align: middle;
+}
+
+/* ── Seção histórico do paciente ─────────────────────────────────────────── */
+.hist-pac-secao {
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
+.hist-pac-loading { font-size: 11px; color: #94a3b8; font-style: italic; }
+
+.hist-pac-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.hist-pac-contador { font-size: 12px; font-weight: 700; color: #1e293b; }
+.hist-pac-ultima   { font-size: 11px; color: #64748b; }
+
+.hist-pac-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.hist-pac-tabela th {
+  padding: 4px 8px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #94a3b8;
+  border-bottom: 1px solid #e2e8f0;
+}
+.hist-pac-tabela td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+.hist-pac-atual td { background: #eff6ff; font-weight: 600; }
+
+.hist-pac-mais {
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
+  padding: 6px !important;
+}
+.hist-pac-este {
+  font-size: 10px;
+  color: #2563eb;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-editar-hist {
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: inherit;
+  background: transparent;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.btn-editar-hist:hover { background: #1e293b; color: #fff; border-color: #1e293b; }
+
+/* ── Botão editar no rodapé do detalhe ───────────────────────────────────── */
+.btn-editar-recepcao {
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+.btn-editar-recepcao:hover { background: #1d4ed8; }

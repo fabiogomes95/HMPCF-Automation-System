@@ -144,8 +144,8 @@ DATABASE_POOL_PRE_PING=true  # testa conexões antes de usar
 ```
 
 ### Tabela pacientes
-Colunas em MAIÚSCULAS seguem o padrão Firebird/CADCNS do sistema legado.
-O SQLAlchemy mapeia para atributos Python em snake_case via `mapped_column("NOME", ...)`.
+Todas as colunas usam **snake_case** (renomeadas em 2026-05-24 via `recreate_pacientes.py`).
+O SQLAlchemy mapeia diretamente sem aliases — atributo Python = nome da coluna no banco.
 
 ---
 
@@ -206,12 +206,14 @@ O novo sistema em `backend/app/` substitui gradualmente os módulos.
 
 ---
 
-## Módulos Planejados
+## Módulos
 
 | Módulo | Status | Rota |
 |--------|--------|------|
 | Pacientes | Implementado | `/api/v1/pacientes` |
-| Recepção | Planejado | `/api/v1/recepcao` |
-| Classificação | Planejado | `/api/v1/classificacao` |
-| Atendimentos | Planejado | `/api/v1/atendimentos` |
-| Terminal | Planejado | `/api/v1/terminal` |
+| Recepção | Implementado | `/api/v1/recepcao` |
+| Terminal | Implementado | `/api/v1/terminal` |
+| Classificação | Não iniciado | `/api/v1/classificacao` |
+| Relatórios | Não iniciado | — |
+
+> Ver detalhes completos da sessão de implementação em `docs/sessao_2026-05-24.md`.

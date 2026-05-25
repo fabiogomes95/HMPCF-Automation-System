@@ -6,28 +6,31 @@ from app.schemas.common import BaseSchema
 
 
 class PacienteCreate(BaseSchema):
-    """Dados obrigatórios e opcionais para criar um paciente."""
 
-    cns: Optional[str] = None
-    num_cpf: Optional[str] = None
-    nome: Optional[str] = None
-    dtnasc: Optional[str] = None
-    sexo: Optional[str] = None
-    raca: Optional[str] = None
-    maepcn: Optional[str] = None
-    logpcn: str = Field(default="principal")
-    numpcn: str = Field(default="s/n")
-    bairro_pcnte: str = Field(default="centro")
-    nmres: Optional[str] = None
-    ddtel_pcnte: Optional[str] = None
-    tel_pcnte: Optional[str] = None
-    nome_social: Optional[str] = None
-    idade: Optional[str] = None
-    civil: Optional[str] = None
-    ocupacao: Optional[str] = None
-    responsavel: Optional[str] = None
-    cidade: Optional[str] = None
-    estado: Optional[str] = None
+    cns:          Optional[str] = None
+    num_cpf:      Optional[str] = None
+    nome:         Optional[str] = None
+    dtnasc:       Optional[str] = None
+    sexo:         Optional[str] = None
+    raca:         Optional[str] = None
+    maepcn:       Optional[str] = None
+    logpcn:       str = Field(default="PRINCIPAL")
+    numpcn:       str = Field(default="S/N")
+    bairro_pcnte: str = Field(default="CENTRO")
+    nmres:        Optional[str] = None
+    ddtel_pcnte:  Optional[str] = None
+    tel_pcnte:    Optional[str] = None
+    ibge:         Optional[str] = None
+    ceppcn:       Optional[str] = None
+    co_lograd:    Optional[str] = None
+    nome_social:  Optional[str] = None
+    idade:        Optional[str] = None
+    civil:        Optional[str] = None
+    ocupacao:     Optional[str] = None
+    responsavel:  Optional[str] = None
+    cidade:       Optional[str] = None
+    estado:       Optional[str] = None
+    nacionalidade: Optional[str] = None
 
     @field_validator("num_cpf", "cns", mode="before")
     @classmethod
@@ -67,26 +70,29 @@ class PacienteCreate(BaseSchema):
 
 
 class PacienteUpdate(BaseSchema):
-    """Todos os campos opcionais — semântica PATCH."""
 
-    nome: Optional[str] = None
-    dtnasc: Optional[str] = None
-    sexo: Optional[str] = None
-    raca: Optional[str] = None
-    maepcn: Optional[str] = None
-    logpcn: Optional[str] = None
-    numpcn: Optional[str] = None
+    nome:         Optional[str] = None
+    dtnasc:       Optional[str] = None
+    sexo:         Optional[str] = None
+    raca:         Optional[str] = None
+    maepcn:       Optional[str] = None
+    logpcn:       Optional[str] = None
+    numpcn:       Optional[str] = None
     bairro_pcnte: Optional[str] = None
-    nmres: Optional[str] = None
-    ddtel_pcnte: Optional[str] = None
-    tel_pcnte: Optional[str] = None
-    nome_social: Optional[str] = None
-    idade: Optional[str] = None
-    civil: Optional[str] = None
-    ocupacao: Optional[str] = None
-    responsavel: Optional[str] = None
-    cidade: Optional[str] = None
-    estado: Optional[str] = None
+    nmres:        Optional[str] = None
+    ddtel_pcnte:  Optional[str] = None
+    tel_pcnte:    Optional[str] = None
+    ibge:         Optional[str] = None
+    ceppcn:       Optional[str] = None
+    co_lograd:    Optional[str] = None
+    nome_social:  Optional[str] = None
+    idade:        Optional[str] = None
+    civil:        Optional[str] = None
+    ocupacao:     Optional[str] = None
+    responsavel:  Optional[str] = None
+    cidade:       Optional[str] = None
+    estado:       Optional[str] = None
+    nacionalidade: Optional[str] = None
 
     @field_validator("nome", mode="before")
     @classmethod
@@ -112,29 +118,32 @@ class PacienteUpdate(BaseSchema):
 
 
 class PacienteResponse(BaseSchema):
-    """Representação completa do paciente para respostas da API."""
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    cns: Optional[str] = None
-    num_cpf: Optional[str] = None
-    nome: Optional[str] = None
-    dtnasc: Optional[str] = None
-    sexo: Optional[str] = None
-    raca: Optional[str] = None
-    maepcn: Optional[str] = None
-    logpcn: str = "principal"
-    numpcn: str = "s/n"
-    bairro_pcnte: str = "centro"
-    nmres: Optional[str] = None
-    ddtel_pcnte: Optional[str] = None
-    tel_pcnte: Optional[str] = None
-    nome_social: Optional[str] = None
-    idade: Optional[str] = None
-    civil: Optional[str] = None
-    ocupacao: Optional[str] = None
-    responsavel: Optional[str] = None
-    cidade: Optional[str] = None
-    estado: Optional[str] = None
-    migrated_at: Optional[datetime] = None
+    id:           int
+    cns:          Optional[str] = None
+    num_cpf:      Optional[str] = None
+    nome:         Optional[str] = None
+    dtnasc:       Optional[str] = None
+    sexo:         Optional[str] = None
+    raca:         Optional[str] = None
+    maepcn:       Optional[str] = None
+    logpcn:       str = "PRINCIPAL"
+    numpcn:       str = "S/N"
+    bairro_pcnte: str = "CENTRO"
+    nmres:        Optional[str] = None
+    ddtel_pcnte:  Optional[str] = None
+    tel_pcnte:    Optional[str] = None
+    ibge:         Optional[str] = None
+    ceppcn:       Optional[str] = None
+    co_lograd:    Optional[str] = None
+    nome_social:  Optional[str] = None
+    idade:        Optional[str] = None
+    civil:        Optional[str] = None
+    ocupacao:     Optional[str] = None
+    responsavel:  Optional[str] = None
+    cidade:       Optional[str] = None
+    estado:       Optional[str] = None
+    nacionalidade: Optional[str] = None
+    migrated_at:  Optional[datetime] = None

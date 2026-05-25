@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import BigInteger, DateTime, Enum, ForeignKey, Index, Text, func
+from sqlalchemy import BigInteger, DateTime, Enum, ForeignKey, Index, SmallInteger, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -44,6 +44,7 @@ class RecepcaoAtendimento(Base):
         nullable=True,
     )
 
+    registro:             Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
     procedencia:          Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     observacoes:          Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     historia_clinica:     Mapped[Optional[str]] = mapped_column(Text, nullable=True)

@@ -1,8 +1,9 @@
 from typing import Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
+from app.models.paciente import Paciente
 from app.models.recepcao_atendimento import RecepcaoAtendimento
 from app.repositories.base import BaseRepository
 
@@ -61,6 +62,46 @@ class RecepcaoRepository(BaseRepository[RecepcaoAtendimento]):
             select(func.count())
             .select_from(RecepcaoAtendimento)
             .where(RecepcaoAtendimento.paciente_id == paciente_id)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one()
+
+    async def list_by_query(
+        self, q: str, limit: int, offset: int
+    ) -> list[RecepcaoAtendimento]:
+        """Busca atendimentos filtrando por nome ou CPF do paciente."""
+        term = f"%{q}%"
+        stmt = (
+            select(RecepcaoAtendimento)
+            .join(RecepcaoAtendimento.paciente)
+            .options(selectinload(RecepcaoAtendimento.paciente))
+            .where(
+                or_(
+                    Paciente.num_cpf.ilike(term),
+                    Paciente.nome.ilike(term),
+                    Paciente.cns.ilike(term),
+                )
+            )
+            .order_by(RecepcaoAtendimento.data_atendimento.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def count_by_query(self, q: str) -> int:
+        term = f"%{q}%"
+        stmt = (
+            select(func.count())
+            .select_from(RecepcaoAtendimento)
+            .join(RecepcaoAtendimento.paciente)
+            .where(
+                or_(
+                    Paciente.num_cpf.ilike(term),
+                    Paciente.nome.ilike(term),
+                    Paciente.cns.ilike(term),
+                )
+            )
         )
         result = await self.session.execute(stmt)
         return result.scalar_one()

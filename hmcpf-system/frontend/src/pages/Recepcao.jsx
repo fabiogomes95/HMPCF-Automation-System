@@ -4,6 +4,7 @@ import {
   criarPaciente,
   atualizarPaciente,
   criarAtendimento,
+  atualizarAtendimento,
   iniciarSessao,
   pingSessao,
 } from "../services/api";
@@ -58,7 +59,7 @@ function uc(v) {
   return v ? v.toUpperCase() : v;
 }
 
-export default function Recepcao() {
+export default function Recepcao({ edicao = null, onVoltar = null }) {
   const [form, setForm] = useState({ ...vazio });
   const [pacienteId, setPacienteId] = useState(null);
   const [msg, setMsg] = useState("");
@@ -154,17 +155,38 @@ export default function Recepcao() {
       } else if (!pacienteEncontradoRef.current) {
         setMsg("+ Novo paciente");
       }
-    } catch {
-      setMsg("Erro ao buscar");
+    } catch (err) {
+      if (err?.response?.status === 404) {
+        if (!pacienteEncontradoRef.current) setMsg("+ Novo paciente");
+      } else {
+        setMsg("Erro ao buscar");
+      }
     } finally {
       setLoading(false);
     }
   }, []);
 
+  useEffect(() => {
+    if (!edicao) return;
+    setAtdInfo({ data: edicao.data, hora: edicao.hora, registro: "" });
+    setProcedencia(edicao.procedencia || "NORMAL");
+    setMsg("");
+    pacienteEncontradoRef.current = false;
+    if (edicao.documento) {
+      autoBusca(edicao.documento);
+    }
+  }, [edicao, autoBusca]);
+
   function handleCPFChange(e) {
     const raw = apenasNumeros(e.target.value).slice(0, 11);
     setForm((prev) => ({ ...prev, num_cpf: raw }));
-    setErroCpf(raw.length === 11 && !validarCPF(raw) ? "CPF inválido" : "");
+    if (raw.length === 11 && !validarCPF(raw)) {
+      setErroCpf("CPF inválido");
+      setMsg("CPF inválido");
+      return;
+    }
+    setErroCpf("");
+    if (raw.length < 11) setMsg("");
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (raw.length === 11) {
       debounceRef.current = setTimeout(() => autoBusca(raw), 300);
@@ -174,7 +196,13 @@ export default function Recepcao() {
   function handleCNSChange(e) {
     const raw = apenasNumeros(e.target.value).slice(0, 15);
     setForm((prev) => ({ ...prev, cns: raw }));
-    setErroCns(raw.length === 15 && !validarCNS(raw) ? "CNS inválido" : "");
+    if (raw.length === 15 && !validarCNS(raw)) {
+      setErroCns("CNS inválido");
+      setMsg("CNS inválido");
+      return;
+    }
+    setErroCns("");
+    if (raw.length < 15) setMsg("");
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (raw.length === 15) {
       debounceRef.current = setTimeout(() => autoBusca(raw), 300);
@@ -270,27 +298,40 @@ export default function Recepcao() {
     try {
       const dados = prepararDados();
       let id = pacienteId;
-      if (id) {
-        await atualizarPaciente(id, dados);
+
+      if (edicao) {
+        // Modo edição: atualiza paciente + atendimento existente
+        if (id) await atualizarPaciente(id, dados);
+        await atualizarAtendimento(edicao.atendimentoId, {
+          data_atendimento: atdInfo.data,
+          hora_atendimento: atdInfo.hora,
+          procedencia,
+        });
+        setMsg("✓ Atendimento atualizado!");
       } else {
-        const res = await criarPaciente(dados);
-        id = res.data.id;
-        setPacienteId(id);
+        // Modo novo: cria ou atualiza paciente + cria atendimento
+        if (id) {
+          await atualizarPaciente(id, dados);
+        } else {
+          const res = await criarPaciente(dados);
+          id = res.data.id;
+          setPacienteId(id);
+        }
+        await criarAtendimento({
+          paciente_id: id,
+          data_atendimento: atdInfo.data,
+          hora_atendimento: atdInfo.hora,
+          registro: atdInfo.registro,
+          procedencia,
+        });
+        const turno = calcularTurno(atdInfo.hora);
+        const regNum = parseInt(atdInfo.registro, 10);
+        if (!isNaN(regNum)) {
+          ultimoRegistroRef.current = regNum;
+          ultimoTurnoRef.current = turno;
+        }
+        setMsg("✓ Registrado!");
       }
-      await criarAtendimento({
-        paciente_id: id,
-        data_atendimento: atdInfo.data,
-        hora_atendimento: atdInfo.hora,
-        registro: atdInfo.registro,
-        procedencia,
-      });
-      const turno = calcularTurno(atdInfo.hora);
-      const regNum = parseInt(atdInfo.registro, 10);
-      if (!isNaN(regNum)) {
-        ultimoRegistroRef.current = regNum;
-        ultimoTurnoRef.current = turno;
-      }
-      setMsg("✓ Registrado!");
     } catch (err) {
       const detail = err.response?.data?.detail || "Erro ao registrar";
       setMsg(typeof detail === "string" ? detail : JSON.stringify(detail));
@@ -324,6 +365,9 @@ export default function Recepcao() {
         <div className="header-left">
           <img src="/img/brasao-extremoz.png" className="header-brasao" alt="Brasão" />
           <h1>HMPCF — Recepção</h1>
+          {edicao && (
+            <span className="badge-edicao">Editando #{edicao.atendimentoId}</span>
+          )}
         </div>
         <div className="header-right">
           {pacienteId && <span className="badge-ok">✓ Paciente</span>}
@@ -342,14 +386,20 @@ export default function Recepcao() {
           className="btn-atendimento"
           disabled={loading}
         >
-          {loading ? "Processando..." : "Registrar Atendimento"}
+          {loading ? "Processando..." : edicao ? "Salvar Alterações" : "Registrar Atendimento"}
         </button>
         <button onClick={handleImprimir} className="btn-imprimir">
           Imprimir
         </button>
-        <button onClick={handleLimpar} className="btn-limpar">
-          Limpar
-        </button>
+        {edicao ? (
+          <button onClick={onVoltar} className="btn-limpar">
+            ← Voltar ao Histórico
+          </button>
+        ) : (
+          <button onClick={handleLimpar} className="btn-limpar">
+            Limpar
+          </button>
+        )}
       </div>
 
       <div className="recepcao-main">

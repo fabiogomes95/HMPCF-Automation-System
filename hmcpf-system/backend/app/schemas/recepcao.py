@@ -26,6 +26,7 @@ class RecepcaoCreate(BaseSchema):
         default=None,
         description="Data/hora do atendimento (padrão: agora)",
     )
+    registro:             Optional[int] = None
     classificacao_risco: Optional[ClassificacaoRisco] = None
     procedencia:          Optional[str] = None
     observacoes:          Optional[str] = None
@@ -37,6 +38,7 @@ class RecepcaoUpdate(BaseSchema):
     """Todos os campos opcionais — semântica PATCH."""
 
     data_atendimento:     Optional[datetime] = None
+    registro:             Optional[int] = None
     classificacao_risco:  Optional[ClassificacaoRisco] = None
     procedencia:          Optional[str] = None
     observacoes:          Optional[str] = None
@@ -51,6 +53,7 @@ class RecepcaoResponse(BaseSchema):
     paciente_id: int
     paciente: Optional[PacienteResumo] = None
     data_atendimento: datetime
+    registro:             Optional[int] = None
     classificacao_risco: Optional[ClassificacaoRisco] = None
     procedencia:          Optional[str] = None
     observacoes:          Optional[str] = None
@@ -69,6 +72,7 @@ class RecepcaoListResponse(BaseSchema):
     paciente_id: int
     paciente: Optional[PacienteResumo] = None
     data_atendimento: datetime
+    registro:             Optional[int] = None
     classificacao_risco: Optional[ClassificacaoRisco] = None
     procedencia: Optional[str] = None
     created_at: datetime

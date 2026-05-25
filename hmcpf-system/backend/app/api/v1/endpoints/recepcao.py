@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Query
 
 from app.api.deps import DBSession
@@ -20,14 +22,15 @@ def _svc(session: DBSession) -> RecepcaoService:
 @router.get(
     "/",
     response_model=PaginatedResponse[RecepcaoListResponse],
-    summary="Listar atendimentos (recentes primeiro)",
+    summary="Listar atendimentos (recentes primeiro, com busca opcional)",
 )
 async def listar_atendimentos(
     session: DBSession,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    q: Optional[str] = Query(None, description="Busca por nome ou CPF do paciente"),
 ) -> PaginatedResponse[RecepcaoListResponse]:
-    return await _svc(session).listar_recentes(page=page, page_size=page_size)
+    return await _svc(session).listar(page=page, page_size=page_size, q=q)
 
 
 @router.get(

@@ -1,0 +1,45 @@
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  background: #1e293b;
+  border-bottom: 2px solid #0f172a;
+}
+
+.app-nav-brand {
+  font-weight: 700;
+  font-size: 12px;
+  color: #64748b;
+  letter-spacing: 2px;
+  margin-right: 16px;
+  font-family: 'Courier New', monospace;
+}
+
+.app-nav-btn {
+  padding: 5px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  font-family: inherit;
+}
+
+.app-nav-btn:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.app-nav-btn.ativo {
+  background: #2563eb;
+  color: #fff;
+  border-color: #1d4ed8;
+}
+
+@media print {
+  .app-nav { display: none !important; }
+}

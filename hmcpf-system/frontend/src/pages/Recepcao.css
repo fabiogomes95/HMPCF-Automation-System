@@ -62,6 +62,18 @@ body {
   white-space: nowrap;
 }
 
+.badge-edicao {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  background: #dbeafe;
+  padding: 2px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  border: 1px solid #bfdbfe;
+}
+
 .badge-loading {
   font-size: 0.85rem;
   animation: pisca 0.6s infinite;
