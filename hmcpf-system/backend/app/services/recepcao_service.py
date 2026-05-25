@@ -9,6 +9,7 @@ from app.repositories.paciente_repository import PacienteRepository
 from app.repositories.recepcao_repository import RecepcaoRepository
 from app.schemas.common import PaginatedResponse
 from app.schemas.recepcao import (
+    PacienteAgrupadoResponse,
     RecepcaoCreate,
     RecepcaoListResponse,
     RecepcaoResponse,
@@ -89,6 +90,42 @@ class RecepcaoService:
         pages = max(1, (total + page_size - 1) // page_size)
         return PaginatedResponse(
             items=[RecepcaoListResponse.model_validate(a) for a in items],
+            total=total,
+            page=page,
+            page_size=page_size,
+            pages=pages,
+        )
+
+    async def listar_agrupado(
+        self,
+        page: int,
+        page_size: int,
+        q: Optional[str] = None,
+    ) -> PaginatedResponse[PacienteAgrupadoResponse]:
+        """Busca pacientes únicos agrupados com total de entradas e última data."""
+        offset = (page - 1) * page_size
+        if q and q.strip():
+            rows = await self._repo.search_grouped_by_patient(q.strip(), limit=page_size, offset=offset)
+            total = await self._repo.count_grouped_by_patient(q.strip())
+        else:
+            rows = []
+            total = 0
+
+        items = []
+        for row in rows:
+            items.append(PacienteAgrupadoResponse(
+                paciente_id=row.paciente_id,
+                nome=row.nome,
+                num_cpf=row.num_cpf,
+                cns=row.cns,
+                dtnasc=row.dtnasc,
+                total_entradas=row.total_entradas,
+                ultima_data=row.ultima_data,
+            ))
+
+        pages = max(1, (total + page_size - 1) // page_size)
+        return PaginatedResponse(
+            items=items,
             total=total,
             page=page,
             page_size=page_size,

@@ -145,5 +145,6 @@ class PacienteResponse(BaseSchema):
     responsavel:  Optional[str] = None
     cidade:       Optional[str] = None
     estado:       Optional[str] = None
-    nacionalidade: Optional[str] = None
+    nacionalidade: str = "010"
+    naturalidade: Optional[str] = None
     migrated_at:  Optional[datetime] = None

@@ -63,6 +63,19 @@ class RecepcaoResponse(BaseSchema):
     updated_at: datetime
 
 
+class PacienteAgrupadoResponse(BaseSchema):
+    """Paciente único com estatísticas de atendimento para busca agrupada."""
+    model_config = ConfigDict(from_attributes=True)
+
+    paciente_id: int
+    nome: Optional[str] = None
+    num_cpf: Optional[str] = None
+    cns: Optional[str] = None
+    dtnasc: Optional[str] = None
+    total_entradas: int = 0
+    ultima_data: Optional[datetime] = None
+
+
 class RecepcaoListResponse(BaseSchema):
     """Resposta compacta para listagens — sem campos de texto longo."""
 
@@ -75,4 +88,5 @@ class RecepcaoListResponse(BaseSchema):
     registro:             Optional[int] = None
     classificacao_risco: Optional[ClassificacaoRisco] = None
     procedencia: Optional[str] = None
+    observacoes: Optional[str] = None
     created_at: datetime

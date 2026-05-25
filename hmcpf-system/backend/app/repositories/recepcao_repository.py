@@ -106,6 +106,68 @@ class RecepcaoRepository(BaseRepository[RecepcaoAtendimento]):
         result = await self.session.execute(stmt)
         return result.scalar_one()
 
+    async def search_grouped_by_patient(
+        self, q: str, limit: int, offset: int
+    ) -> list[tuple]:
+        """
+        Retorna pacientes únicos com total de entradas e última data.
+        Cada tupla: (paciente_id, nome, num_cpf, cns, dtnasc, total_entradas, ultima_data)
+        """
+        term = f"%{q}%"
+        stmt = (
+            select(
+                RecepcaoAtendimento.paciente_id,
+                Paciente.nome,
+                Paciente.num_cpf,
+                Paciente.cns,
+                Paciente.dtnasc,
+                func.count(RecepcaoAtendimento.id).label("total_entradas"),
+                func.max(RecepcaoAtendimento.data_atendimento).label("ultima_data"),
+            )
+            .join(RecepcaoAtendimento.paciente)
+            .where(
+                or_(
+                    Paciente.num_cpf.ilike(term),
+                    Paciente.nome.ilike(term),
+                    Paciente.cns.ilike(term),
+                )
+            )
+            .group_by(
+                RecepcaoAtendimento.paciente_id,
+                Paciente.nome,
+                Paciente.num_cpf,
+                Paciente.cns,
+                Paciente.dtnasc,
+            )
+            .order_by(func.max(RecepcaoAtendimento.data_atendimento).desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.all())
+
+
+    async def count_grouped_by_patient(self, q: str) -> int:
+        """Conta pacientes únicos que atendem ao filtro de busca."""
+        term = f"%{q}%"
+        subq = (
+            select(RecepcaoAtendimento.paciente_id)
+            .join(RecepcaoAtendimento.paciente)
+            .where(
+                or_(
+                    Paciente.num_cpf.ilike(term),
+                    Paciente.nome.ilike(term),
+                    Paciente.cns.ilike(term),
+                )
+            )
+            .group_by(RecepcaoAtendimento.paciente_id)
+            .subquery()
+        )
+        stmt = select(func.count()).select_from(subq)
+        result = await self.session.execute(stmt)
+        return result.scalar_one()
+
+
     async def add_and_load(self, obj: RecepcaoAtendimento) -> RecepcaoAtendimento:
         """Persiste e recarrega com o relacionamento paciente."""
         self.session.add(obj)

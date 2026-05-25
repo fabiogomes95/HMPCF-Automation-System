@@ -59,6 +59,10 @@ export function listarAtendimentos(page = 1, q = "") {
   return api.get("/recepcao/", { params });
 }
 
+export function buscarPacientesAgrupados(q, page = 1, pageSize = 20) {
+  return api.get("/recepcao/pacientes/agrupado", { params: { q, page, page_size: pageSize } });
+}
+
 export function listarAtendimentosPorPaciente(pacienteId, page = 1, pageSize = 10) {
   return api.get(`/recepcao/paciente/${pacienteId}`, { params: { page, page_size: pageSize } });
 }

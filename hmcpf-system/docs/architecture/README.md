@@ -192,17 +192,18 @@ alembic history --verbose
 
 ---
 
-## Coexistência com o Legado
+## Legado (Removido)
 
-| Aspecto | Legado (`backend/`) | Novo (`backend/app/`) |
-|---------|--------------------|-----------------------|
-| Banco | SQLite (`hospital.db`) | PostgreSQL |
-| ORM | Nenhum (sql direto) | SQLAlchemy 2.x async |
-| API | `/api/v1` (SQLite) + `/api/v2` (PG raw) | `/api/v1` (SQLAlchemy) |
-| Porta | 8000 (antigo) | 8000 (novo, substitui) |
+Os arquivos legados foram removidos em 2026-05-25:
 
-O legado permanece **congelado** em `backend/` (main.py, database.py, routes/).
-O novo sistema em `backend/app/` substitui gradualmente os módulos.
+| Arquivo | Motivo |
+|---------|--------|
+| `backend/main.py` | Entrypoint legado concorrente |
+| `backend/database.py` | Conexão SQLite (apenas routes legados usavam) |
+| `backend/database_pg.py` | Conexão PostgreSQL raw (substituída por SQLAlchemy async) |
+| `backend/routes/` | Rotas SQLite + PostgreSQL raw |
+
+O único módulo ativo é `backend/app/` com FastAPI modular + SQLAlchemy async + PostgreSQL.
 
 ---
 
@@ -213,7 +214,16 @@ O novo sistema em `backend/app/` substitui gradualmente os módulos.
 | Pacientes | Implementado | `/api/v1/pacientes` |
 | Recepção | Implementado | `/api/v1/recepcao` |
 | Terminal | Implementado | `/api/v1/terminal` |
-| Classificação | Não iniciado | `/api/v1/classificacao` |
+| Busca Agrupada | Implementado | `GET /api/v1/recepcao/pacientes/agrupado?q=...` |
+| Testes | 21 testes | `backend/tests/` |
+| Classificação | Não iniciado | — |
 | Relatórios | Não iniciado | — |
 
-> Ver detalhes completos da sessão de implementação em `docs/sessao_2026-05-24.md`.
+### Endpoints da Busca Agrupada
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/api/v1/recepcao/pacientes/agrupado?q=...` | Pacientes únicos com total de entradas e última data |
+| GET | `/api/v1/recepcao/paciente/{id}` | Histórico completo de atendimentos de um paciente |
+
+> Ver detalhes completos das sessões em `docs/sessao_2026-05-24.md` e `docs/sessao_2026-05-25.md`.

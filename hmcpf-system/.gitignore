@@ -16,3 +16,8 @@ frontend/.vite/
 # Misc
 *.log
 .DS_Store
+
+# SQLite databases (legacy)
+*.db
+*.db-shm
+*.db-wal

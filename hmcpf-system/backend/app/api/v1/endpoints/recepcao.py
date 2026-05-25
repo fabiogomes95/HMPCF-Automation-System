@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query
 from app.api.deps import DBSession
 from app.schemas.common import PaginatedResponse
 from app.schemas.recepcao import (
+    PacienteAgrupadoResponse,
     RecepcaoCreate,
     RecepcaoListResponse,
     RecepcaoResponse,
@@ -31,6 +32,20 @@ async def listar_atendimentos(
     q: Optional[str] = Query(None, description="Busca por nome ou CPF do paciente"),
 ) -> PaginatedResponse[RecepcaoListResponse]:
     return await _svc(session).listar(page=page, page_size=page_size, q=q)
+
+
+@router.get(
+    "/pacientes/agrupado",
+    response_model=PaginatedResponse[PacienteAgrupadoResponse],
+    summary="Buscar pacientes únicos agrupados com total de entradas",
+)
+async def buscar_pacientes_agrupados(
+    session: DBSession,
+    q: str = Query(..., min_length=3, description="Busca por nome, CPF ou CNS"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+) -> PaginatedResponse[PacienteAgrupadoResponse]:
+    return await _svc(session).listar_agrupado(page=page, page_size=page_size, q=q)
 
 
 @router.get(
