@@ -43,7 +43,8 @@ const vazio = {
   cidade: "EXTREMOZ",
   estado: "RN",
   telefone: "",
-  nacionalidade: "",
+  naturalidade: "",
+  nacionalidade: "010",
   estado_civil: "",
   ocupacao: "",
   responsavel: "",
@@ -52,7 +53,7 @@ const vazio = {
 const camposTexto = [
   "nome", "nome_social", "maepcn", "logpcn",
   "numpcn", "bairro_pcnte", "cidade", "estado",
-  "nacionalidade", "estado_civil", "ocupacao", "responsavel",
+  "naturalidade", "estado_civil", "ocupacao", "responsavel",
 ];
 
 function uc(v) {
@@ -142,7 +143,8 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
           cidade: p.cidade || "EXTREMOZ",
           estado: p.estado || "RN",
           telefone: formatTelefone(p.telefone),
-          nacionalidade: p.nacionalidade || "",
+          naturalidade: p.naturalidade || "",
+          nacionalidade: "010",
           estado_civil: p.estado_civil || "",
           ocupacao: p.ocupacao || "",
           responsavel: p.responsavel || "",

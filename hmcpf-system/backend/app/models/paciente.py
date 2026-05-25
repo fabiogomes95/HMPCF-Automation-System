@@ -29,7 +29,7 @@ class Paciente(Base):
     nmres:        Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     ddtel_pcnte:  Mapped[Optional[str]] = mapped_column(String(2),  nullable=True)
     tel_pcnte:    Mapped[Optional[str]] = mapped_column(String(9),  nullable=True)
-    ibge:         Mapped[str]           = mapped_column(String(6),  nullable=False, server_default="240390")
+    ibge:         Mapped[str]           = mapped_column(String(6),  nullable=False, server_default="240360")
     ceppcn:       Mapped[str]           = mapped_column(String(8),  nullable=False, server_default="59575000")
     co_lograd:    Mapped[str]           = mapped_column(String(3),  nullable=False, server_default="081")
 

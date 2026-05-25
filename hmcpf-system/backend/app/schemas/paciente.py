@@ -20,9 +20,9 @@ class PacienteCreate(BaseSchema):
     nmres:        Optional[str] = None
     ddtel_pcnte:  Optional[str] = None
     tel_pcnte:    Optional[str] = None
-    ibge:         Optional[str] = None
-    ceppcn:       Optional[str] = None
-    co_lograd:    Optional[str] = None
+    ibge:         str = Field(default="240360")
+    ceppcn:       str = Field(default="59575000")
+    co_lograd:    str = Field(default="081")
     nome_social:  Optional[str] = None
     idade:        Optional[str] = None
     civil:        Optional[str] = None
@@ -30,7 +30,8 @@ class PacienteCreate(BaseSchema):
     responsavel:  Optional[str] = None
     cidade:       Optional[str] = None
     estado:       Optional[str] = None
-    nacionalidade: Optional[str] = None
+    nacionalidade: str = Field(default="010")
+    naturalidade: Optional[str] = None
 
     @field_validator("num_cpf", "cns", mode="before")
     @classmethod
@@ -93,6 +94,7 @@ class PacienteUpdate(BaseSchema):
     cidade:       Optional[str] = None
     estado:       Optional[str] = None
     nacionalidade: Optional[str] = None
+    naturalidade: Optional[str] = None
 
     @field_validator("nome", mode="before")
     @classmethod

@@ -77,7 +77,7 @@ export default function BoletimA4({
         <div className="row">
           <div className="field" style={{ flex: 2 }}>
             <label>NATURALIDADE:</label>
-            <input type="text" name="nacionalidade" value={form.nacionalidade || ""} onChange={onFieldChange} />
+            <input type="text" name="naturalidade" value={form.naturalidade || ""} onChange={onFieldChange} />
           </div>
           <div className="field" style={{ flex: 1.2 }}>
             <label>DN:</label>
