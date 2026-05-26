@@ -77,9 +77,9 @@ LOG_FILE          = os.getenv("LOG_FILE",           os.path.join(_BASE_DIR, "mig
 BATCH_SIZE        = int(os.getenv("BATCH_SIZE",    "500"))
 
 # Defaults obrigatorios — campos NOT NULL no modelo PostgreSQL (HMPCF/BPA)
-_DEFAULT_LOGPCN    = "PRINCIPAL"   # logpcn  — logradouro vazio
-_DEFAULT_NUMPCN    = "S/N"         # numpcn  — numero vazio
-_DEFAULT_BAIRRO    = "CENTRO"      # bairro_pcnte
+_DEFAULT_LOGPCN    = None
+_DEFAULT_NUMPCN    = None
+_DEFAULT_BAIRRO    = None
 _DEFAULT_IBGE      = "240360"      # ibge    — codigo IBGE Extremoz/RN
 _DEFAULT_CEPPCN    = "59575000"    # ceppcn
 _DEFAULT_CO_LOGRAD = "081"         # co_lograd — tipo de logradouro "RUA"
@@ -420,7 +420,7 @@ def carregar_chaves_pg(pg_conn) -> tuple[set, set]:
 # Colunas na ordem exata usada no INSERT — deve espelhar o modelo Paciente
 _COLS: tuple[str, ...] = (
     "cns", "num_cpf", "nome", "dtnasc", "sexo", "raca",
-    "maepcn", "logpcn", "numpcn", "bairro_pcnte", "nmres",
+    "maepcn", "logpcn", "numpcn", "bairro_pcnte",
     "ddtel_pcnte", "tel_pcnte",
     "ibge", "ceppcn", "co_lograd",
     "nome_social", "idade", "civil", "ocupacao",
@@ -448,10 +448,9 @@ def transformar(row: sqlite3.Row, c: Contadores) -> Optional[tuple]:
         sexo    = norm_sexo(_row_get(row, "sexo"))
         raca    = norm_raca(_row_get(row, "raca"))
         maepcn  = truncar(_row_get(row, "mae"),         100) or None
-        logpcn  = truncar(_row_get(row, "endereco"),    100, default=_DEFAULT_LOGPCN)
-        numpcn  = truncar(_row_get(row, "numero"),      100, default=_DEFAULT_NUMPCN)
-        bairro  = truncar(_row_get(row, "bairro"),      100, default=_DEFAULT_BAIRRO)
-        nmres   = truncar(_row_get(row, "naturalidade"), 100) or None
+        logpcn  = truncar(_row_get(row, "endereco"),    100) or None
+        numpcn  = truncar(_row_get(row, "numero"),      100) or None
+        bairro  = truncar(_row_get(row, "bairro"),      100) or None
         ddd, tel = norm_telefone(_row_get(row, "tel"))
 
         # Campos BPA sem equivalente no SQLite — defaults obrigatorios
@@ -483,7 +482,7 @@ def transformar(row: sqlite3.Row, c: Contadores) -> Optional[tuple]:
 
         return (
             cns, num_cpf, nome, dtnasc, sexo, raca,
-            maepcn, logpcn, numpcn, bairro, nmres,
+            maepcn, logpcn, numpcn, bairro,
             ddd, tel,
             ibge, ceppcn, co_lograd,
             nome_social, idade, civil, ocupacao,

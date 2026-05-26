@@ -104,6 +104,11 @@ body {
   color: #991b1b;
 }
 
+.msg-badge-aviso {
+  background: #fbbf24;
+  color: #78350f;
+}
+
 /* ─── Action buttons (above A4, centered) ─── */
 .recepcao-acoes {
   display: flex;

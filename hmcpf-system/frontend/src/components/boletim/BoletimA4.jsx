@@ -35,6 +35,8 @@ export default function BoletimA4({
   cpfRef,
   erroCpf,
   erroCns,
+  erroDtnasc,
+  onFamilia,
 }) {
   return (
     <div className="page">
@@ -87,7 +89,9 @@ export default function BoletimA4({
               onChange={onDtnascChange}
               placeholder="DD/MM/AAAA"
               maxLength={10}
+              style={erroDtnasc ? { outline: "2px solid #dc2626" } : {}}
             />
+            {erroDtnasc && <span style={{ color: "#dc2626", fontSize: 10, whiteSpace: "nowrap" }}>{erroDtnasc}</span>}
           </div>
           <div className="field" style={{ flex: 0.8 }}>
             <label>IDADE:</label>
@@ -223,6 +227,16 @@ export default function BoletimA4({
           <div className="field" style={{ flex: 3.2 }}>
             <label>ENDEREÇO:</label>
             <input type="text" name="logpcn" value={form.logpcn || ""} onChange={onFieldChange} />
+            {onFamilia && (
+              <button
+                type="button"
+                className="btn-familia no-print"
+                onClick={onFamilia}
+                title="Copiar endereço do último paciente registrado"
+              >
+                Família
+              </button>
+            )}
           </div>
           <div className="field" style={{ flex: 0.8 }}>
             <label>Nº:</label>

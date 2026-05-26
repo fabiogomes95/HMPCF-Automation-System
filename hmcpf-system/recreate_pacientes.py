@@ -76,7 +76,6 @@ CREATE TABLE pacientes (
     logpcn        VARCHAR(50)     NOT NULL DEFAULT 'PRINCIPAL',
     numpcn        VARCHAR(5)      NOT NULL DEFAULT 'S/N',
     bairro_pcnte  VARCHAR(50)     NOT NULL DEFAULT 'CENTRO',
-    nmres         VARCHAR(50),
     ddtel_pcnte   VARCHAR(2),
     tel_pcnte     VARCHAR(9),
     ibge          VARCHAR(6),
@@ -186,7 +185,7 @@ def norm_tel(v):
 # Ordem exata das colunas no INSERT
 _COLS = (
     "cns", "num_cpf", "nome", "dtnasc", "sexo", "raca",
-    "maepcn", "logpcn", "numpcn", "bairro_pcnte", "nmres",
+    "maepcn", "logpcn", "numpcn", "bairro_pcnte",
     "ddtel_pcnte", "tel_pcnte",
     "ibge", "ceppcn", "co_lograd",
     "nome_social", "idade", "civil", "ocupacao",
@@ -207,10 +206,9 @@ def transformar(row: sqlite3.Row) -> Optional[tuple]:
         sexo    = norm_sexo(row["sexo"])
         raca    = norm_raca(row["raca"])
         maepcn  = _trunc(row["mae"],        50)
-        logpcn  = _trunc(row["endereco"],   50, default="PRINCIPAL")
-        numpcn  = _trunc(row["numero"],      5, default="S/N")
-        bairro  = _trunc(row["bairro"],     50, default="CENTRO")
-        nmres   = _trunc(row["naturalidade"],50)
+        logpcn  = _trunc(row["endereco"],   50) or None
+        numpcn  = _trunc(row["numero"],      5) or None
+        bairro  = _trunc(row["bairro"],     50) or None
         ddd, tel = norm_tel(row["tel"])
 
         # Novos campos BPA — nao existem no SQLite, ficam vazios
@@ -229,7 +227,7 @@ def transformar(row: sqlite3.Row) -> Optional[tuple]:
 
         return (
             cns, cpf, nome, dtnasc, sexo, raca,
-            maepcn, logpcn, numpcn, bairro, nmres,
+            maepcn, logpcn, numpcn, bairro,
             ddd, tel,
             ibge, ceppcn, co_lograd,
             nome_social, idade, civil, ocupacao,

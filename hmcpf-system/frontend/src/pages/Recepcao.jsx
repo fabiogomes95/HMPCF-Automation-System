@@ -64,10 +64,12 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   const [form, setForm] = useState({ ...vazio });
   const [pacienteId, setPacienteId] = useState(null);
   const [msg, setMsg] = useState("");
+  const [aviso, setAviso] = useState("");
   const [idade, setIdade] = useState("");
   const [loading, setLoading] = useState(false);
   const [erroCpf, setErroCpf] = useState("");
   const [erroCns, setErroCns] = useState("");
+  const [erroDtnasc, setErroDtnasc] = useState("");
   const [procedencia, setProcedencia] = useState("NORMAL");
   const [atdInfo, setAtdInfo] = useState({ data: "", hora: "", registro: "" });
   const debounceRef = useRef(null);
@@ -75,15 +77,22 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   const cpfRef = useRef(null);
   const ultimoRegistroRef = useRef(null);
   const ultimoTurnoRef = useRef(null);
+  const horaManualRef = useRef(false);
+  const dataManualRef = useRef(false);
 
   function sugerirAtdInfo() {
     const data = dataAtual();
     const hora = horaAtual();
     const turno = calcularTurno(hora);
     let registro = 1;
-    if (turno === ultimoTurnoRef.current && ultimoRegistroRef.current != null) {
-      registro = ultimoRegistroRef.current + 1;
+    if (ultimoRegistroRef.current != null) {
+      if (ultimoTurnoRef.current === null || turno === ultimoTurnoRef.current) {
+        // Mesmo turno (ou primeiro uso): incrementa
+        registro = ultimoRegistroRef.current + 1;
+      }
+      // Turno diferente: reseta para 01
     }
+    ultimoTurnoRef.current = turno;
     setAtdInfo({ data, hora, registro: formatRegistro(registro) });
   }
 
@@ -99,9 +108,32 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
       localStorage.setItem("terminal_nome", id);
       iniciarSessao(id, window.location.hostname);
     }
-    ultimoRegistroRef.current = null;
-    ultimoTurnoRef.current = null;
+    // Restaura último registro/turno do localStorage (sobrevive à navegação)
+    const regSalvo = parseInt(localStorage.getItem("ultimo_registro"), 10);
+    const turnoSalvo = localStorage.getItem("ultimo_turno");
+    ultimoRegistroRef.current = isNaN(regSalvo) ? null : regSalvo;
+    ultimoTurnoRef.current = turnoSalvo || null;
     sugerirAtdInfo();
+  }, []);
+
+  // Relógio em tempo real — atualiza hora/data automaticamente a cada 10s
+  // Para de atualizar o campo se o usuário tiver editado manualmente
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setAtdInfo(prev => {
+        const novaHora = horaAtual();
+        const novaData = dataAtual();
+        const atualizaHora = !horaManualRef.current && novaHora !== prev.hora;
+        const atualizaData = !dataManualRef.current && novaData !== prev.data;
+        if (!atualizaHora && !atualizaData) return prev;
+        return {
+          ...prev,
+          ...(atualizaHora ? { hora: novaHora } : {}),
+          ...(atualizaData ? { data: novaData } : {}),
+        };
+      });
+    }, 10000);
+    return () => clearInterval(tick);
   }, []);
 
   useEffect(() => {
@@ -154,6 +186,11 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
         setErroCns("");
         calcIdade(dtnasc);
         setMsg("✓ Paciente encontrado");
+        if (!p.dtnasc || p.dtnasc.trim() === "") {
+          setAviso("⚠️ Data de nascimento ausente — atualize");
+        } else {
+          setAviso("");
+        }
       } else if (!pacienteEncontradoRef.current) {
         setMsg("+ Novo paciente");
       }
@@ -244,11 +281,13 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   }
 
   function handleAtdDataChange(e) {
+    dataManualRef.current = true;
     const raw = formatDateBR(e.target.value);
     setAtdInfo((prev) => ({ ...prev, data: raw }));
   }
 
   function handleAtdHoraChange(e) {
+    horaManualRef.current = true;
     let v = e.target.value.replace(/[^0-9:]/g, "").slice(0, 5);
     if (v.length === 2 && !v.includes(":")) v += ":";
     setAtdInfo((prev) => ({ ...prev, hora: v }));
@@ -275,28 +314,62 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
 
   function validar() {
     const erros = [];
-    if (!form.nome.trim()) {
-      erros.push({ campo: "nome", msg: "Informe o nome do paciente." });
+
+    const nomeStr = (form.nome || "").trim();
+    if (!nomeStr) {
+      erros.push({ campo: "nome", msg: "Nome é obrigatório." });
+    } else if (nomeStr.length < 3) {
+      erros.push({ campo: "nome", msg: "Nome muito curto (mínimo 3 caracteres)." });
     }
+
     if (!form.sexo) {
-      erros.push({ campo: "sexo", msg: "Selecione o sexo do paciente." });
+      erros.push({ campo: "sexo", msg: "Selecione o sexo (M ou F)." });
     }
+
     const cpfOk = form.num_cpf && validarCPF(form.num_cpf);
     const cnsOk = form.cns && validarCNS(form.cns);
     if (!cpfOk && !cnsOk) {
       erros.push({ campo: "num_cpf", msg: "Informe um CPF ou CNS válido." });
     }
+
+    if (!form.dtnasc || form.dtnasc.trim() === "") {
+      erros.push({ campo: "dtnasc", msg: "Data de nascimento é obrigatória." });
+    } else {
+      const partes = form.dtnasc.split("/");
+      if (partes.length !== 3 || partes[2].length !== 4) {
+        erros.push({ campo: "dtnasc", msg: "Data de nascimento inválida." });
+      } else {
+        const nasc = new Date(
+          parseInt(partes[2], 10),
+          parseInt(partes[1], 10) - 1,
+          parseInt(partes[0], 10)
+        );
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        if (isNaN(nasc.getTime())) {
+          erros.push({ campo: "dtnasc", msg: "Data de nascimento inválida." });
+        } else if (nasc > hoje) {
+          erros.push({ campo: "dtnasc", msg: "Data de nascimento não pode ser futura." });
+        } else if ((hoje - nasc) / (1000 * 60 * 60 * 24 * 365) > 130) {
+          erros.push({ campo: "dtnasc", msg: "Data de nascimento absurda (mais de 130 anos)." });
+        }
+      }
+    }
+
     return erros;
   }
 
   async function handleAtendimento() {
     const erros = validar();
     if (erros.length > 0) {
+      setErroDtnasc(erros.find(e => e.campo === "dtnasc")?.msg || "");
       setMsg(erros[0].msg);
       return;
     }
+    setErroDtnasc("");
     setLoading(true);
     setMsg("");
+    setAviso("");
     try {
       const dados = prepararDados();
       let id = pacienteId;
@@ -326,29 +399,72 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
           registro: atdInfo.registro,
           procedencia,
         });
+        // Salva endereço para o botão Família — só atualiza se o paciente tem endereço
+        if (dados.logpcn || dados.numpcn || dados.bairro_pcnte) {
+          localStorage.setItem("ultimo_endereco", JSON.stringify({
+            logpcn:       dados.logpcn       || "",
+            numpcn:       dados.numpcn       || "",
+            bairro_pcnte: dados.bairro_pcnte || "",
+          }));
+        }
         const turno = calcularTurno(atdInfo.hora);
         const regNum = parseInt(atdInfo.registro, 10);
         if (!isNaN(regNum)) {
           ultimoRegistroRef.current = regNum;
           ultimoTurnoRef.current = turno;
+          localStorage.setItem("ultimo_registro", regNum);
+          localStorage.setItem("ultimo_turno", turno);
         }
         setMsg("✓ Registrado!");
       }
     } catch (err) {
-      const detail = err.response?.data?.detail || "Erro ao registrar";
-      setMsg(typeof detail === "string" ? detail : JSON.stringify(detail));
+      const data = err.response?.data || {};
+      const msg = data.detail || data.message || "Erro ao registrar";
+      setMsg(typeof msg === "string" ? msg : JSON.stringify(msg));
     } finally {
       setLoading(false);
     }
   }
 
+  function handleFamilia() {
+    try {
+      const salvo = localStorage.getItem("ultimo_endereco");
+      if (!salvo) return;
+      const { logpcn, numpcn, bairro_pcnte } = JSON.parse(salvo);
+      setForm(prev => ({
+        ...prev,
+        logpcn,
+        numpcn,
+        bairro_pcnte,
+      }));
+    } catch {
+      // localStorage corrompido — ignora
+    }
+  }
+
   function handleLimpar() {
+    // Persiste o registro/turno atuais para que sugerirAtdInfo possa incrementar
+    const regAtual = parseInt(atdInfo.registro, 10);
+    const turnoAtual = calcularTurno(atdInfo.hora || horaAtual());
+    if (!isNaN(regAtual) && regAtual > 0) {
+      ultimoRegistroRef.current = regAtual;
+      localStorage.setItem("ultimo_registro", regAtual);
+    }
+    ultimoTurnoRef.current = turnoAtual;
+    localStorage.setItem("ultimo_turno", turnoAtual);
+
+    // Reativa atualização automática de hora e data
+    horaManualRef.current = false;
+    dataManualRef.current = false;
+
     setForm({ ...vazio });
     setPacienteId(null);
     setMsg("");
+    setAviso("");
     setIdade("");
     setErroCpf("");
     setErroCns("");
+    setErroDtnasc("");
     setProcedencia("NORMAL");
     pacienteEncontradoRef.current = false;
     sugerirAtdInfo();
@@ -377,6 +493,11 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
           {msg && (
             <span className={`msg-badge ${msgOk ? "msg-badge-ok" : "msg-badge-erro"}`}>
               {msg}
+            </span>
+          )}
+          {aviso && (
+            <span className="msg-badge msg-badge-aviso">
+              {aviso}
             </span>
           )}
         </div>
@@ -429,6 +550,8 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
           cpfRef={cpfRef}
           erroCpf={erroCpf}
           erroCns={erroCns}
+          erroDtnasc={erroDtnasc}
+          onFamilia={handleFamilia}
         />
       </div>
     </div>

@@ -178,7 +178,7 @@ def abrir_pg() -> psycopg2.extensions.connection:
 
 _PAC_COLS = (
     "cns", "num_cpf", "nome", "dtnasc", "sexo", "raca",
-    "maepcn", "logpcn", "numpcn", "bairro_pcnte", "nmres",
+    "maepcn", "logpcn", "numpcn", "bairro_pcnte",
     "ddtel_pcnte", "tel_pcnte",
     "nome_social", "idade", "civil", "ocupacao",
     "responsavel", "cidade", "estado", "nacionalidade",
@@ -206,10 +206,9 @@ def _transformar_paciente(row: sqlite3.Row) -> Optional[tuple]:
         sexo    = norm_sexo(row["sexo"])
         raca    = norm_raca(row["raca"])
         maepcn  = limpar(row["mae"])  or None
-        logpcn  = limpar(row["endereco"], "principal")
-        numpcn  = limpar(row["numero"],   "s/n")
-        bairro  = limpar(row["bairro"],   "centro")
-        nmres   = limpar(row["naturalidade"]) or None  # município de residência
+        logpcn  = limpar(row["endereco"]) or None
+        numpcn  = limpar(row["numero"])   or None
+        bairro  = limpar(row["bairro"])   or None
         ddd, tel = norm_tel(row["tel"])
         nome_social  = limpar(row["nomeSocial"]) or None
         idade        = limpar(row["idade"])      or None
@@ -222,7 +221,7 @@ def _transformar_paciente(row: sqlite3.Row) -> Optional[tuple]:
         nacionalidade = limpar(row["naturalidade"]) or None
 
         return (cns, num_cpf, nome, dtnasc, sexo, raca,
-                maepcn, logpcn, numpcn, bairro, nmres,
+                maepcn, logpcn, numpcn, bairro,
                 ddd, tel,
                 nome_social, idade, civil, ocupacao,
                 responsavel, cidade, estado, nacionalidade)
@@ -278,41 +277,7 @@ def migrar_pacientes(sqlite_conn, pg_conn, dry_run: bool) -> Stats:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  PASSO 2 — Fix naturalidade → nacionalidade para pacientes já migrados
-# ══════════════════════════════════════════════════════════════════════════════
-
-def fix_nacionalidade(pg_conn, dry_run: bool) -> int:
-    """Copia NMRES → nacionalidade onde nacionalidade ainda está NULL."""
-    count_sql = """
-        SELECT COUNT(*) FROM pacientes
-         WHERE nacionalidade IS NULL
-           AND nmres IS NOT NULL
-           AND nmres != ''
-    """
-    update_sql = """
-        UPDATE pacientes
-           SET nacionalidade = nmres
-         WHERE nacionalidade IS NULL
-           AND nmres IS NOT NULL
-           AND nmres != ''
-    """
-    if dry_run:
-        with pg_conn.cursor() as cur:
-            cur.execute(count_sql)
-            n = cur.fetchone()[0]
-        log.info(f"[dry-run] Fix nacionalidade afetaria {n:,} linhas.")
-        return n
-
-    with pg_conn.cursor() as cur:
-        cur.execute(update_sql)
-        n = cur.rowcount
-    pg_conn.commit()
-    log.info(f"Fix nacionalidade: {n:,} pacientes atualizados (nmres → nacionalidade).")
-    return n
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  PASSO 3 — Atendimentos históricos
+#  PASSO 2 — Atendimentos históricos
 # ══════════════════════════════════════════════════════════════════════════════
 
 _ATD_COLS = ("paciente_id", "data_atendimento", "procedencia")
@@ -460,12 +425,8 @@ def main():
             st_pac = migrar_pacientes(sqlite_conn, pg_conn, args.dry_run)
             resultados.append(st_pac)
 
-            # 2. Fix naturalidade → nacionalidade
-            log.info("\n── PASSO 2: Fix naturalidade → nacionalidade ──")
-            fix_nacionalidade(pg_conn, args.dry_run)
-
-        # 3. Atendimentos
-        log.info("\n── PASSO 3: Atendimentos históricos ──")
+        # 2. Atendimentos
+        log.info("\n── PASSO 2: Atendimentos históricos ──")
         st_atd = migrar_atendimentos(sqlite_conn, pg_conn, args.dry_run)
         resultados.append(st_atd)
 

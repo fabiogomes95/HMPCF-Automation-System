@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import DateTime, Index, Integer, String, func
+from sqlalchemy import DateTime, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -23,10 +23,9 @@ class Paciente(Base):
     sexo:         Mapped[Optional[str]] = mapped_column(String(1),   nullable=True)
     raca:         Mapped[Optional[str]] = mapped_column(String(2),   nullable=True)
     maepcn:       Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    logpcn:       Mapped[str]           = mapped_column(String(100), nullable=False, server_default="PRINCIPAL")
-    numpcn:       Mapped[str]           = mapped_column(String(100), nullable=False, server_default="S/N")
-    bairro_pcnte: Mapped[str]           = mapped_column(String(100), nullable=False, server_default="CENTRO")
-    nmres:        Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    logpcn:       Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    numpcn:       Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    bairro_pcnte: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     ddtel_pcnte:  Mapped[Optional[str]] = mapped_column(String(2),  nullable=True)
     tel_pcnte:    Mapped[Optional[str]] = mapped_column(String(9),  nullable=True)
     ibge:         Mapped[str]           = mapped_column(String(6),  nullable=False, server_default="240360")
@@ -55,7 +54,7 @@ class Paciente(Base):
     )
 
     __table_args__ = (
-        Index("idx_pac_cpf",  "num_cpf"),
+        UniqueConstraint("num_cpf", name="uq_pac_cpf"),
         Index("idx_pac_cns",  "cns"),
         Index("idx_pac_nome", "nome"),
     )

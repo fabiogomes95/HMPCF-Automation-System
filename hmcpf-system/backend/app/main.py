@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -65,6 +66,22 @@ async def _validation(request, exc: ValidationError):
 @app.exception_handler(HMPCFError)
 async def _hmpcf_generic(request, exc: HMPCFError):
     return JSONResponse(status_code=500, content={"error": exc.code, "message": exc.message})
+
+
+@app.exception_handler(RequestValidationError)
+async def _pydantic_validation(request: Request, exc: RequestValidationError):
+    """Converte erros de validação Pydantic em mensagem legível."""
+    erros = exc.errors()
+    if erros:
+        primeiro = erros[0]
+        campo = " → ".join(str(p) for p in primeiro.get("loc", []) if p != "body")
+        msg = primeiro.get("msg", "Dados inválidos")
+        # Remove prefixo "Value error, " que o Pydantic adiciona em field_validators
+        msg = msg.removeprefix("Value error, ")
+        detail = f"{msg} (campo: {campo})" if campo else msg
+    else:
+        detail = "Dados inválidos"
+    return JSONResponse(status_code=422, content={"detail": detail})
 
 
 # ── Health ────────────────────────────────────────────────────────────────────

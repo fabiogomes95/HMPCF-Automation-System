@@ -73,6 +73,28 @@
   margin: 0;
 }
 
+/* ─── Botão Família ─── */
+.btn-familia {
+  flex-shrink: 0;
+  margin-left: 5px;
+  padding: 2px 8px;
+  font-size: 9px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.btn-familia:hover {
+  background: #1d4ed8;
+}
+
 /* ─── Section Title ─── */
 .section-title {
   text-align: center;
