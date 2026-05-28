@@ -54,13 +54,11 @@ enquanto o novo sistema é construído em paralelo.
  ┃     ┗ 📂 api/v1/endpoints/    # Pacientes · Recepção · Terminal
  ┣ 📂 frontend/                  # React + Vite (intocado, aguarda integração)
  ┣ 📂 docker/                    # Stack completa: PG + pgAdmin + backend
- ┣ 📂 docs/                      # Sessões de desenvolvimento + arquitetura
- ┣ 📂 scripts/                   # Scripts ETL e utilitários
- ┣ 📂 legacy_reference/          # Scripts de migração SQLite → PostgreSQL
+ ┣ 📂 docs/                      # Arquitetura, histórico e decisões técnicas
+ ┣ 📂 scripts/                   # Scripts ETL de uso único
  ┣ 📂 legado/                    # Sistema original completo (em produção)
  ┣ 📜 docker-compose.yml         # PostgreSQL local (desenvolvimento)
- ┣ 📜 INICIAR.bat                # Launcher Windows (backend + frontend)
- ┗ 📜 .env.example               # Template de variáveis de ambiente
+ ┗ 📜 INICIAR.bat                # Launcher Windows (backend + frontend)
 ```
 
 ---
@@ -96,8 +94,8 @@ docker compose up -d
 ### Configuração
 
 ```bash
-cp .env.example .env
-# edite .env com suas credenciais
+cp backend/.env.example backend/.env
+# edite com suas credenciais
 ```
 
 ---
