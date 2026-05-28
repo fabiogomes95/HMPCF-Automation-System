@@ -1,9 +1,9 @@
 @echo off
-cd /d "%~dp0hmcpf-system\backend"
+cd /d "%~dp0backend"
 start /min python -m uvicorn app.main:app --reload --port 8000
 timeout /t 4 /nobreak >nul
 
-cd /d "%~dp0hmcpf-system\frontend"
+cd /d "%~dp0frontend"
 start powershell -NoExit "npm run dev"
 timeout /t 5 /nobreak >nul
 

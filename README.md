@@ -1,12 +1,12 @@
 # HMPCF Automation System
 
-> Hospital automation system for patient check-in, SUS/BPA billing,
-> administrative management and audit. Built for a real hospital in
-> Extremoz/RN, Brazil.
+> Sistema de automação hospitalar para recepção digital, faturamento BPA/SUS,
+> gestão administrativa e auditoria. Desenvolvido para o Hospital Municipal
+> Pres. Café Filho — Extremoz/RN, Brasil.
 
-Sistema de automação hospitalar desenvolvido para otimizar processos
-operacionais, recepção, integração BPA/SUS, auditoria e fluxos
-administrativos em ambiente hospitalar real.
+Em migração ativa do sistema legado (Python/Eel/SQLite) para uma arquitetura
+moderna com **FastAPI + PostgreSQL + React/Vite**, mantendo todas as
+funcionalidades existentes e abrindo espaço para evolução.
 
 ---
 
@@ -14,76 +14,144 @@ administrativos em ambiente hospitalar real.
 
 O HMPCF Automation System integra recepção digital, automação BPA/SUS,
 painel de gestão, auditoria e sincronização com Google Sheets, reduzindo
-retrabalho manual e eliminando fichas em papel no Hospital Municipal
-Pres. Café Filho (Extremoz/RN).
+retrabalho manual e eliminando fichas em papel no hospital.
 
-## Funcionalidades
-
-- **Recepção Digital** — Cadastro de pacientes com busca por CPF, SUS ou
-  nome, validação automática de CPF e CNS, registro de atendimentos
-- **Automação BPA/SUS** — Geração de arquivos TXT posicionais, exportação
-  de lotes e digitação automática via RPA (PyAutoGUI)
-- **Painel de Gestão** — Indicadores em tempo real, integração com
-  Firebird (sistema legado), consulta de atendimentos paginada,
-  backup automático e exportação de relatórios Excel/PDF
-- **Auditoria** — Verificação de inconsistências, log centralizado de
-  operações e rastreabilidade completa
-- **Sincronização** — "Gari da Nuvem": envio automático de atendimentos
-  para Google Sheets a cada 10 segundos
+O sistema legado original (Python/Eel) continua em produção na pasta `legado/`
+enquanto o novo sistema é construído em paralelo.
 
 ---
 
-## Arquitetura
+## Status da Migração
+
+| Módulo | Legado | Novo Sistema |
+|--------|--------|--------------|
+| Recepção digital (cadastro, busca CPF/CNS/nome) | Produção | Em construção |
+| API REST (FastAPI + PostgreSQL) | — | **Funcionando** |
+| Busca agrupada de pacientes | — | **Funcionando** |
+| Autenticação / sessão multi-usuário | Não tinha | A fazer |
+| Faturamento BPA/SUS (geração TXT posicional) | Produção | A fazer |
+| Automação RPA (digitação automática) | Produção | A fazer |
+| Painel de gestão + Firebird | Produção | A fazer |
+| Relatórios Excel/PDF | Produção | A fazer |
+| Sincronização Google Sheets | Produção | A fazer |
+| Testes automatizados | Zero | 21 testes (e crescendo) |
+
+---
+
+## Arquitetura do Novo Sistema
 
 ```
 📦 HMPCF-Automation-System
- ┣ 📂 analise/                 # BI — Dashboards, relatórios Excel e PDF
- ┣ 📂 automacao/               # RPA — Robô digitador + Scripts de reparo
- ┃  ┣ 📜 executor_rpa.py      # Robô de digitação BPA (PyAutoGUI)
- ┃  ┣ 📜 MIGRAR_PACIENTES.py   # Migração SQLite → Firebird (CADCNS)
- ┃  ┣ 📜 REPARAR_FIREBIRD.py   # Reparo de registros corrompidos no Firebird
- ┃  ┣ 📜 padronizar_firebird.py# Padronização de campos CADCNS
- ┃  ┣ 📜 digitacao.py          # Geração de arquivos de produção TXT
- ┃  ┗ 📜 limpeza.py            # Extração/validação de CPF e CNS
- ┣ 📂 integracao/              # Integração SUS — conversores TXT
- ┣ 📂 scripts/                 # Scripts administrativos e manutenção
- ┣ 📂 web_recepcao/            # Frontend da Recepção (porta 8000)
- ┣ 📂 web_painel/              # Frontend do Painel de Gestão (porta 8001)
- ┣ 📂 hmcpf-system/            # Backend FastAPI (nova arquitetura)
- ┣ 📜 app_recepcao.py          # Servidor da Recepção (Eel)
- ┣ 📜 app_painel.py            # Servidor do Painel de Gestão (Eel)
- ┣ 📜 main.py                  # Launcher unificado
- ┣ 📜 config.py                # Configuração centralizada
- ┣ 📜 planilha_nuvem.py        # Sincronizador Google Sheets
- ┗ 📜 passo_a_passo.md         # Setup completo para nova máquina
+ ┣ 📂 backend/                   # API FastAPI — único módulo ativo
+ ┃  ┗ 📂 app/
+ ┃     ┣ 📜 main.py              # Entrypoint FastAPI (lifespan, CORS, handlers)
+ ┃     ┣ 📂 core/                # Config (pydantic-settings) + Exceções de domínio
+ ┃     ┣ 📂 database/            # Engine async, SessionLocal, get_db()
+ ┃     ┣ 📂 models/              # SQLAlchemy ORM (pacientes, atendimentos)
+ ┃     ┣ 📂 schemas/             # Pydantic v2 (Create / Update / Response)
+ ┃     ┣ 📂 repositories/        # Queries isoladas (BaseRepository + específicos)
+ ┃     ┣ 📂 services/            # Regras de negócio
+ ┃     ┗ 📂 api/v1/endpoints/    # Pacientes · Recepção · Terminal
+ ┣ 📂 frontend/                  # React + Vite (intocado, aguarda integração)
+ ┣ 📂 docker/                    # Stack completa: PG + pgAdmin + backend
+ ┣ 📂 docs/                      # Sessões de desenvolvimento + arquitetura
+ ┣ 📂 scripts/                   # Scripts ETL e utilitários
+ ┣ 📂 legacy_reference/          # Scripts de migração SQLite → PostgreSQL
+ ┣ 📂 legado/                    # Sistema original completo (em produção)
+ ┣ 📜 docker-compose.yml         # PostgreSQL local (desenvolvimento)
+ ┣ 📜 INICIAR.bat                # Launcher Windows (backend + frontend)
+ ┗ 📜 .env.example               # Template de variáveis de ambiente
 ```
 
 ---
 
-## O que foi feito nesta sessão (18/05/2026)
+## Como Rodar
 
-### Scripts criados
+### Windows (desenvolvimento)
 
-| Script | Função |
-|--------|--------|
-| `automacao/MIGRAR_PACIENTES.py` | Migração definitiva SQLite → Firebird com geração manual de ID, valores fixos, tratamentos de nulos e verificação de duplicidade |
-| `automacao/REPARAR_FIREBIRD.py` | Ferramenta de reparo de registros corrompidos no CADCNS (IDs nulos, endereços vazios, sexo inválido, etc.) |
-| `automacao/padronizar_firebird.py` | Padronização standalone de campos do CADCNS (LOGPCN, NUMPCN, etc.) |
-| `integracao/padronizar.py` | Padronização da tabela SQLite |
+```bat
+INICIAR.bat
+```
 
-### Correções e melhorias
+Sobe o backend (`uvicorn`, porta 8000) e o frontend Vite (porta 5173) e abre o navegador.
 
-| Arquivo | Mudança |
-|---------|---------|
-| `executor_rpa.py` | Troca `fdb` → `firebirdsql` (compatibilidade 64-bit). Adiciona `manter_acordado()` para evitar suspensão do Windows durante RPA Consulta em RAM (`_buscar_na_ram`) para acelerar preparação de lotes |
-| `limpeza.py` | Algoritmo de validação CNS corrigido (dígito verificador completo) |
-| `app_painel.py` | Import corrigido de `cpf_sus` → `limpeza`. Base de pacientes recarregada automaticamente |
-| `cadcns_repository.py` | Nova função `buscar_por_documento()` |
-| `robo_service.py` | Novas funções `buscar_paciente_no_banco()`, `preparar_lotes()`, `executar_pyautogui()` |
-| `processamento_service.py` | Nova função `processar_lista()` para extrair CPF/SUS |
-| `web_painel/robo.html` | Botão "Iniciar Automação" agora com `onclick` funcional |
-| `.env.example` | Configurações de produção descomentadas |
-| `requirements.txt` / `pyproject.toml` | Adicionadas dependências: `fdb`, `fastapi`, `uvicorn`, `pydantic`, `sqlalchemy` |
+### Docker (banco de dados local)
+
+```bash
+# Apenas PostgreSQL
+docker compose up -d
+
+# Stack completa: PG + pgAdmin + backend
+cd docker
+docker compose up -d
+```
+
+| Serviço | Porta | Acesso |
+|---------|-------|--------|
+| Backend API | 8000 | http://localhost:8000/docs |
+| Frontend | 5173 | http://localhost:5173 |
+| PostgreSQL | 5432 | — |
+| pgAdmin | 5050 | admin@hmpcf.local / admin |
+
+### Configuração
+
+```bash
+cp .env.example .env
+# edite .env com suas credenciais
+```
+
+---
+
+## Banco de Dados
+
+PostgreSQL como única fonte de verdade. Migrations versionadas via Alembic.
+
+```bash
+cd backend
+
+# Aplicar migrations
+alembic upgrade head
+
+# Nova migration após alterar models
+alembic revision --autogenerate -m "descricao"
+```
+
+**Dados migrados do legado:** 29.218 pacientes · 8.024 atendimentos
+
+---
+
+## Endpoints Ativos
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/api/v1/pacientes` | Listar pacientes |
+| POST | `/api/v1/pacientes` | Criar paciente |
+| GET | `/api/v1/pacientes/{id}` | Buscar por ID |
+| GET | `/api/v1/recepcao` | Listar atendimentos |
+| POST | `/api/v1/recepcao` | Registrar atendimento |
+| GET | `/api/v1/recepcao/pacientes/agrupado?q=...` | Busca agrupada com histórico |
+| GET | `/api/v1/recepcao/paciente/{id}` | Histórico completo do paciente |
+| GET | `/api/v1/terminal` | Status do sistema |
+
+Documentação interativa: http://localhost:8000/docs
+
+---
+
+## Testes
+
+```bash
+cd backend
+pytest tests/ -v
+```
+
+21 testes cobrindo pacientes, recepção e terminal.
+
+---
+
+## Legado
+
+O sistema original está íntegro em `legado/` e continua em produção.
+Consulte `legado/passo_a_passo.md` para instruções de operação do sistema legado.
 
 ---
 
