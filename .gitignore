@@ -26,3 +26,4 @@ frontend/.vite/
 legado/venv/
 legado/credentials.json
 legado/__pycache__/
+opencode/
