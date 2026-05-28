@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "hmpcf2024"
+    POSTGRES_PASSWORD: str
     POSTGRES_DB: str = "hmpcf"
 
     DATABASE_POOL_SIZE: int = 10

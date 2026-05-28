@@ -1,4 +1,5 @@
 import asyncio
+import os
 from typing import AsyncGenerator
 
 import pytest
@@ -15,8 +16,14 @@ from app.core.config import settings
 from app.models.paciente import Paciente
 from app.models.recepcao_atendimento import RecepcaoAtendimento
 
-# Usa PostgreSQL do Docker (configurado via .env)
-TEST_DATABASE_URL = settings.database_url
+# Banco de testes isolado — nunca aponta para o banco de produção.
+# Configure TEST_POSTGRES_DB no .env (ou variável de ambiente) para um banco dedicado.
+# Exemplo: TEST_POSTGRES_DB=hmpcf_test
+_test_db = os.getenv("TEST_POSTGRES_DB", "hmpcf_test")
+TEST_DATABASE_URL = (
+    f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+    f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{_test_db}"
+)
 
 
 @pytest.fixture(scope="session")

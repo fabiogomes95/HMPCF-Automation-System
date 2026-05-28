@@ -1,7 +1,7 @@
 # Plano — Ficha A4 idêntica ao legado
 
 ## 1. Copiar logo
-`web_recepcao/logo.png` → `hmcpf-system/frontend/public/logo.png`
+`web_recepcao/logo.png` → `hmpcf-system/frontend/public/logo.png`
 
 ## 2. Criar `components/FichaA4Print.jsx`
 Componente oculto na tela que renderiza o HTML exato do legado:

@@ -4,11 +4,11 @@
 
 Script ETL de migração única: SQLite (`hospital.db`) → PostgreSQL.
 
-Localização original: `hmcpf-system/migrate_to_postgres.py`
+Localização original: `hmpcf-system/migrate_to_postgres.py`
 
 Uso:
 ```bash
-cd hmcpf-system
+cd hmpcf-system
 python migrate_to_postgres.py --dry-run   # simula sem gravar
 python migrate_to_postgres.py             # migração real
 python migrate_to_postgres.py --truncate  # limpa e re-migra

@@ -9,7 +9,7 @@ para o PostgreSQL do novo sistema HMPCF.
 
 - Python 3.12+
 - PostgreSQL 16 rodando (local ou Docker)
-- `hospital.db` disponível (um nível acima de `hmcpf-system/`)
+- `hospital.db` disponível (um nível acima de `hmpcf-system/`)
 - Tabela `pacientes` já criada no PostgreSQL (via Alembic ou `recreate_pacientes.py`)
 
 ---
@@ -17,7 +17,7 @@ para o PostgreSQL do novo sistema HMPCF.
 ## Instalação das dependências
 
 ```bash
-cd hmcpf-system
+cd hmpcf-system
 pip install -r requirements.txt
 ```
 

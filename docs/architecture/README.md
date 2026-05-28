@@ -11,7 +11,7 @@ versionadas via Alembic.
 ## Estrutura de Diretórios
 
 ```
-hmcpf-system/
+hmpcf-system/
 ├── backend/                    # Aplicação FastAPI
 │   ├── app/                    # Código-fonte do novo sistema
 │   │   ├── main.py             # Entrypoint FastAPI (lifespan, CORS, exception handlers)
