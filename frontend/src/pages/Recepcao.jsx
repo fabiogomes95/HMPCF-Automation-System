@@ -67,6 +67,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   const [aviso, setAviso] = useState("");
   const [idade, setIdade] = useState("");
   const [loading, setLoading] = useState(false);
+  const [registrado, setRegistrado] = useState(false);
   const [erroCpf, setErroCpf] = useState("");
   const [erroCns, setErroCns] = useState("");
   const [erroDtnasc, setErroDtnasc] = useState("");
@@ -416,6 +417,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
           localStorage.setItem("ultimo_turno", turno);
         }
         setMsg("✓ Registrado!");
+        setRegistrado(true);
       }
     } catch (err) {
       const data = err.response?.data || {};
@@ -457,6 +459,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     horaManualRef.current = false;
     dataManualRef.current = false;
 
+    setRegistrado(false);
     setForm({ ...vazio });
     setPacienteId(null);
     setMsg("");
@@ -507,7 +510,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
         <button
           onClick={handleAtendimento}
           className="btn-atendimento"
-          disabled={loading}
+          disabled={loading || registrado}
         >
           {loading ? "Processando..." : edicao ? "Salvar Alterações" : "Registrar Atendimento"}
         </button>

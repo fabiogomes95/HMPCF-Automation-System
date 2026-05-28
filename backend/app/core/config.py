@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "HMPCF"
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
 
+    # CORS — em produção LAN pode ficar ["*"] pois frontend e backend são mesma origem
+    CORS_ORIGINS: list[str] = ["*"]
+
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "postgres"

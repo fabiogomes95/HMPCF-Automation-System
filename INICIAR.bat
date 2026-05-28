@@ -1,17 +1,55 @@
 @echo off
-cd /d "%~dp0backend"
-start /min python -m uvicorn app.main:app --reload --port 8000
+chcp 65001 >nul
+echo.
+echo ==========================================
+echo   HMPCF -- Sistema Hospitalar
+echo ==========================================
+echo.
+
+REM ── 1. PostgreSQL via Docker ──────────────────────────────────────────────
+echo [1/3] Verificando PostgreSQL...
+docker start hmpcf_postgres >nul 2>&1
+if %errorlevel% neq 0 (
+    echo  [!] Nao foi possivel iniciar o PostgreSQL.
+    echo      Verifique se o Docker Desktop esta aberto.
+    echo.
+)
 timeout /t 4 /nobreak >nul
 
-cd /d "%~dp0frontend"
-start powershell -NoExit "npm run dev"
+REM ── 2. Backend FastAPI ───────────────────────────────────────────────────
+echo [2/3] Iniciando backend...
+cd /d "%~dp0backend"
+
+if not exist ".venv\Scripts\python.exe" (
+    echo  [ERRO] Ambiente virtual nao encontrado em backend\.venv
+    echo         Execute no PowerShell:
+    echo           cd backend
+    echo           python -m venv .venv
+    echo           .venv\Scripts\pip install -r requirements.txt
+    echo.
+    pause
+    exit /b 1
+)
+
+start "HMPCF-Backend" /min .venv\Scripts\python.exe -m uvicorn app.main:app ^
+    --host 0.0.0.0 ^
+    --port 8001
+
 timeout /t 5 /nobreak >nul
 
-start http://localhost:5173
+REM ── 3. Abrir navegador ────────────────────────────────────────────────────
+echo [3/3] Abrindo HMPCF...
+start http://localhost:8001
+
 echo.
-echo ✅ HMPCF iniciado!
-echo    Backend: http://localhost:8000
-echo    Frontend: http://localhost:5173
+echo ==========================================
+echo  Sistema iniciado!
 echo.
-echo ⚠️  Feche esta janela para parar o frontend (navegador continua)
-echo    Para parar TUDO: feche o terminal do backend (minimizado na barra)
+echo  Acesso local : http://localhost:8001
+echo  Acesso LAN   : http://%COMPUTERNAME%:8001
+echo ==========================================
+echo.
+echo  Para encerrar: feche a janela minimizada
+echo  "HMPCF-Backend" na barra de tarefas.
+echo.
+pause
