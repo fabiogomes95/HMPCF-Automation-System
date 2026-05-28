@@ -140,10 +140,35 @@ pacientes:
 
 ---
 
-## 2026-05-28 — Reestruturação do repositório
+## 2026-05-28 — Reestruturação, limpeza e preparação para produção
 
-- Todo o sistema legado movido para `legado/`
-- Conteúdo de `hmcpf-system/` promovido para a raiz
-- Correção do nome: `hmcpf-system` → `hmpcf-system`
-- `INICIAR.bat` atualizado
-- Novo `README.md` refletindo o estado atual da migração
+### Reestruturação do repositório
+- Legado movido para `legado/` (intocado, em produção); novo sistema promovido para a raiz
+- Correção do nome: `hmcpf-system` → `hmpcf-system` em todos os docs
+- `INICIAR.bat` atualizado com caminhos corretos
+- Novo `README.md` com tabela de status da migração
+
+### Limpeza do repositório
+- Docs: 7 arquivos → 3 (`HISTORICO.md`, `ARQUITETURA.md`, `MIGRACAO.md`) — 4 diários de sessão consolidados
+- `frontend/verify_*.png` e `verify_*.mjs` removidos (artefatos de verificação manual)
+- `legacy_reference/` removido (versões descartadas do ETL)
+- `.env.example` duplicado da raiz removido
+- `.opencode/` removido e adicionado ao `.gitignore`
+
+### Fix de duplo registro acidental — `Recepcao.jsx`
+Estado `registrado` desabilita o botão "Registrar Atendimento" após sucesso até o usuário clicar "Limpar". Impede criar dois atendimentos idênticos no mesmo clique.
+
+### Preparação para produção
+- `backend/app/main.py`: `GZipMiddleware`, CORS dinâmico via `.env`, `StaticFiles` serve `frontend/dist/`, SPA fallback, `/docs` oculto em `ENVIRONMENT=production`
+- `INICIAR.bat`: usa `.venv\Scripts\python.exe`, `--host 0.0.0.0 --port 8001`, sem `--reload`, sem `npm run dev`, inicia Docker
+- Frontend buildado: 3 chunks (~229 KB total, ~75 KB gzip)
+- Scripts novos: `backup_postgres.bat` (pg_dump nativo), `instalar_servico.bat` (NSSM), `agendar_backup.ps1` (Task Scheduler)
+
+### Decisão: PostgreSQL nativo em produção (sem Docker)
+PC de recepção Windows 24h não se beneficia do Docker — adiciona ~500 MB RAM, ponto de falha extra (Docker Desktop) e complexidade desnecessária. PostgreSQL instala como serviço Windows nativo com auto-start.
+
+### Guia de deploy — `docs/DEPLOY_HOSPITAL.md`
+11 seções cobrindo do zero ao checklist final: instalação, banco, migração, build, serviço Windows, backup, rede LAN, 30 itens de checklist.
+
+### Próximo passo
+Deploy em PC de **teste** primeiro para validar migração e fluxo completo antes do PC real da recepção.
