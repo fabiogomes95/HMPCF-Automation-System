@@ -317,12 +317,13 @@ table.tabela-risco td {
 
   .page {
     width: 100%;
-    min-height: 100%;
+    height: 297mm;
     box-shadow: none;
     margin: 0;
     padding: 3mm 4mm;
     border: none;
     background: white;
+    overflow: hidden;
   }
 
   .no-print { display: none !important; }
