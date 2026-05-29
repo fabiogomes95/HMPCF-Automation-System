@@ -2,7 +2,7 @@
 .page {
   width: 210mm;
   min-height: 297mm;
-  padding: 3mm 4mm;
+  padding: 5mm 6mm;
   margin: 0 auto;
   background: #fff;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
@@ -320,7 +320,7 @@ table.tabela-risco td {
     height: 297mm;
     box-shadow: none;
     margin: 0;
-    padding: 3mm 4mm;
+    padding: 5mm 6mm;
     border: none;
     background: white;
     overflow: hidden;
