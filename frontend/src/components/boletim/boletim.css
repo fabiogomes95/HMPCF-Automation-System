@@ -336,16 +336,22 @@ table.tabela-risco td {
 
   .spacer-row { margin-bottom: 4px; }
 
-  /* Formulario ocupa a folha inteira; hipotese expande para preencher */
+  /* Formulario ocupa exatamente a folha A4 */
   #formBoletim {
     height: calc(297mm - 10mm);
   }
 
-  .ha-hipotese {
+  /* Cada linha de dados cresce igualmente para preencher o espaco */
+  .row {
     flex: 1 1 auto;
-    min-height: 90px;
-    height: auto;
-    max-height: none;
+  }
+
+  /* Areas de escrita: 4 linhas cada (4 x 25px = 100px), tamanho fixo */
+  .ha-anotacoes,
+  .ha-historia,
+  .ha-hipotese {
+    flex: none;
+    height: 100px;
   }
 
   .header-text          { font-size: 10px; }
@@ -364,9 +370,4 @@ table.tabela-risco td {
   table.tabela-risco td { padding: 3px 6px; height: 20px; font-size: 11px; }
   .color-box            { font-size: 11px; }
   .input-ssvv           { font-size: 11px; width: 40px !important; }
-
-  /* Alturas reduzidas no print — exatamente como o legado */
-  .ha-anotacoes { height: 55px; }
-  .ha-historia  { height: 90px; }
-  .ha-hipotese  { height: 90px; }
 }
