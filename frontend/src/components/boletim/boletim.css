@@ -310,17 +310,19 @@ table.tabela-risco td {
 
 @media print {
   body {
-    background: none;
+    background: white;
     padding: 0;
     margin: 0;
-    font-size: 11px;
   }
 
   .page {
+    width: 100%;
+    min-height: 100%;
     box-shadow: none;
     margin: 0;
     padding: 3mm 4mm;
     border: none;
+    background: white;
   }
 
   .no-print { display: none !important; }
