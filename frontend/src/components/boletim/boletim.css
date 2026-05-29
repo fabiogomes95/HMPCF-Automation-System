@@ -126,7 +126,7 @@
 
 .field {
   flex: 1;
-  padding: 5px 6px;
+  padding: 4px 6px;
   border-right: 1px solid #000;
   display: flex;
   align-items: center;
@@ -184,9 +184,8 @@ table.tabela-risco {
 
 table.tabela-risco td {
   border: 1px solid #000;
-  padding: 3px 8px;
-  height: 20px;
-  font-size: 11px;
+  padding: 4px 8px;
+  font-size: 13px;
   font-family: Arial, sans-serif;
 }
 
@@ -195,7 +194,7 @@ table.tabela-risco td {
   width: 14%;
   text-transform: uppercase;
   text-align: center;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .input-ssvv {
@@ -204,7 +203,7 @@ table.tabela-risco td {
   border: none;
   outline: none;
   background: transparent;
-  font-size: 11px;
+  font-size: 13px;
   font-family: Arial, sans-serif;
 }
 
@@ -358,7 +357,5 @@ table.tabela-risco td {
 
   /* Campos: herdam tela (15px, 25px de altura) — sem override */
 
-  table.tabela-risco td { padding: 2px 6px; height: 18px; font-size: 11px; }
-  .color-box            { font-size: 11px; }
-  .input-ssvv           { font-size: 11px; width: 40px !important; }
+  /* tabela risco herda da tela (13px, 4px padding) */
 }
