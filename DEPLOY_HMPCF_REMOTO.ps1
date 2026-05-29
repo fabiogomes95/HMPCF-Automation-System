@@ -436,34 +436,64 @@ $localIP = if ($localIPObj) { $localIPObj.IPAddress } else { "SEM-IP-CONFIGURADO
 # ETAPA 17 -- Atalho na area de trabalho
 # =============================================================================
 
-Log-Step "Criando atalho na area de trabalho..."
+Log-Step "Criando icone e atalho na area de trabalho..."
+
+# Converte o brasao PNG para ICO usando System.Drawing
+$pngPath = $INSTALL_ROOT + "\frontend\dist\img\brasao-extremoz.png"
+$icoPath = $INSTALL_ROOT + "\frontend\dist\img\hmpcf.ico"
+if (Test-Path $pngPath) {
+    try {
+        Add-Type -AssemblyName System.Drawing
+        $img    = [System.Drawing.Image]::FromFile($pngPath)
+        $thumb  = $img.GetThumbnailImage(64, 64, $null, [System.IntPtr]::Zero)
+        $bmp    = New-Object System.Drawing.Bitmap($thumb)
+        $hIcon  = $bmp.GetHicon()
+        $icon   = [System.Drawing.Icon]::FromHandle($hIcon)
+        $fs     = [System.IO.File]::OpenWrite($icoPath)
+        $icon.Save($fs)
+        $fs.Close()
+        $img.Dispose(); $bmp.Dispose()
+        Log-Ok ("Icone gerado: " + $icoPath)
+    } catch {
+        Log-Warn ("Nao foi possivel gerar o icone: " + $_)
+        $icoPath = $null
+    }
+} else {
+    Log-Warn "brasao-extremoz.png nao encontrado -- atalho usara icone padrao do navegador"
+    $icoPath = $null
+}
 
 $sistemaUrl  = "http://localhost:" + $APP_PORT
 $atalhoNome  = "HMPCF - Recepcao.lnk"
-$desktopPubl = [System.Environment]::GetFolderPath("CommonDesktopDirectory")  # C:\Users\Public\Desktop
+$desktopPubl = [System.Environment]::GetFolderPath("CommonDesktopDirectory")
 $atalhoPath  = Join-Path $desktopPubl $atalhoNome
 
-$wsh     = New-Object -ComObject WScript.Shell
-$atalho  = $wsh.CreateShortcut($atalhoPath)
-$atalho.TargetPath       = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-$atalho.Arguments        = "--app=$sistemaUrl --start-maximized"
-$atalho.WorkingDirectory = "C:\Program Files\Google\Chrome\Application"
-$atalho.Description      = "HMPCF - Sistema de Recepcao"
-$atalho.WindowStyle      = 1   # Normal
-
-# Tenta Chrome primeiro; cai para Edge se nao encontrar
-if (-not (Test-Path $atalho.TargetPath)) {
-    $atalho.TargetPath       = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-    $atalho.Arguments        = "--app=$sistemaUrl --start-maximized"
-    $atalho.WorkingDirectory = "C:\Program Files (x86)\Microsoft\Edge\Application"
+# Detecta Chrome ou Edge
+$chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+$edgePath   = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+if (Test-Path $chromePath) {
+    $browserExe = $chromePath
+    $browserDir = Split-Path $chromePath
+} else {
+    $browserExe = $edgePath
+    $browserDir = Split-Path $edgePath
 }
 
-# Usa o favicon do sistema como icone (se o backend estiver respondendo)
-$atalho.IconLocation = $atalho.TargetPath + ",0"
+$wsh    = New-Object -ComObject WScript.Shell
+$atalho = $wsh.CreateShortcut($atalhoPath)
+$atalho.TargetPath       = $browserExe
+$atalho.Arguments        = "--app=$sistemaUrl --start-maximized"
+$atalho.WorkingDirectory = $browserDir
+$atalho.Description      = "HMPCF - Sistema de Recepcao Hospitalar"
+$atalho.WindowStyle      = 1
+if ($icoPath -and (Test-Path $icoPath)) {
+    $atalho.IconLocation = $icoPath + ",0"
+}
 $atalho.Save()
 
 Log-Ok ("Atalho criado: " + $atalhoPath)
-Log-Ok ("  Abre: " + $sistemaUrl + " em modo app (sem barra de endereco)")
+Log-Ok ("  URL   : " + $sistemaUrl)
+Log-Ok ("  Icone : " + (if ($icoPath) { $icoPath } else { "padrao do navegador" }))
 
 # =============================================================================
 # RESUMO
