@@ -278,7 +278,7 @@ Log-Ok ".env de migracao criado"
 
 # migrate_to_postgres.py ja cria as tabelas (Etapa 0) e migra pacientes + atendimentos
 Log-Step "Criando tabelas e migrando dados (SQLite -> PostgreSQL)..."
-$migResult = & ".venv\Scripts\python.exe" migrate_to_postgres.py
+& ".venv\Scripts\python.exe" migrate_to_postgres.py
 if ($LASTEXITCODE -ne 0) { Log-Error "Migracao falhou. Veja scripts\migration.log" }
 Log-Ok "Migracao concluida"
 
@@ -370,12 +370,13 @@ $backupBat = @(
     ("set PGPASSWORD=" + $PG_PASSWORD),
     ("set BACKUP_DIR=" + $BACKUP_DIR),
     ("set DB=" + $PG_DB),
-    "set DATESTAMP=%date:~6,4%-%date:~3,2%-%date:~0,2%",
-    ("set OUTFILE=%BACKUP_DIR%\hmpcf_%DATESTAMP%.sql"),
+    ('if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"'),
+    ('for /f "tokens=*" %%a in (''powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd''"'') do set DATESTAMP=%%a'),
+    ('set OUTFILE=%BACKUP_DIR%\hmpcf_%DATESTAMP%.sql'),
     "echo Iniciando backup...",
     ('"' + $PG_BIN + '\pg_dump.exe" -U postgres -h localhost -d %DB% -f "%OUTFILE%"'),
-    "if %ERRORLEVEL% EQU 0 (echo [OK] Backup: %OUTFILE%) else (echo [ERRO] Falha no backup! & exit /b 1)",
-    "forfiles /p ""%BACKUP_DIR%"" /m *.sql /d -30 /c ""cmd /c del @path"" 2>nul"
+    'if %ERRORLEVEL% EQU 0 (echo [OK] Backup: %OUTFILE%) else (echo [ERRO] Falha no backup! & exit /b 1)',
+    ("powershell -NoProfile -Command ""Get-ChildItem '" + $BACKUP_DIR + "' -Filter *.sql | Where-Object { `$_.LastWriteTime -lt (Get-Date).AddDays(-30) } | Remove-Item -Force""")
 )
 $backupBat | Set-Content -Path ($INSTALL_ROOT + "\scripts\backup_postgres.bat") -Encoding ASCII
 Log-Ok "Script de backup criado"
@@ -421,7 +422,8 @@ try {
     Log-Warn ("Nao foi possivel verificar /health agora. Teste manualmente: http://localhost:" + $APP_PORT + "/health")
 }
 
-$localIP = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notlike "*Loopback*" -and $_.IPAddress -notlike "169.*" } | Select-Object -First 1).IPAddress
+$localIPObj = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notlike "*Loopback*" -and $_.IPAddress -notlike "169.*" } | Select-Object -First 1
+$localIP = if ($localIPObj) { $localIPObj.IPAddress } else { "SEM-IP-CONFIGURADO" }
 
 # =============================================================================
 # RESUMO

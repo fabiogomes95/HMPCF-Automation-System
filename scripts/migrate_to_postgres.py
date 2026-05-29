@@ -111,51 +111,67 @@ CO_LOGRAD_PADRAO = "081"
 #  DDL — estrutura das tabelas
 # ══════════════════════════════════════════════════════════════════════════════
 
+DDL_ENUMS = """
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'classificacao_risco_enum') THEN
+        CREATE TYPE classificacao_risco_enum AS ENUM
+            ('VERMELHO','LARANJA','AMARELO','VERDE','AZUL');
+    END IF;
+END $$;
+"""
+
 DDL_PACIENTES = """
 CREATE TABLE IF NOT EXISTS pacientes (
-    id            SERIAL       PRIMARY KEY,
-    cns           VARCHAR(15)  UNIQUE,
-    num_cpf       VARCHAR(11),
-    nome          VARCHAR(50),
+    id            SERIAL        PRIMARY KEY,
+    cns           VARCHAR(15)   UNIQUE,
+    num_cpf       VARCHAR(11)   UNIQUE,
+    nome          VARCHAR(100),
     dtnasc        VARCHAR(8),
-    sexo          CHAR(1)      CHECK (sexo IN ('M','F','I')),
+    sexo          CHAR(1)       CHECK (sexo IN ('M','F','I')),
     raca          VARCHAR(2),
-    maepcn        VARCHAR(50),
-    logpcn        VARCHAR(50)  NOT NULL DEFAULT 'PRINCIPAL',
-    numpcn        VARCHAR(5)   NOT NULL DEFAULT 'S/N',
-    bairro_pcnte  VARCHAR(50)  NOT NULL DEFAULT 'CENTRO',
+    maepcn        VARCHAR(100),
+    logpcn        VARCHAR(100),
+    numpcn        VARCHAR(100),
+    bairro_pcnte  VARCHAR(100),
     ddtel_pcnte   VARCHAR(2),
     tel_pcnte     VARCHAR(9),
-    ibge          VARCHAR(6),
-    ceppcn        VARCHAR(8),
-    co_lograd     VARCHAR(3),
-    nome_social   VARCHAR(50),
+    ibge          VARCHAR(6)    NOT NULL DEFAULT '240360',
+    ceppcn        VARCHAR(8)    NOT NULL DEFAULT '59575000',
+    co_lograd     VARCHAR(3)    NOT NULL DEFAULT '081',
+    nome_social   VARCHAR(100),
     idade         VARCHAR(50),
     civil         VARCHAR(50),
-    ocupacao      VARCHAR(50),
-    responsavel   VARCHAR(50),
-    cidade        VARCHAR(50),
+    ocupacao      VARCHAR(100),
+    responsavel   VARCHAR(100),
+    cidade        VARCHAR(100),
     estado        VARCHAR(2),
-    nacionalidade VARCHAR(50),
-    migrated_at   TIMESTAMPTZ  DEFAULT CURRENT_TIMESTAMP
+    nacionalidade VARCHAR(50)   NOT NULL DEFAULT '010',
+    naturalidade  VARCHAR(100),
+    migrated_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 """
 
 DDL_PACIENTES_IDX = [
     "CREATE INDEX IF NOT EXISTS idx_pac_cpf  ON pacientes (num_cpf);",
     "CREATE INDEX IF NOT EXISTS idx_pac_nome ON pacientes (nome);",
+    "CREATE INDEX IF NOT EXISTS idx_pac_cns  ON pacientes (cns);",
 ]
 
 DDL_ATENDIMENTOS = """
 CREATE TABLE IF NOT EXISTS recepcao_atendimentos (
-    id               SERIAL      PRIMARY KEY,
-    paciente_id      INTEGER     NOT NULL
-                                 REFERENCES pacientes(id)
-                                 ON DELETE RESTRICT ON UPDATE CASCADE,
-    data_atendimento TIMESTAMP   NOT NULL,
-    registro         SMALLINT,
-    procedencia      VARCHAR(100),
-    criado_em        TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    id                    SERIAL                    PRIMARY KEY,
+    paciente_id           INTEGER                   NOT NULL
+                                                    REFERENCES pacientes(id)
+                                                    ON DELETE RESTRICT ON UPDATE CASCADE,
+    data_atendimento      TIMESTAMPTZ               NOT NULL DEFAULT NOW(),
+    classificacao_risco   classificacao_risco_enum,
+    registro              SMALLINT,
+    procedencia           TEXT,
+    observacoes           TEXT,
+    historia_clinica      TEXT,
+    hipotese_diagnostica  TEXT,
+    created_at            TIMESTAMPTZ               NOT NULL DEFAULT NOW(),
+    updated_at            TIMESTAMPTZ               NOT NULL DEFAULT NOW()
 );
 """
 
@@ -393,6 +409,7 @@ def criar_tabelas(pg: psycopg2.extensions.connection, dry_run: bool) -> None:
         log.info("  [dry-run] DDL ignorado.")
         return
     with pg.cursor() as cur:
+        cur.execute(DDL_ENUMS)
         cur.execute(DDL_PACIENTES)
         for idx in DDL_PACIENTES_IDX:
             cur.execute(idx)
@@ -422,6 +439,7 @@ _COLS_PAC: tuple[str, ...] = (
     "ibge", "ceppcn", "co_lograd",
     "nome_social", "idade", "civil", "ocupacao",
     "responsavel", "cidade", "estado", "nacionalidade",
+    "naturalidade",
 )
 
 _INSERT_PAC = f"INSERT INTO pacientes ({', '.join(_COLS_PAC)}) VALUES %s"
@@ -433,22 +451,22 @@ def transformar_pac(row: sqlite3.Row, c: ContPac) -> Optional[tuple]:
     try:
         cns     = norm_cns(sus_raw)
         num_cpf = norm_cpf(cpf_raw)
-        nome    = _trunc(_get(row, "nome").upper(),     50)
+        nome    = _trunc(_get(row, "nome").upper(),      100)
         dtnasc  = norm_dtnasc(_get(row, "dn"))
         sexo    = norm_sexo(_get(row, "sexo"))
         raca    = norm_raca(_get(row, "raca"))
-        maepcn  = _trunc(_get(row, "mae"),              50) or "PRINCIPAL"
-        logpcn  = _trunc(_get(row, "endereco"),         50) or "PRINCIPAL"
-        numpcn  = _trunc(_get(row, "numero"),            5) or "S/N"
-        bairro  = _trunc(_get(row, "bairro"),           50) or "CENTRO"
+        maepcn  = _trunc(_get(row, "mae"),               100) or None
+        logpcn  = _trunc(_get(row, "endereco"),          100) or None
+        numpcn  = _trunc(_get(row, "numero"),            100) or None
+        bairro  = _trunc(_get(row, "bairro"),            100) or None
         ddd, tel = norm_tel(_get(row, "tel"))
 
-        nome_social  = _trunc(_get(row, "nomeSocial"),  50) or None
-        idade        = _trunc(_get(row, "idade"),        50) or None
-        civil        = _trunc(_get(row, "civil"),        50) or None
-        ocupacao     = _trunc(_get(row, "ocupacao"),     50) or None
-        responsavel  = _trunc(_get(row, "responsavel"),  50) or None
-        cidade       = _trunc(_get(row, "cidade"),       50) or None
+        nome_social  = _trunc(_get(row, "nomeSocial"),  100) or None
+        idade        = _trunc(_get(row, "idade"),         50) or None
+        civil        = _trunc(_get(row, "civil"),         50) or None
+        ocupacao     = _trunc(_get(row, "ocupacao"),     100) or None
+        responsavel  = _trunc(_get(row, "responsavel"),  100) or None
+        cidade       = _trunc(_get(row, "cidade"),       100) or None
         estado       = _get(row, "estado").upper()[:2] or None
         nacionalidade = _trunc(_get(row, "naturalidade"), 50) or None
 
@@ -467,6 +485,7 @@ def transformar_pac(row: sqlite3.Row, c: ContPac) -> Optional[tuple]:
             IBGE_PADRAO, CEPPCN_PADRAO, CO_LOGRAD_PADRAO,
             nome_social, idade, civil, ocupacao,
             responsavel, cidade, estado, nacionalidade,
+            None,   # naturalidade — nao mapeada nesta migracao
         )
 
     except Exception as exc:
