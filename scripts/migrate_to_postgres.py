@@ -29,7 +29,9 @@ Mapeamento de colunas (SQLite antigo -> PostgreSQL):
   responsavel -> responsavel
   cidade      -> cidade
   estado      -> estado
-  naturalidade-> nacionalidade
+  naturalidade-> naturalidade  (cidade/estado de nascimento)
+Campos com valores fixos (todos os registros):
+  nacionalidade = '010'  (codigo brasileiro — constante)
 
 Valores fixos injetados em todos os registros:
   ibge      = '240360'
@@ -93,6 +95,7 @@ except ImportError:
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 SQLITE_PATH       = os.getenv("SQLITE_PATH",       os.path.normpath(os.path.join(_BASE_DIR, "..", "legado", "hospital.db")))
+SQLITE_TABLE      = os.getenv("SQLITE_TABLE",      "pacientes")
 POSTGRES_HOST     = os.getenv("POSTGRES_HOST",     "localhost")
 POSTGRES_PORT     = int(os.getenv("POSTGRES_PORT", "5432"))
 POSTGRES_DB       = os.getenv("POSTGRES_DB",       "hmpcf")
@@ -468,7 +471,8 @@ def transformar_pac(row: sqlite3.Row, c: ContPac) -> Optional[tuple]:
         responsavel  = _trunc(_get(row, "responsavel"),  100) or None
         cidade       = _trunc(_get(row, "cidade"),       100) or None
         estado       = _get(row, "estado").upper()[:2] or None
-        nacionalidade = _trunc(_get(row, "naturalidade"), 50) or None
+        nacionalidade = "010"
+        naturalidade_val = _trunc(_get(row, "naturalidade"), 100) or None
 
         # Alertas de qualidade (nao descartam o registro)
         if not nome:
@@ -485,7 +489,7 @@ def transformar_pac(row: sqlite3.Row, c: ContPac) -> Optional[tuple]:
             IBGE_PADRAO, CEPPCN_PADRAO, CO_LOGRAD_PADRAO,
             nome_social, idade, civil, ocupacao,
             responsavel, cidade, estado, nacionalidade,
-            None,   # naturalidade — nao mapeada nesta migracao
+            naturalidade_val,
         )
 
     except Exception as exc:
@@ -508,9 +512,9 @@ def migrar_pacientes(sq: sqlite3.Connection, pg, dry_run: bool) -> ContPac:
     c = ContPac()
     cpfs_pg, cnss_pg = _carregar_chaves_pg(pg)
 
-    rows = sq.execute("SELECT * FROM pacientes ORDER BY ROWID").fetchall()
+    rows = sq.execute(f"SELECT * FROM {SQLITE_TABLE} ORDER BY ROWID").fetchall()
     c.total = len(rows)
-    log.info(f"  SQLite pacientes: {c.total:,}")
+    log.info(f"  SQLite {SQLITE_TABLE}: {c.total:,}")
     if not c.total:
         log.warning("  Nenhum registro na tabela pacientes do SQLite.")
         return c
