@@ -5,6 +5,134 @@ estão no código e nos commits do git.
 
 ---
 
+## 2026-05-29 — Migração definitiva, auditoria e boletim A4
+
+### Script de migração (`scripts/migrate_to_postgres.py`)
+
+Script único que substitui `recreate_pacientes.py` (deletado). Roda uma vez
+só no PC da recepção e faz tudo:
+
+1. Cria as tabelas `pacientes` e `recepcao_atendimentos` com DDL exato do
+   modelo SQLAlchemy (inclui enum `classificacao_risco_enum`, colunas
+   `created_at`, `updated_at`, `observacoes`, `historia_clinica`, etc.)
+2. Migra pacientes do SQLite legado (colunas antigas: `cpf`, `sus`, `dn`,
+   `mae`, `endereco`…) para o PostgreSQL (colunas BPA: `num_cpf`, `cns`,
+   `dtnasc`, `maepcn`, `logpcn`…)
+3. Migra atendimentos vinculando pelo CPF/CNS do paciente
+4. Validação matemática CPF (mod 11) e CNS (DATASUS checksum)
+5. Deduplicação por CPF/CNS exato; idempotente (pode rodar N vezes)
+
+**Mapeamento de colunas (SQLite → PostgreSQL):**
+
+| SQLite (legado) | PostgreSQL | Tratamento |
+|---|---|---|
+| `cpf` | `num_cpf` | Validação mod 11 |
+| `sus` | `cns` | Validação DATASUS |
+| `nome` | `nome` | UPPERCASE |
+| `dn` | `dtnasc` | Formato YYYYMMDD |
+| `mae` | `maepcn` | — |
+| `endereco` | `logpcn` | — |
+| `numero` | `numpcn` | — |
+| `bairro` | `bairro_pcnte` | — |
+| `tel` | `ddtel_pcnte` + `tel_pcnte` | Separa DDD do número |
+| `naturalidade` | `naturalidade` | Campo livre (cidade de nascimento) |
+| — | `nacionalidade` | Fixo: `"010"` (código BPA brasileiro) |
+| — | `ibge` | Fixo: `"240360"` |
+| — | `ceppcn` | Fixo: `"59575000"` |
+| — | `co_lograd` | Fixo: `"081"` |
+
+**Bug corrigido — timezone nos atendimentos:**  
+`_carregar_chaves_atd` retornava `datetime` com timezone (TIMESTAMPTZ do PG)
+mas o parser SQLite retorna naive datetime. Comparação sempre falhava → todos
+os atendimentos eram re-inseridos a cada execução (duplicatas). Fix:
+`.replace(tzinfo=None)` ao carregar do PG.
+
+**Dedup de atendimentos (`_dedup_atendimentos`):**  
+Função nova que roda antes de inserir. Remove duplicatas existentes no PG
+(mantém o menor `id` de cada grupo `paciente_id + data_atendimento`).
+Garante idempotência mesmo após execuções parciais anteriores.
+
+**`SQLITE_TABLE` env var:**  
+Permite escolher a tabela de origem (`pacientes` ou `pacientes_backup`).
+Padrão: `pacientes`. Útil para migrar do backup quando a tabela principal
+já foi renomeada para formato BPA.
+
+---
+
+### Auditoria pré-produção (10 correções)
+
+**Frontend (`Recepcao.jsx`):**
+- Bug data de nascimento: mensagem de erro persistia mesmo após digitar data
+  válida. Fix: `handleDtnascChange` chama `setErroDtnasc("")` quando
+  `calcularIdade(fmt)` retorna objeto válido.
+- Modo edição: `setRegistrado(false)` no `useEffect` de edição, evitando
+  botão "Salvar" travado.
+
+**Backend:**
+- `recepcao_service.py`: `remover()` usava `repo.get()` (base, sem carregar
+  relação); corrigido para `get_by_id()`.
+- `schemas/paciente.py`: `PacienteUpdate.nacionalidade` era `Optional=None`,
+  podendo gerar erro 500 (coluna NOT NULL). Fix: default `"010"`.
+- `models/recepcao_atendimento.py`: `BigInteger` → `Integer` para `id` e
+  `paciente_id`, consistente com `pacientes.id`.
+- DDL `pacientes`: VARCHAR expandidos para 100 chars, colunas nullable
+  corrigidas, `naturalidade` adicionada, `num_cpf UNIQUE`.
+- DDL `recepcao_atendimentos`: adicionadas colunas que o backend usa mas
+  não estavam no DDL — `classificacao_risco` (enum), `observacoes`,
+  `historia_clinica`, `hipotese_diagnostica`, `created_at`, `updated_at`.
+  Coluna `criado_em` renomeada para `created_at`.
+
+**Deploy (`DEPLOY_HMPCF_REMOTO.ps1`):**
+- `hospital.db`: verificação virou `Log-Warn` (não aborta o deploy; usuário
+  copia manualmente antes da migração).
+- `CREATE DATABASE`: removido `LC_COLLATE 'Portuguese_Brazil.1252'` com
+  `ENCODING 'UTF8'` — combinação incompatível que poderia rejeitar no PG 16.
+- `$localIP`: null-check (exibe `SEM-IP-CONFIGURADO` em vez de `null`).
+- `$migResult`: variável não usada removida.
+
+**`backup_postgres.bat`:**
+- `BACKUP_DIR`: corrigido para `C:\HMPCF\backups` (antes ficava em pasta
+  separada na raiz do disco).
+- Data: migrada de `%date:~6,4%` (dependente de locale) para
+  `powershell Get-Date -Format 'yyyy-MM-dd'` (locale-safe).
+- `mkdir` adicionado antes de usar o diretório.
+- Limpeza de backups antigos via `Get-ChildItem` (substituiu `forfiles`
+  que pode não existir em todos os Windows).
+
+---
+
+### Estrutura de pastas (produção)
+
+```
+C:\HMPCF\
+  backups\          ← backups diários do PostgreSQL (antes: C:\hmpcf-backups)
+  logs\             ← logs do serviço backend (antes: C:\hmpcf-logs)
+  nssm\             ← binário do NSSM (antes: C:\nssm)
+  legado\
+    hospital.db     ← banco SQLite original (copiado manualmente, no .gitignore)
+  backend\
+  frontend\
+  scripts\
+```
+
+---
+
+### Boletim de Atendimento A4
+
+Layout final aprovado. Especificação completa em `docs/BOLETIM_A4.md`.
+
+**Resumo das medidas:**
+- Margem: 5 mm topo/baixo, 6 mm laterais
+- Labels: 15 px bold | Inputs: 15 px | Padding linha: 4 px
+- Títulos de seção: 14 px bold, fundo `#d9d9d9`
+- Cabeçalho: logo 70 px, nome hospital 16 px, prioridades 13 px
+- Tabela risco: 13 px, padding 4 px
+- Áreas de escrita: crescem igualmente (`flex: 1 1 0`) para preencher o
+  restante da folha após os dados do paciente
+- Placeholders (DD/MM/AAAA, 000.000.000-00) invisíveis na impressão
+
+---
+
 ## 2026-05-24 — Migração inicial e módulos core
 
 **Contexto:** Primeiro dia do novo sistema. Banco de dados zerado, código do zero.
