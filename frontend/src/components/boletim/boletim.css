@@ -225,7 +225,7 @@ table.tabela-risco td {
 
 .ha-anotacoes { height: 75px; }
 .ha-historia  { height: 125px; }
-.ha-hipotese  { height: 125px; border-bottom: 1px solid #000; }
+.ha-hipotese  { height: 125px; border-bottom: none; }
 
 /* ─── Procedência (no-print, fora do A4) ─── */
 .procedencia-container {
