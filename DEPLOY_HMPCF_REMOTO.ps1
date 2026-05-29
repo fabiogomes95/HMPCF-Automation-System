@@ -433,6 +433,39 @@ $localIPObj = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.Interface
 $localIP = if ($localIPObj) { $localIPObj.IPAddress } else { "SEM-IP-CONFIGURADO" }
 
 # =============================================================================
+# ETAPA 17 -- Atalho na area de trabalho
+# =============================================================================
+
+Log-Step "Criando atalho na area de trabalho..."
+
+$sistemaUrl  = "http://localhost:" + $APP_PORT
+$atalhoNome  = "HMPCF - Recepcao.lnk"
+$desktopPubl = [System.Environment]::GetFolderPath("CommonDesktopDirectory")  # C:\Users\Public\Desktop
+$atalhoPath  = Join-Path $desktopPubl $atalhoNome
+
+$wsh     = New-Object -ComObject WScript.Shell
+$atalho  = $wsh.CreateShortcut($atalhoPath)
+$atalho.TargetPath       = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+$atalho.Arguments        = "--app=$sistemaUrl --start-maximized"
+$atalho.WorkingDirectory = "C:\Program Files\Google\Chrome\Application"
+$atalho.Description      = "HMPCF - Sistema de Recepcao"
+$atalho.WindowStyle      = 1   # Normal
+
+# Tenta Chrome primeiro; cai para Edge se nao encontrar
+if (-not (Test-Path $atalho.TargetPath)) {
+    $atalho.TargetPath       = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+    $atalho.Arguments        = "--app=$sistemaUrl --start-maximized"
+    $atalho.WorkingDirectory = "C:\Program Files (x86)\Microsoft\Edge\Application"
+}
+
+# Usa o favicon do sistema como icone (se o backend estiver respondendo)
+$atalho.IconLocation = $atalho.TargetPath + ",0"
+$atalho.Save()
+
+Log-Ok ("Atalho criado: " + $atalhoPath)
+Log-Ok ("  Abre: " + $sistemaUrl + " em modo app (sem barra de endereco)")
+
+# =============================================================================
 # RESUMO
 # =============================================================================
 
