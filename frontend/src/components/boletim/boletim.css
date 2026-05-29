@@ -358,4 +358,7 @@ table.tabela-risco td {
   /* Campos: herdam tela (15px, 25px de altura) — sem override */
 
   /* tabela risco herda da tela (13px, 4px padding) */
+
+  /* Oculta placeholders (DD/MM/AAAA, 000.000.000-00, etc) na impressao */
+  input::placeholder { color: transparent; }
 }
