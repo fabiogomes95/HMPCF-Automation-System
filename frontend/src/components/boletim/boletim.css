@@ -361,4 +361,7 @@ table.tabela-risco td {
 
   /* Oculta placeholders (DD/MM/AAAA, 000.000.000-00, etc) na impressao */
   input::placeholder { color: transparent; }
+
+  /* Remove borda solida final do hipotese — linhas do gradiente ja fazem o limite */
+  .ha-hipotese { border-bottom: none; }
 }
