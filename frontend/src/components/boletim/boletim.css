@@ -334,17 +334,7 @@ table.tabela-risco td {
   .section-title    { page-break-after: avoid; }
   .handwriting-area { page-break-inside: avoid; }
 
-  /* Formulario ocupa exatamente a folha A4 */
-  #formBoletim { height: calc(297mm - 10mm); }
-
-  /* Rows comuns: compactas, altura natural */
-  .row { flex: 0 0 auto; }
-
-  /* Spacer-rows absorvem o espaco restante — preenchem a folha */
-  .spacer-row {
-    flex: 1 1 auto;
-    margin-bottom: 0;
-  }
+  .spacer-row { margin-bottom: 4px; }
 
   /* Areas de escrita: 4 linhas cada, tamanho fixo */
   .ha-anotacoes,
