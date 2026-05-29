@@ -336,6 +336,18 @@ table.tabela-risco td {
 
   .spacer-row { margin-bottom: 4px; }
 
+  /* Formulario ocupa a folha inteira; hipotese expande para preencher */
+  #formBoletim {
+    height: calc(297mm - 10mm);
+  }
+
+  .ha-hipotese {
+    flex: 1 1 auto;
+    min-height: 90px;
+    height: auto;
+    max-height: none;
+  }
+
   .header-text          { font-size: 10px; }
   .header-logo img      { max-height: 40px; }
 
