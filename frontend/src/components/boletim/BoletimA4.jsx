@@ -41,7 +41,6 @@ export default function BoletimA4({
   return (
     <div className="page">
       <form id="formBoletim">
-        <div className="patient-info-section">
         <HeaderHospital />
 
         {/* ─── Linha 1: Data / Hora / Registro ─── */}
@@ -330,27 +329,14 @@ export default function BoletimA4({
           </div>
         </div>
 
-        </div>{/* fim patient-info-section */}
+        <div className="section-title">ANOTAÇÕES DA CLASSIFICAÇÃO</div>
+        <div className="handwriting-area ha-anotacoes"></div>
 
-        <div className="annotations-section">
-        {/* ─── Anotações da Classificação ─── */}
-        <div className="writing-section">
-          <div className="section-title">ANOTAÇÕES DA CLASSIFICAÇÃO</div>
-          <div className="handwriting-area"></div>
-        </div>
+        <div className="section-title">RESUMO DA HISTÓRIA CLÍNICA</div>
+        <div className="handwriting-area ha-historia"></div>
 
-        {/* ─── Resumo da História Clínica ─── */}
-        <div className="writing-section">
-          <div className="section-title">RESUMO DA HISTÓRIA CLÍNICA</div>
-          <div className="handwriting-area"></div>
-        </div>
-
-        {/* ─── Hipótese Diagnóstica ─── */}
-        <div className="writing-section">
-          <div className="section-title">HIPÓTESE DIAGNÓSTICA</div>
-          <div className="handwriting-area"></div>
-        </div>
-        </div>{/* fim annotations-section */}
+        <div className="section-title">HIPÓTESE DIAGNÓSTICA</div>
+        <div className="handwriting-area ha-hipotese"></div>
       </form>
     </div>
   );
