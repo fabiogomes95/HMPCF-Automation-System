@@ -211,6 +211,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     setAtdInfo({ data: edicao.data, hora: edicao.hora, registro: "" });
     setProcedencia(edicao.procedencia || "NORMAL");
     setMsg("");
+    setRegistrado(false);
     pacienteEncontradoRef.current = false;
     if (edicao.documento) {
       autoBusca(edicao.documento);
@@ -262,6 +263,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     const fmt = formatDateBR(e.target.value);
     setForm((prev) => ({ ...prev, dtnasc: fmt }));
     calcIdade(fmt);
+    if (calcularIdade(fmt)) setErroDtnasc("");
   }
 
   function handleTelChange(e) {

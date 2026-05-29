@@ -168,7 +168,7 @@ class RecepcaoService:
         return RecepcaoResponse.model_validate(atendimento)
 
     async def remover(self, atendimento_id: int) -> None:
-        atendimento = await self._repo.get(atendimento_id)
+        atendimento = await self._repo.get_by_id(atendimento_id)
         if atendimento is None:
             raise NotFoundError("Atendimento", atendimento_id)
         await self._repo.delete(atendimento)

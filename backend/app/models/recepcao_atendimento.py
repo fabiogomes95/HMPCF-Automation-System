@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import BigInteger, DateTime, Enum, ForeignKey, Index, SmallInteger, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, SmallInteger, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -27,10 +27,10 @@ class RecepcaoAtendimento(Base):
 
     __tablename__ = "recepcao_atendimentos"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     paciente_id: Mapped[int] = mapped_column(
-        BigInteger,
+        Integer,
         ForeignKey("pacientes.id", ondelete="RESTRICT"),
         nullable=False,
     )

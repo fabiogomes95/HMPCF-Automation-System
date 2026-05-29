@@ -188,7 +188,7 @@ class PacienteUpdate(BaseSchema):
     responsavel:  Optional[str] = None
     cidade:       Optional[str] = None
     estado:       Optional[str] = None
-    nacionalidade: Optional[str] = None
+    nacionalidade: Optional[str] = "010"
     naturalidade: Optional[str] = None
 
     @field_validator("nome", mode="before")
