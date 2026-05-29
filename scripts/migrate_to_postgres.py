@@ -2,37 +2,52 @@
 """
 migrate_to_postgres.py
 ======================
-ETL profissional: hospital.db (SQLite legado) → PostgreSQL (HMPCF novo)
+Migracao completa: hospital.db (SQLite legado) -> PostgreSQL (HMPCF)
 
-SEGURANÇA:
-  - hospital.db é aberto em modo SOMENTE LEITURA (file URI mode=ro).
-  - Nenhuma escrita, alteração ou exclusão ocorre no banco legado.
-  - Credenciais carregadas exclusivamente via .env / variáveis de ambiente.
+O que este script faz (rode uma unica vez):
+  1. Cria as tabelas pacientes e recepcao_atendimentos no PostgreSQL
+  2. Migra todos os pacientes com validacao matematica de CPF (mod 11) e CNS (DATASUS)
+  3. Migra os atendimentos vinculando pelo CPF/CNS do paciente
+  4. Deduplicacao automatica: registros ja existentes no PG sao pulados
 
-IDEMPOTÊNCIA:
-  - Pacientes: deduplicação por CPF/CNS exato; sem doc → fuzzy nome ≥90% + dtnasc.
-  - Atendimentos: deduplicação por paciente_id + data_atendimento exato.
-  - Registros já existentes no PostgreSQL são pulados.
+Mapeamento de colunas (SQLite antigo -> PostgreSQL):
+  cpf         -> num_cpf      (validacao CPF mod 11)
+  sus         -> cns          (validacao CNS DATASUS)
+  nome        -> nome         (UPPERCASE)
+  nomeSocial  -> nome_social
+  dn          -> dtnasc       (formato YYYYMMDD)
+  sexo        -> sexo         (M / F / I)
+  raca        -> raca         (codigos 01-05)
+  mae         -> maepcn
+  endereco    -> logpcn
+  numero      -> numpcn
+  bairro      -> bairro_pcnte
+  tel         -> ddtel_pcnte + tel_pcnte  (separa DDD do numero)
+  idade       -> idade
+  civil       -> civil
+  ocupacao    -> ocupacao
+  responsavel -> responsavel
+  cidade      -> cidade
+  estado      -> estado
+  naturalidade-> nacionalidade
 
-VALIDAÇÃO:
-  - CPF: algoritmo de dígito verificador (módulo 11). Rejeita inválidos.
-  - CNS: soma ponderada divisível por 11, primeiro dígito em {1,2,7,8,9}.
-  - Datas: formatos YYYY-MM-DD, DD/MM/YYYY, YYYYMMDD, DDMMYYYY → YYYYMMDD.
+Valores fixos injetados em todos os registros:
+  ibge      = '240360'
+  ceppcn    = '59575000'
+  co_lograd = '081'
 
 USO:
-    python migrate_to_postgres.py              # migração completa (pacientes + atendimentos)
-    python migrate_to_postgres.py --dry-run    # simula sem gravar no PG
+    python migrate_to_postgres.py              # migracao completa
+    python migrate_to_postgres.py --dry-run    # simula sem gravar no PostgreSQL
     python migrate_to_postgres.py --truncate   # limpa tabelas e re-migra
 
-CONFIGURAÇÃO (arquivo .env ou variáveis de ambiente):
-    SQLITE_PATH        caminho do hospital.db   (padrão: ../hospital.db)
-    POSTGRES_HOST      host do PostgreSQL        (padrão: localhost)
-    POSTGRES_PORT      porta                     (padrão: 5432)
-    POSTGRES_DB        nome do banco             (padrão: hmpcf)
-    POSTGRES_USER      usuário                   (padrão: postgres)
-    POSTGRES_PASSWORD  senha                     (obrigatório)
-    LOG_FILE           arquivo de log            (padrão: migration.log)
-    BATCH_SIZE         registros por INSERT      (padrão: 500)
+CONFIGURACAO (.env ou variaveis de ambiente):
+    SQLITE_PATH        caminho do hospital.db   (padrao: ../legado/hospital.db)
+    POSTGRES_HOST      host do PostgreSQL        (padrao: localhost)
+    POSTGRES_PORT      porta                     (padrao: 5432)
+    POSTGRES_DB        nome do banco             (padrao: hmpcf)
+    POSTGRES_USER      usuario                   (padrao: postgres)
+    POSTGRES_PASSWORD  senha                     (obrigatorio — sem valor padrao)
 """
 
 from __future__ import annotations
@@ -46,28 +61,24 @@ import sys
 import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime
-from difflib import SequenceMatcher
 from typing import Optional, Tuple
 
-# ── Dependências externas ─────────────────────────────────────────────────────
+# ── Dependencias externas ─────────────────────────────────────────────────────
 
 try:
     import psycopg2
     from psycopg2.extras import execute_values
 except ImportError:
-    print("ERRO: psycopg2 nao instalado.")
-    print("      Execute: pip install psycopg2-binary")
+    print("ERRO: psycopg2 nao instalado. Execute: pip install psycopg2-binary")
     sys.exit(1)
 
 try:
     from dotenv import load_dotenv
     _BASE_DIR_ENV = os.path.dirname(os.path.abspath(__file__))
-    # Tenta scripts/.env primeiro; fallback para backend/.env
-    _env_paths = [
+    for _env_path in [
         os.path.join(_BASE_DIR_ENV, ".env"),
         os.path.join(_BASE_DIR_ENV, "..", "backend", ".env"),
-    ]
-    for _env_path in _env_paths:
+    ]:
         if os.path.exists(_env_path):
             load_dotenv(_env_path)
             break
@@ -79,10 +90,9 @@ except ImportError:
 #  CONFIGURACAO
 # ══════════════════════════════════════════════════════════════════════════════
 
-_BASE_DIR       = os.path.dirname(os.path.abspath(__file__))
-_SQLITE_DEFAULT = os.path.normpath(os.path.join(_BASE_DIR, "..", "hospital.db"))
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-SQLITE_PATH       = os.getenv("SQLITE_PATH",       _SQLITE_DEFAULT)
+SQLITE_PATH       = os.getenv("SQLITE_PATH",       os.path.normpath(os.path.join(_BASE_DIR, "..", "legado", "hospital.db")))
 POSTGRES_HOST     = os.getenv("POSTGRES_HOST",     "localhost")
 POSTGRES_PORT     = int(os.getenv("POSTGRES_PORT", "5432"))
 POSTGRES_DB       = os.getenv("POSTGRES_DB",       "hmpcf")
@@ -91,13 +101,68 @@ POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "")
 LOG_FILE          = os.getenv("LOG_FILE",           os.path.join(_BASE_DIR, "migration.log"))
 BATCH_SIZE        = int(os.getenv("BATCH_SIZE",    "500"))
 
-_DEFAULT_IBGE      = "240360"
-_DEFAULT_CEPPCN    = "59575000"
-_DEFAULT_CO_LOGRAD = "081"
-_DEFAULT_NACIONAL  = "010"
+# Valores fixos de faturamento BPA (injetados em todos os registros)
+IBGE_PADRAO      = "240360"
+CEPPCN_PADRAO    = "59575000"
+CO_LOGRAD_PADRAO = "081"
 
-# Limiar de similaridade para dedup fuzzy de nome (0.0 – 1.0)
-FUZZY_THRESHOLD = 0.90
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  DDL — estrutura das tabelas
+# ══════════════════════════════════════════════════════════════════════════════
+
+DDL_PACIENTES = """
+CREATE TABLE IF NOT EXISTS pacientes (
+    id            SERIAL       PRIMARY KEY,
+    cns           VARCHAR(15)  UNIQUE,
+    num_cpf       VARCHAR(11),
+    nome          VARCHAR(50),
+    dtnasc        VARCHAR(8),
+    sexo          CHAR(1)      CHECK (sexo IN ('M','F','I')),
+    raca          VARCHAR(2),
+    maepcn        VARCHAR(50),
+    logpcn        VARCHAR(50)  NOT NULL DEFAULT 'PRINCIPAL',
+    numpcn        VARCHAR(5)   NOT NULL DEFAULT 'S/N',
+    bairro_pcnte  VARCHAR(50)  NOT NULL DEFAULT 'CENTRO',
+    ddtel_pcnte   VARCHAR(2),
+    tel_pcnte     VARCHAR(9),
+    ibge          VARCHAR(6),
+    ceppcn        VARCHAR(8),
+    co_lograd     VARCHAR(3),
+    nome_social   VARCHAR(50),
+    idade         VARCHAR(50),
+    civil         VARCHAR(50),
+    ocupacao      VARCHAR(50),
+    responsavel   VARCHAR(50),
+    cidade        VARCHAR(50),
+    estado        VARCHAR(2),
+    nacionalidade VARCHAR(50),
+    migrated_at   TIMESTAMPTZ  DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+DDL_PACIENTES_IDX = [
+    "CREATE INDEX IF NOT EXISTS idx_pac_cpf  ON pacientes (num_cpf);",
+    "CREATE INDEX IF NOT EXISTS idx_pac_nome ON pacientes (nome);",
+]
+
+DDL_ATENDIMENTOS = """
+CREATE TABLE IF NOT EXISTS recepcao_atendimentos (
+    id               SERIAL      PRIMARY KEY,
+    paciente_id      INTEGER     NOT NULL
+                                 REFERENCES pacientes(id)
+                                 ON DELETE RESTRICT ON UPDATE CASCADE,
+    data_atendimento TIMESTAMP   NOT NULL,
+    registro         SMALLINT,
+    procedencia      VARCHAR(100),
+    criado_em        TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+DDL_ATD_IDX = [
+    "CREATE INDEX IF NOT EXISTS idx_atd_pac  ON recepcao_atendimentos (paciente_id);",
+    "CREATE INDEX IF NOT EXISTS idx_atd_data ON recepcao_atendimentos (data_atendimento);",
+]
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -107,23 +172,20 @@ FUZZY_THRESHOLD = 0.90
 def _setup_logging() -> logging.Logger:
     logger = logging.getLogger("hmpcf.migration")
     logger.setLevel(logging.DEBUG)
-    fmt = logging.Formatter(
-        "%(asctime)s [%(levelname)-8s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    fmt = logging.Formatter("%(asctime)s [%(levelname)-8s] %(message)s", "%Y-%m-%d %H:%M:%S")
+
     fh = logging.FileHandler(LOG_FILE, encoding="utf-8", mode="w")
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(fmt)
+
     try:
-        stdout_w = open(
-            sys.stdout.fileno(), mode="w", encoding="utf-8",
-            errors="replace", closefd=False,
-        )
+        out = open(sys.stdout.fileno(), mode="w", encoding="utf-8", errors="replace", closefd=False)
     except Exception:
-        stdout_w = sys.stdout
-    ch = logging.StreamHandler(stdout_w)
+        out = sys.stdout
+    ch = logging.StreamHandler(out)
     ch.setLevel(logging.INFO)
     ch.setFormatter(fmt)
+
     logger.addHandler(fh)
     logger.addHandler(ch)
     return logger
@@ -139,20 +201,15 @@ log = _setup_logging()
 def conectar_sqlite() -> sqlite3.Connection:
     path = os.path.abspath(SQLITE_PATH)
     if not os.path.exists(path):
-        raise FileNotFoundError(
-            f"Banco SQLite nao encontrado: {path}\n"
-            f"Verifique SQLITE_PATH no arquivo .env."
-        )
+        raise FileNotFoundError(f"Banco SQLite nao encontrado: {path}")
     uri = "file:///{}?mode=ro".format(path.replace("\\", "/").lstrip("/"))
     conn = sqlite3.connect(uri, uri=True)
     conn.row_factory = sqlite3.Row
-    log.info(f"SQLite (read-only) => {path}")
+    log.info(f"SQLite (read-only): {path}")
     return conn
 
 
 def conectar_postgres() -> psycopg2.extensions.connection:
-    if not POSTGRES_PASSWORD:
-        log.warning("POSTGRES_PASSWORD nao definida. Configure o arquivo .env.")
     conn = psycopg2.connect(
         host=POSTGRES_HOST,
         port=POSTGRES_PORT,
@@ -162,23 +219,18 @@ def conectar_postgres() -> psycopg2.extensions.connection:
         connect_timeout=10,
     )
     conn.autocommit = False
-    log.info(
-        f"PostgreSQL => {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB} "
-        f"(user={POSTGRES_USER})"
-    )
+    log.info(f"PostgreSQL: {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
     return conn
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  VALIDAÇÃO MATEMÁTICA — CPF e CNS
+#  VALIDACAO MATEMATICA — CPF e CNS
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _validar_cpf(cpf: str) -> bool:
-    """Valida CPF pelo algoritmo de dígito verificador (módulo 11)."""
+def _cpf_valido(cpf: str) -> bool:
+    """Valida CPF pelo algoritmo de digito verificador (modulo 11)."""
     d = re.sub(r"\D", "", str(cpf or ""))
-    if len(d) != 11:
-        return False
-    if re.match(r"^(\d)\1{10}$", d):  # sequências como 00000000000
+    if len(d) != 11 or re.match(r"^(\d)\1{10}$", d):
         return False
     soma = sum(int(d[i]) * (10 - i) for i in range(9))
     dig1 = 0 if soma % 11 < 2 else 11 - soma % 11
@@ -189,123 +241,67 @@ def _validar_cpf(cpf: str) -> bool:
     return dig2 == int(d[10])
 
 
-def _validar_cns(cns: str) -> bool:
-    """
-    Valida CNS/SUS pelo algoritmo padrão do DATASUS:
-    - Exatamente 15 dígitos
-    - Primeiro dígito em {1, 2, 7, 8, 9}
-    - Soma ponderada (dígito[i] × (15 - i)) divisível por 11
-    """
+def _cns_valido(cns: str) -> bool:
+    """Valida CNS/SUS pelo algoritmo DATASUS (soma ponderada divisivel por 11)."""
     d = re.sub(r"\D", "", str(cns or ""))
-    if len(d) != 15:
+    if len(d) != 15 or d[0] not in "12789":
         return False
-    if d[0] not in "12789":
-        return False
-    soma = sum(int(d[i]) * (15 - i) for i in range(15))
-    return soma % 11 == 0
+    return sum(int(d[i]) * (15 - i) for i in range(15)) % 11 == 0
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  NORMALIZAÇÃO DE NOME — para comparação fuzzy
+#  NORMALIZACAO DE DADOS
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _normalizar_nome(nome: str) -> str:
-    """
-    Normaliza nome para comparação fuzzy:
-    maiúsculas, remove acentos, colapsa espaços múltiplos.
-    """
-    if not nome:
-        return ""
-    s = nome.strip().upper()
-    s = unicodedata.normalize("NFD", s)
-    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
-    return re.sub(r"\s+", " ", s)
-
-
-def _similaridade(a: str, b: str) -> float:
-    """Retorna similaridade entre dois strings (0.0 – 1.0)."""
-    return SequenceMatcher(None, a, b).ratio()
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  TRANSFORMADORES DE DADOS
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _str(v) -> str:
+def _s(v) -> str:
     return str(v).strip() if v is not None else ""
 
 
-def _row_get(row: sqlite3.Row, key: str, default: str = "") -> str:
+def _get(row: sqlite3.Row, key: str) -> str:
+    """Acesso seguro a sqlite3.Row — retorna '' para colunas inexistentes."""
     try:
         v = row[key]
-        return _str(v) if v is not None else default
+        return _s(v)
     except (IndexError, KeyError):
-        return default
+        return ""
 
 
-def apenas_numeros(v) -> str:
-    return re.sub(r"\D", "", _str(v))
-
-
-def limpar(v, default: str = "") -> str:
-    s = _str(v)
-    return s if s else default
-
-
-def truncar(v, maxlen: int, default: str = "") -> str:
-    s = limpar(v, default)
+def _trunc(v, maxlen: int, default: str = "") -> str:
+    s = _s(v) or default
     return s[:maxlen]
 
 
+def _apenas_num(v) -> str:
+    return re.sub(r"\D", "", _s(v))
+
+
 def norm_cpf(v) -> Optional[str]:
-    """
-    Normaliza e VALIDA CPF matematicamente.
-    Retorna None para CPFs inválidos, formatados incorretamente ou
-    com dígito verificador errado.
-    """
-    d = apenas_numeros(v)
-    if not d:
+    d = _apenas_num(v)
+    if not d or len(d) != 11:
         return None
-    if len(d) > 11:
-        return None  # provavelmente CNS no campo CPF
-    if len(d) != 11:
-        return None  # CPF incompleto — não há como validar
-    if not _validar_cpf(d):
-        return None
-    return d
+    return d if _cpf_valido(d) else None
 
 
 def norm_cns(v) -> Optional[str]:
-    """
-    Normaliza e VALIDA CNS matematicamente.
-    Retorna None para CNS inválidos.
-    """
-    d = apenas_numeros(v)
-    if not d:
+    d = _apenas_num(v)
+    if not d or len(d) != 15:
         return None
-    if not _validar_cns(d):
-        return None
-    return d[:15]
+    return d if _cns_valido(d) else None
 
 
 def norm_dtnasc(v) -> Optional[str]:
-    """
-    Converte data de nascimento para YYYYMMDD.
-    Formatos aceitos: YYYY-MM-DD, DD/MM/YYYY, YYYYMMDD, DDMMYYYY.
-    Retorna None para datas inválidas ou fora de 1900–hoje.
-    """
-    raw = _str(v)
+    """Converte data de nascimento para YYYYMMDD. Aceita DD/MM/YYYY, YYYY-MM-DD, YYYYMMDD."""
+    raw = _s(v)
     if not raw:
         return None
-    num = re.sub(r"\D", "", raw)
-    tentativas = [
+    num = _apenas_num(raw)
+    ano_max = datetime.now().year
+    for fmt, alvo in [
         ("%Y-%m-%d", raw),
         ("%d/%m/%Y", raw),
         ("%Y%m%d",   num),
         ("%d%m%Y",   num),
-    ]
-    ano_max = datetime.now().year
-    for fmt, alvo in tentativas:
+    ]:
         if len(alvo) not in (8, 10):
             continue
         try:
@@ -318,44 +314,36 @@ def norm_dtnasc(v) -> Optional[str]:
 
 
 def norm_sexo(v) -> str:
-    s = _str(v).upper()
+    s = _s(v).upper()[:1]
     return s if s in ("M", "F") else "I"
 
 
 _RACA_MAP: dict[str, str] = {
-    "1": "01", "01": "01",
-    "2": "02", "02": "02",
-    "3": "03", "03": "03",
-    "4": "04", "04": "04",
-    "5": "05", "05": "05",
-    "BRANCA":   "01",
-    "PRETA":    "02",
-    "PARDA":    "03",
-    "AMARELA":  "04",
-    "INDIGENA": "05",
+    "1": "01", "01": "01", "BRANCA":   "01",
+    "2": "02", "02": "02", "PRETA":    "02",
+    "3": "03", "03": "03", "PARDA":    "03",
+    "4": "04", "04": "04", "AMARELA":  "04",
+    "5": "05", "05": "05", "INDIGENA": "05",
 }
 
 
 def norm_raca(v) -> Optional[str]:
-    raw = _str(v).upper()
-    raw = raw.replace("Í", "I").replace("É", "E")
+    raw = _s(v).upper()
+    raw = unicodedata.normalize("NFD", raw)
+    raw = "".join(c for c in raw if unicodedata.category(c) != "Mn")
     return _RACA_MAP.get(raw)
 
 
-def norm_telefone(v) -> Tuple[Optional[str], Optional[str]]:
-    digits = apenas_numeros(v)
-    if not digits:
+def norm_tel(v) -> Tuple[Optional[str], Optional[str]]:
+    """Separa DDD (2 digitos) do numero de telefone."""
+    d = _apenas_num(v)
+    if not d:
         return None, None
-    if digits.startswith("0") and len(digits) >= 11:
-        digits = digits[1:]
-    if len(digits) >= 10:
-        return digits[:2], digits[2:11]
-    return None, digits[:9]
-
-
-def norm_estado(v) -> Optional[str]:
-    s = _str(v)
-    return s[:2].upper() if s else None
+    if d.startswith("0") and len(d) >= 11:
+        d = d[1:]
+    if len(d) >= 10:
+        return d[:2], d[2:11]
+    return None, d[:9] or None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -363,21 +351,32 @@ def norm_estado(v) -> Optional[str]:
 # ══════════════════════════════════════════════════════════════════════════════
 
 @dataclass
-class Contadores:
-    total:          int  = 0
-    migrados:       int  = 0
-    ignorados:      int  = 0   # duplicatas por CPF/CNS exato
-    ignorados_fuzzy: int = 0   # duplicatas por nome+dtnasc fuzzy
-    cpf_invalido:   int  = 0   # barrados por CPF matematicamente inválido
-    cns_invalido:   int  = 0   # barrados por CNS matematicamente inválido
-    sem_documento:  int  = 0   # barrados por não ter CPF nem CNS válido
-    erros:          int  = 0
-    avisos:         list = field(default_factory=list)
+class ContPac:
+    total:        int  = 0
+    migrados:     int  = 0
+    duplicatas:   int  = 0
+    sem_doc:      int  = 0
+    cpf_invalido: int  = 0
+    cns_invalido: int  = 0
+    erros:        int  = 0
+    avisos:       list = field(default_factory=list)
 
-    def avisar(self, cpf: str, msg: str) -> None:
-        entrada = f"CPF={cpf or '?'} | {msg}"
-        self.avisos.append(entrada)
-        log.debug(f"AVISO {entrada}")
+    def avisar(self, ref: str, msg: str) -> None:
+        self.avisos.append(f"{ref or '?'} | {msg}")
+        log.debug(f"AVISO {ref or '?'} | {msg}")
+
+    @property
+    def ok(self) -> bool:
+        return self.erros == 0
+
+
+@dataclass
+class ContAtd:
+    total:      int = 0
+    migrados:   int = 0
+    duplicatas: int = 0
+    sem_pac:    int = 0
+    erros:      int = 0
 
     @property
     def ok(self) -> bool:
@@ -385,402 +384,219 @@ class Contadores:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  EXTRACT
+#  DDL — criar tabelas
 # ══════════════════════════════════════════════════════════════════════════════
 
-def extrair(sqlite_conn: sqlite3.Connection) -> list:
-    cur = sqlite_conn.cursor()
-    cur.execute("SELECT * FROM pacientes ORDER BY ROWID")
-    rows = cur.fetchall()
-    log.info(f"Extraidos {len(rows):,} registros do SQLite (tabela: pacientes).")
-    return rows
+def criar_tabelas(pg: psycopg2.extensions.connection, dry_run: bool) -> None:
+    log.info("Criando tabelas (se nao existirem)...")
+    if dry_run:
+        log.info("  [dry-run] DDL ignorado.")
+        return
+    with pg.cursor() as cur:
+        cur.execute(DDL_PACIENTES)
+        for idx in DDL_PACIENTES_IDX:
+            cur.execute(idx)
+        cur.execute(DDL_ATENDIMENTOS)
+        for idx in DDL_ATD_IDX:
+            cur.execute(idx)
+    pg.commit()
+    log.info("  Tabelas pacientes e recepcao_atendimentos prontas.")
 
 
-def carregar_chaves_pg(pg_conn) -> tuple[set, set, dict]:
-    """
-    Carrega do PostgreSQL:
-    - CPFs já existentes (set)
-    - CNSs já existentes (set)
-    - Nomes normalizados agrupados por dtnasc (dict[dtnasc → list[nome]])
-      apenas para registros SEM CPF e SEM CNS válidos.
-    """
-    with pg_conn.cursor() as cur:
-        cur.execute("SELECT num_cpf FROM pacientes WHERE num_cpf IS NOT NULL")
-        cpfs = {r[0] for r in cur.fetchall()}
-
-        cur.execute("SELECT cns FROM pacientes WHERE cns IS NOT NULL")
-        cnss = {r[0] for r in cur.fetchall()}
-
-        cur.execute(
-            "SELECT nome, dtnasc FROM pacientes "
-            "WHERE num_cpf IS NULL AND cns IS NULL "
-            "  AND nome IS NOT NULL AND dtnasc IS NOT NULL"
-        )
-        nomes_pg: dict[str, list[str]] = {}
-        for row in cur.fetchall():
-            nome_norm = _normalizar_nome(row[0])
-            dtnasc    = row[1]
-            if nome_norm and dtnasc:
-                nomes_pg.setdefault(dtnasc, []).append(nome_norm)
-
-    log.info(
-        f"PostgreSQL: {len(cpfs):,} CPFs | {len(cnss):,} CNSs | "
-        f"{sum(len(v) for v in nomes_pg.values()):,} nomes s/ doc (para fuzzy)"
-    )
-    return cpfs, cnss, nomes_pg
+def truncar_tabelas(pg: psycopg2.extensions.connection) -> None:
+    log.warning("TRUNCANDO recepcao_atendimentos e pacientes (RESTART IDENTITY)...")
+    with pg.cursor() as cur:
+        cur.execute("TRUNCATE TABLE recepcao_atendimentos, pacientes RESTART IDENTITY;")
+    pg.commit()
+    log.warning("Tabelas truncadas.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  TRANSFORM
+#  ETAPA 1 — PACIENTES
 # ══════════════════════════════════════════════════════════════════════════════
 
-_COLS: tuple[str, ...] = (
+_COLS_PAC: tuple[str, ...] = (
     "cns", "num_cpf", "nome", "dtnasc", "sexo", "raca",
     "maepcn", "logpcn", "numpcn", "bairro_pcnte",
     "ddtel_pcnte", "tel_pcnte",
     "ibge", "ceppcn", "co_lograd",
     "nome_social", "idade", "civil", "ocupacao",
-    "responsavel", "cidade", "estado",
-    "nacionalidade", "naturalidade",
+    "responsavel", "cidade", "estado", "nacionalidade",
 )
 
-_INSERT_SQL = f"INSERT INTO pacientes ({', '.join(_COLS)}) VALUES %s"
+_INSERT_PAC = f"INSERT INTO pacientes ({', '.join(_COLS_PAC)}) VALUES %s"
 
 
-def transformar(row: sqlite3.Row, c: Contadores) -> Optional[tuple]:
-    cpf_raw = _row_get(row, "cpf")
+def transformar_pac(row: sqlite3.Row, c: ContPac) -> Optional[tuple]:
+    cpf_raw = _get(row, "cpf")
+    sus_raw = _get(row, "sus")
     try:
-        cns     = norm_cns(_row_get(row, "sus"))
+        cns     = norm_cns(sus_raw)
         num_cpf = norm_cpf(cpf_raw)
-        nome    = truncar(_row_get(row, "nome"),        100) or None
-        dtnasc  = norm_dtnasc(_row_get(row, "dn"))
-        sexo    = norm_sexo(_row_get(row, "sexo"))
-        raca    = norm_raca(_row_get(row, "raca"))
-        maepcn  = truncar(_row_get(row, "mae"),         100) or None
-        logpcn  = truncar(_row_get(row, "endereco"),    100) or None
-        numpcn  = truncar(_row_get(row, "numero"),      100) or None
-        bairro  = truncar(_row_get(row, "bairro"),      100) or None
-        ddd, tel = norm_telefone(_row_get(row, "tel"))
+        nome    = _trunc(_get(row, "nome").upper(),     50)
+        dtnasc  = norm_dtnasc(_get(row, "dn"))
+        sexo    = norm_sexo(_get(row, "sexo"))
+        raca    = norm_raca(_get(row, "raca"))
+        maepcn  = _trunc(_get(row, "mae"),              50) or "PRINCIPAL"
+        logpcn  = _trunc(_get(row, "endereco"),         50) or "PRINCIPAL"
+        numpcn  = _trunc(_get(row, "numero"),            5) or "S/N"
+        bairro  = _trunc(_get(row, "bairro"),           50) or "CENTRO"
+        ddd, tel = norm_tel(_get(row, "tel"))
 
-        ibge       = _DEFAULT_IBGE
-        ceppcn     = _DEFAULT_CEPPCN
-        co_lograd  = _DEFAULT_CO_LOGRAD
+        nome_social  = _trunc(_get(row, "nomeSocial"),  50) or None
+        idade        = _trunc(_get(row, "idade"),        50) or None
+        civil        = _trunc(_get(row, "civil"),        50) or None
+        ocupacao     = _trunc(_get(row, "ocupacao"),     50) or None
+        responsavel  = _trunc(_get(row, "responsavel"),  50) or None
+        cidade       = _trunc(_get(row, "cidade"),       50) or None
+        estado       = _get(row, "estado").upper()[:2] or None
+        nacionalidade = _trunc(_get(row, "naturalidade"), 50) or None
 
-        nome_social  = truncar(_row_get(row, "nomeSocial"), 100) or None
-        idade        = truncar(_row_get(row, "idade"),        50) or None
-        civil        = truncar(_row_get(row, "civil"),        50) or None
-        ocupacao     = truncar(_row_get(row, "ocupacao"),    100) or None
-        responsavel  = truncar(_row_get(row, "responsavel"), 100) or None
-        cidade       = truncar(_row_get(row, "cidade"),      100) or None
-        estado       = norm_estado(_row_get(row, "estado"))
-        nacionalidade = _DEFAULT_NACIONAL
-        naturalidade  = truncar(_row_get(row, "naturalidade"), 100) or None
-
-        # Alertas de qualidade
+        # Alertas de qualidade (nao descartam o registro)
         if not nome:
-            c.avisar(cpf_raw, "NOME vazio")
-        if not num_cpf and not cns:
-            c.avisar(cpf_raw, "sem CPF nem CNS valido")
-        if _row_get(row, "dn") and dtnasc is None:
-            c.avisar(cpf_raw, f"data invalida ignorada: '{_row_get(row, 'dn')}'")
-        if sexo == "I" and limpar(_row_get(row, "sexo")):
-            c.avisar(cpf_raw, f"sexo nao reconhecido: '{_row_get(row, 'sexo')}'")
+            c.avisar(cpf_raw or sus_raw, "NOME vazio")
+        if _get(row, "dn") and dtnasc is None:
+            c.avisar(cpf_raw or sus_raw, f"data invalida ignorada: '{_get(row, 'dn')}'")
+        if sexo == "I" and _get(row, "sexo"):
+            c.avisar(cpf_raw or sus_raw, f"sexo nao reconhecido: '{_get(row, 'sexo')}'")
 
         return (
             cns, num_cpf, nome, dtnasc, sexo, raca,
             maepcn, logpcn, numpcn, bairro,
             ddd, tel,
-            ibge, ceppcn, co_lograd,
+            IBGE_PADRAO, CEPPCN_PADRAO, CO_LOGRAD_PADRAO,
             nome_social, idade, civil, ocupacao,
-            responsavel, cidade, estado,
-            nacionalidade, naturalidade,
+            responsavel, cidade, estado, nacionalidade,
         )
 
     except Exception as exc:
         c.erros += 1
-        log.error(f"ERRO ao transformar CPF={cpf_raw}: {exc}", exc_info=True)
+        log.error(f"ERRO transformar paciente CPF={cpf_raw!r}: {exc}", exc_info=True)
         return None
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  LOAD
-# ══════════════════════════════════════════════════════════════════════════════
-
-def _inserir_batch(pg_conn, batch: list, c: Contadores) -> None:
-    if not batch:
-        return
-    try:
-        with pg_conn.cursor() as cur:
-            execute_values(cur, _INSERT_SQL, batch, page_size=BATCH_SIZE)
-        pg_conn.commit()
-        c.migrados += len(batch)
-    except Exception as exc:
-        pg_conn.rollback()
-        log.warning(
-            f"Falha no lote de {len(batch)} registros ({exc}). "
-            "Tentando insercao individual..."
-        )
-        _inserir_individualmente(pg_conn, batch, c)
+def _carregar_chaves_pg(pg) -> tuple[set, set]:
+    with pg.cursor() as cur:
+        cur.execute("SELECT num_cpf FROM pacientes WHERE num_cpf IS NOT NULL")
+        cpfs = {r[0] for r in cur.fetchall()}
+        cur.execute("SELECT cns FROM pacientes WHERE cns IS NOT NULL")
+        cnss = {r[0] for r in cur.fetchall()}
+    log.info(f"  PG existente: {len(cpfs):,} CPFs | {len(cnss):,} CNSs")
+    return cpfs, cnss
 
 
-def _inserir_individualmente(pg_conn, batch: list, c: Contadores) -> None:
-    sql_ind = (
-        f"INSERT INTO pacientes ({', '.join(_COLS)}) "
-        f"VALUES ({', '.join(['%s'] * len(_COLS))})"
-    )
-    cpf_idx = list(_COLS).index("num_cpf")
-    for record in batch:
-        try:
-            with pg_conn.cursor() as cur:
-                cur.execute(sql_ind, record)
-            pg_conn.commit()
-            c.migrados += 1
-        except Exception as exc:
-            pg_conn.rollback()
-            c.erros += 1
-            log.error(f"ERRO SQL | CPF={record[cpf_idx] or '?'} | {exc}")
+def migrar_pacientes(sq: sqlite3.Connection, pg, dry_run: bool) -> ContPac:
+    c = ContPac()
+    cpfs_pg, cnss_pg = _carregar_chaves_pg(pg)
 
+    rows = sq.execute("SELECT * FROM pacientes ORDER BY ROWID").fetchall()
+    c.total = len(rows)
+    log.info(f"  SQLite pacientes: {c.total:,}")
+    if not c.total:
+        log.warning("  Nenhum registro na tabela pacientes do SQLite.")
+        return c
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  TRUNCATE
-# ══════════════════════════════════════════════════════════════════════════════
+    batch: list = []
+    inicio = datetime.now()
 
-def truncar_tabelas(pg_conn) -> None:
-    log.warning(
-        "TRUNCANDO recepcao_atendimentos e pacientes (RESTART IDENTITY)... "
-        "Esta operacao remove TODOS os registros."
-    )
-    with pg_conn.cursor() as cur:
-        cur.execute(
-            "TRUNCATE TABLE recepcao_atendimentos, pacientes RESTART IDENTITY;"
-        )
-    pg_conn.commit()
-    log.warning("Tabelas truncadas.")
+    for row in rows:
+        cpf_raw = _get(row, "cpf")
+        sus_raw = _get(row, "sus")
+        cpf = norm_cpf(cpf_raw)
+        cns = norm_cns(sus_raw)
 
+        # Conta documentos matematicamente invalidos (mas continua processando)
+        cpf_digits = _apenas_num(cpf_raw)
+        if cpf_digits and len(cpf_digits) == 11 and cpf is None:
+            c.cpf_invalido += 1
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  VALIDAÇÃO FINAL
-# ══════════════════════════════════════════════════════════════════════════════
+        cns_digits = _apenas_num(sus_raw)
+        if cns_digits and len(cns_digits) == 15 and cns is None:
+            c.cns_invalido += 1
 
-def _validar_migracao(sqlite_conn, pg_conn, c: Contadores) -> None:
-    cur_sq = sqlite_conn.cursor()
-    cur_sq.execute("SELECT COUNT(*) FROM pacientes")
-    total_sqlite = cur_sq.fetchone()[0]
+        # Deduplicacao por CPF ou CNS exato
+        if (cpf and cpf in cpfs_pg) or (cns and cns in cnss_pg):
+            c.duplicatas += 1
+            continue
 
-    with pg_conn.cursor() as cur:
-        cur.execute("SELECT COUNT(*) FROM pacientes")
-        total_pg = cur.fetchone()[0]
+        # Sem CPF valido nem CNS valido -> descarta
+        if not cpf and not cns:
+            c.sem_doc += 1
+            log.debug(f"Sem doc valido: nome={_get(row, 'nome')!r}")
+            continue
 
-    log.info(
-        f"Validacao => SQLite: {total_sqlite:,} | "
-        f"PostgreSQL: {total_pg:,} | "
-        f"Migrados: {c.migrados:,} | "
-        f"Dup: {c.ignorados:,} | "
-        f"Sem doc: {c.sem_documento:,} | "
-        f"CPF inv: {c.cpf_invalido:,} | "
-        f"CNS inv: {c.cns_invalido:,} | "
-        f"Erros: {c.erros:,}"
-    )
+        rec = transformar_pac(row, c)
+        if rec is None:
+            continue
 
-    processados = c.migrados + c.ignorados + c.sem_documento + c.erros
-    if processados == c.total:
-        log.info("Validacao OK: todos os registros do SQLite foram processados.")
-    else:
-        log.warning(
-            f"Atencao: {c.total - processados:,} registros nao processados."
-        )
+        batch.append(rec)
 
+        # Atualiza chaves locais para dedup dentro da propria fonte
+        if cpf:
+            cpfs_pg.add(cpf)
+        if cns:
+            cnss_pg.add(cns)
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  PIPELINE ETL PRINCIPAL
-# ══════════════════════════════════════════════════════════════════════════════
-
-def migrar(dry_run: bool = False, truncate: bool = False) -> tuple[Contadores, ContadoresAtd]:
-    c     = Contadores()
-    c_atd = ContadoresAtd()
-    sqlite_conn = None
-    pg_conn     = None
-
-    try:
-        sqlite_conn = conectar_sqlite()
-
-        # Conecta ao PG sempre — necessário para leitura (dedup e mapa de pacientes).
-        # Em dry-run, apenas lê; nunca escreve.
-        pg_conn = conectar_postgres()
-        if not dry_run and truncate:
-            truncar_tabelas(pg_conn)
-
-        # Chaves já existentes no destino
-        cpfs_pg, cnss_pg, nomes_pg = carregar_chaves_pg(pg_conn)
-
-        rows    = extrair(sqlite_conn)
-        c.total = len(rows)
-
-        if c.total == 0:
-            log.warning("Nenhum registro encontrado na tabela pacientes do SQLite.")
-            return c
-
-        batch: list = []
-        inicio = datetime.now()
-
-        for row in rows:
-            cpf_raw = _row_get(row, "cpf")
-            sus_raw = _row_get(row, "sus")
-
-            cpf = norm_cpf(cpf_raw)
-            cns = norm_cns(sus_raw)
-
-            # ── Conta documentos barrados pela validação matemática ───────────
-            cpf_digits = apenas_numeros(cpf_raw)
-            if cpf_digits and len(cpf_digits) == 11 and cpf is None:
-                c.cpf_invalido += 1
-                log.debug(f"CPF invalido (digito verificador): {cpf_digits}")
-
-            cns_digits = apenas_numeros(sus_raw)
-            if cns_digits and len(cns_digits) == 15 and cns is None:
-                c.cns_invalido += 1
-                log.debug(f"CNS invalido (checksum): {cns_digits}")
-
-            # ── Dedup por CPF/CNS exato ───────────────────────────────────────
-            if (cpf and cpf in cpfs_pg) or (cns and cns in cnss_pg):
-                c.ignorados += 1
-                continue
-
-            # ── Sem CPF nem CNS válido → descarta ────────────────────────────
-            if not cpf and not cns:
-                c.sem_documento += 1
-                log.debug(f"Sem documento valido: nome={_row_get(row, 'nome')!r}")
-                continue
-
-            # ── Transforma e enfileira ────────────────────────────────────────
-            record = transformar(row, c)
-            if record is None:
-                continue
-
-            batch.append(record)
-
-            # Atualiza chaves locais para dedup dentro da própria fonte
-            if cpf:
-                cpfs_pg.add(cpf)
-            if cns:
-                cnss_pg.add(cns)
-
-            if len(batch) >= BATCH_SIZE:
-                if not dry_run:
-                    _inserir_batch(pg_conn, batch, c)
-                else:
-                    c.migrados += len(batch)
-
-                decorrido   = max((datetime.now() - inicio).seconds, 1)
-                processados = c.migrados + c.ignorados + c.sem_documento + c.erros
-                pct = processados / c.total * 100
-                log.info(
-                    f"  {processados:>6,}/{c.total:,} ({pct:5.1f}%)  "
-                    f"migrados={c.migrados:,}  dup={c.ignorados:,}  "
-                    f"sem_doc={c.sem_documento:,}  erros={c.erros:,}  [{decorrido}s]"
-                )
-                batch.clear()
-
-        # Último lote parcial
-        if batch:
+        if len(batch) >= BATCH_SIZE:
             if not dry_run:
-                _inserir_batch(pg_conn, batch, c)
+                _inserir_batch_pac(pg, batch, c)
             else:
                 c.migrados += len(batch)
+            _log_prog_pac(c, inicio)
+            batch.clear()
 
+    if batch:
         if not dry_run:
-            _validar_migracao(sqlite_conn, pg_conn, c)
+            _inserir_batch_pac(pg, batch, c)
+        else:
+            c.migrados += len(batch)
 
-        # ── Pipeline de atendimentos ──────────────────────────────────────────
-        log.info("")
-        log.info("── ETAPA 2: Atendimentos ─────────────────────────────────────")
-        c_atd = migrar_atendimentos(sqlite_conn, pg_conn, dry_run)
-
-    except FileNotFoundError as exc:
-        log.critical(str(exc))
-    except psycopg2.OperationalError as exc:
-        log.critical(f"Falha de conexao com o PostgreSQL: {exc}")
-        if pg_conn and not pg_conn.closed:
-            pg_conn.rollback()
-    except KeyboardInterrupt:
-        log.warning("Migracao interrompida (Ctrl+C).")
-        if pg_conn and not pg_conn.closed:
-            pg_conn.rollback()
-    except Exception as exc:
-        log.critical(f"Erro inesperado: {exc}", exc_info=True)
-        if pg_conn and not pg_conn.closed:
-            pg_conn.rollback()
-    finally:
-        if sqlite_conn:
-            sqlite_conn.close()
-        if pg_conn and not pg_conn.closed:
-            pg_conn.close()
-
-    return c, c_atd
+    return c
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  ATENDIMENTOS — contadores, helpers e pipeline
-# ══════════════════════════════════════════════════════════════════════════════
-
-@dataclass
-class ContadoresAtd:
-    total:           int = 0
-    migrados:        int = 0
-    ignorados:       int = 0   # duplicatas exatas (paciente_id + datetime)
-    sem_paciente:    int = 0   # CPF/CNS não encontrado no PG
-    erros:           int = 0
-
-    @property
-    def ok(self) -> bool:
-        return self.erros == 0
-
-
-def construir_mapa_pacientes(pg_conn) -> dict[str, int]:
-    """
-    Retorna dict mapeando identificador normalizado → paciente_id.
-    Carrega CPFs e CNSs do PostgreSQL.
-    """
-    mapa: dict[str, int] = {}
-    with pg_conn.cursor() as cur:
-        cur.execute("SELECT id, num_cpf FROM pacientes WHERE num_cpf IS NOT NULL")
-        for pid, cpf in cur.fetchall():
-            mapa[cpf] = pid
-        cur.execute("SELECT id, cns FROM pacientes WHERE cns IS NOT NULL")
-        for pid, cns in cur.fetchall():
-            mapa[cns] = pid
-    log.info(f"Mapa de pacientes: {len(mapa):,} identificadores (CPF + CNS)")
-    return mapa
-
-
-def carregar_chaves_atd(pg_conn) -> set[tuple]:
-    """
-    Carrega (paciente_id, data_atendimento) já existentes no PG para dedup.
-    """
-    with pg_conn.cursor() as cur:
-        cur.execute("SELECT paciente_id, data_atendimento FROM recepcao_atendimentos")
-        chaves = {(r[0], r[1]) for r in cur.fetchall()}
-    log.info(f"Atendimentos ja no PG: {len(chaves):,} (usados para dedup)")
-    return chaves
-
-
-def norm_datetime_atd(data_str: str, hora_str: str) -> Optional[datetime]:
-    """
-    Combina data 'YYYY-MM-DD' + hora 'HH:MM' → datetime.
-    Retorna None se inválido.
-    """
-    d = _str(data_str)
-    h = _str(hora_str) or "00:00"
-    if not d:
-        return None
+def _inserir_batch_pac(pg, batch: list, c: ContPac) -> None:
     try:
-        return datetime.strptime(f"{d} {h}", "%Y-%m-%d %H:%M")
-    except ValueError:
-        try:
-            return datetime.strptime(d, "%Y-%m-%d")
-        except ValueError:
-            return None
+        with pg.cursor() as cur:
+            execute_values(cur, _INSERT_PAC, batch, page_size=BATCH_SIZE)
+        pg.commit()
+        c.migrados += len(batch)
+    except Exception as exc:
+        pg.rollback()
+        log.warning(f"Falha no lote de pacientes ({exc}). Tentando individual...")
+        _inserir_pac_individual(pg, batch, c)
 
+
+def _inserir_pac_individual(pg, batch: list, c: ContPac) -> None:
+    sql = (
+        f"INSERT INTO pacientes ({', '.join(_COLS_PAC)}) "
+        f"VALUES ({', '.join(['%s'] * len(_COLS_PAC))})"
+    )
+    for rec in batch:
+        try:
+            with pg.cursor() as cur:
+                cur.execute(sql, rec)
+            pg.commit()
+            c.migrados += 1
+        except Exception as exc:
+            pg.rollback()
+            c.erros += 1
+            log.error(f"ERRO SQL paciente | num_cpf={rec[1]!r} | {exc}")
+
+
+def _log_prog_pac(c: ContPac, inicio: datetime) -> None:
+    feitos = c.migrados + c.duplicatas + c.sem_doc + c.erros
+    pct    = feitos / c.total * 100 if c.total else 0
+    seg    = max((datetime.now() - inicio).seconds, 1)
+    log.info(
+        f"  {feitos:>6,}/{c.total:,} ({pct:5.1f}%)  "
+        f"migrados={c.migrados:,}  dup={c.duplicatas:,}  "
+        f"sem_doc={c.sem_doc:,}  erros={c.erros:,}  [{seg}s]"
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ETAPA 2 — ATENDIMENTOS
+# ══════════════════════════════════════════════════════════════════════════════
 
 _COLS_ATD: tuple[str, ...] = (
     "paciente_id", "data_atendimento", "registro", "procedencia",
@@ -789,163 +605,157 @@ _COLS_ATD: tuple[str, ...] = (
 _INSERT_ATD = f"INSERT INTO recepcao_atendimentos ({', '.join(_COLS_ATD)}) VALUES %s"
 
 
-def transformar_atd(
-    row: sqlite3.Row,
-    mapa: dict[str, int],
-    c: ContadoresAtd,
-) -> Optional[tuple]:
-    """
-    Converte linha de atendimentos SQLite → tuple para INSERT no PG.
-    Retorna None se paciente não encontrado ou erro irrecuperável.
-    """
-    cpf_raw = _row_get(row, "cpf")
-    sus_raw = _row_get(row, "sus")
+def _construir_mapa_pacs(pg) -> dict[str, int]:
+    mapa: dict[str, int] = {}
+    with pg.cursor() as cur:
+        cur.execute("SELECT id, num_cpf FROM pacientes WHERE num_cpf IS NOT NULL")
+        for pid, cpf in cur.fetchall():
+            mapa[cpf] = pid
+        cur.execute("SELECT id, cns FROM pacientes WHERE cns IS NOT NULL")
+        for pid, cns in cur.fetchall():
+            mapa[cns] = pid
+    log.info(f"  Mapa de pacientes: {len(mapa):,} identificadores (CPF + CNS)")
+    return mapa
 
-    # Resolve paciente_id via CPF ou CNS (já normalizados)
-    paciente_id: Optional[int] = None
-    cpf = norm_cpf(cpf_raw)
-    cns = norm_cns(sus_raw)
-    if cpf:
-        paciente_id = mapa.get(cpf)
-    if paciente_id is None and cns:
-        paciente_id = mapa.get(cns)
 
-    if paciente_id is None:
-        c.sem_paciente += 1
-        log.debug(f"Paciente nao encontrado: CPF={cpf_raw!r} SUS={sus_raw!r}")
-        return None
-
-    data_atd = norm_datetime_atd(
-        _row_get(row, "data_atendimento"),
-        _row_get(row, "hora_atendimento"),
-    )
-    if data_atd is None:
-        c.erros += 1
-        log.error(f"Data invalida no atendimento paciente_id={paciente_id}")
-        return None
-
-    reg_raw = _str(_row_get(row, "registro"))
+def _carregar_chaves_atd(pg) -> set[tuple]:
     try:
-        registro = int(reg_raw) if reg_raw else None
-        if registro is not None and not (-32768 <= registro <= 32767):
-            registro = None
+        with pg.cursor() as cur:
+            cur.execute("SELECT paciente_id, data_atendimento FROM recepcao_atendimentos")
+            return {(r[0], r[1]) for r in cur.fetchall()}
+    except psycopg2.errors.UndefinedTable:
+        pg.rollback()
+        return set()
+
+
+def _norm_dt_atd(data_str: str, hora_str: str) -> Optional[datetime]:
+    d = _s(data_str)
+    h = _s(hora_str) or "00:00"
+    if not d:
+        return None
+    try:
+        return datetime.strptime(f"{d} {h}", "%Y-%m-%d %H:%M")
     except ValueError:
-        registro = None
+        pass
+    try:
+        return datetime.strptime(d, "%Y-%m-%d")
+    except ValueError:
+        return None
 
-    procedencia = _str(_row_get(row, "procedencia")) or None
 
-    return (paciente_id, data_atd, registro, procedencia)
+def migrar_atendimentos(sq: sqlite3.Connection, pg, dry_run: bool) -> ContAtd:
+    c = ContAtd()
+    mapa      = _construir_mapa_pacs(pg)
+    chaves_pg = _carregar_chaves_atd(pg)
 
-
-def migrar_atendimentos(
-    sqlite_conn: sqlite3.Connection,
-    pg_conn,
-    dry_run: bool,
-) -> ContadoresAtd:
-    """Pipeline ETL de atendimentos: Extract → Transform → Load."""
-    c = ContadoresAtd()
-
-    rows = sqlite_conn.execute(
-        "SELECT * FROM atendimentos ORDER BY id"
-    ).fetchall()
+    rows = sq.execute("SELECT * FROM atendimentos ORDER BY id").fetchall()
     c.total = len(rows)
-    log.info(f"Extraidos {c.total:,} atendimentos do SQLite.")
-
-    if c.total == 0:
+    log.info(f"  SQLite atendimentos: {c.total:,}")
+    if not c.total:
+        log.warning("  Nenhum registro na tabela atendimentos do SQLite.")
         return c
-
-    # Mapa de identificadores para resolver paciente_id (sempre usa PG, mesmo em dry-run)
-    mapa = construir_mapa_pacientes(pg_conn)
-
-    # Chaves já existentes para dedup
-    chaves_pg: set[tuple] = carregar_chaves_atd(pg_conn)
 
     batch: list = []
     inicio = datetime.now()
 
     for row in rows:
-        record = transformar_atd(row, mapa, c)
-        if record is None:
-            continue  # sem_paciente ou erro já contabilizado
+        # A tabela atendimentos usa os nomes antigos: cpf e sus
+        cpf_raw = _get(row, "cpf")
+        sus_raw = _get(row, "sus")
+        cpf = norm_cpf(cpf_raw)
+        cns = norm_cns(sus_raw)
 
-        chave = (record[0], record[1])  # (paciente_id, data_atendimento)
-        if chave in chaves_pg:
-            c.ignorados += 1
+        # Resolve paciente_id via CPF ou CNS
+        pac_id = None
+        if cpf:
+            pac_id = mapa.get(cpf)
+        if pac_id is None and cns:
+            pac_id = mapa.get(cns)
+
+        if pac_id is None:
+            c.sem_pac += 1
+            log.debug(f"Paciente nao encontrado: CPF={cpf_raw!r} SUS={sus_raw!r}")
             continue
 
-        batch.append(record)
+        dt = _norm_dt_atd(_get(row, "data_atendimento"), _get(row, "hora_atendimento"))
+        if dt is None:
+            c.erros += 1
+            log.error(f"Data invalida no atendimento: paciente_id={pac_id}")
+            continue
+
+        chave = (pac_id, dt)
+        if chave in chaves_pg:
+            c.duplicatas += 1
+            continue
+
+        reg_raw = _get(row, "registro")
+        try:
+            registro = int(reg_raw) if reg_raw else None
+            if registro is not None and not (-32768 <= registro <= 32767):
+                registro = None
+        except ValueError:
+            registro = None
+
+        proc = _get(row, "procedencia") or None
+        batch.append((pac_id, dt, registro, proc))
         chaves_pg.add(chave)
 
         if len(batch) >= BATCH_SIZE:
             if not dry_run:
-                _inserir_batch_atd(pg_conn, batch, c)
+                _inserir_batch_atd(pg, batch, c)
             else:
                 c.migrados += len(batch)
-
-            decorrido   = max((datetime.now() - inicio).seconds, 1)
-            processados = c.migrados + c.ignorados + c.sem_paciente + c.erros
-            pct = processados / c.total * 100
+            feitos = c.migrados + c.duplicatas + c.sem_pac + c.erros
+            pct = feitos / c.total * 100 if c.total else 0
             log.info(
-                f"  ATD {processados:>6,}/{c.total:,} ({pct:5.1f}%)  "
-                f"migrados={c.migrados:,}  dup={c.ignorados:,}  "
-                f"sem_pac={c.sem_paciente:,}  erros={c.erros:,}  [{decorrido}s]"
+                f"  ATD {feitos:>6,}/{c.total:,} ({pct:5.1f}%)  "
+                f"migrados={c.migrados:,}  dup={c.duplicatas:,}  sem_pac={c.sem_pac:,}"
             )
             batch.clear()
 
     if batch:
         if not dry_run:
-            _inserir_batch_atd(pg_conn, batch, c)
+            _inserir_batch_atd(pg, batch, c)
         else:
             c.migrados += len(batch)
 
-    log.info(
-        f"Atendimentos => migrados={c.migrados:,}  "
-        f"dup={c.ignorados:,}  sem_paciente={c.sem_paciente:,}  erros={c.erros:,}"
-    )
     return c
 
 
-def _inserir_batch_atd(pg_conn, batch: list, c: ContadoresAtd) -> None:
-    if not batch:
-        return
+def _inserir_batch_atd(pg, batch: list, c: ContAtd) -> None:
     try:
-        with pg_conn.cursor() as cur:
+        with pg.cursor() as cur:
             execute_values(cur, _INSERT_ATD, batch, page_size=BATCH_SIZE)
-        pg_conn.commit()
+        pg.commit()
         c.migrados += len(batch)
     except Exception as exc:
-        pg_conn.rollback()
+        pg.rollback()
         log.warning(f"Falha no lote de atendimentos ({exc}). Tentando individual...")
-        _inserir_atd_individual(pg_conn, batch, c)
+        _inserir_atd_individual(pg, batch, c)
 
 
-def _inserir_atd_individual(pg_conn, batch: list, c: ContadoresAtd) -> None:
+def _inserir_atd_individual(pg, batch: list, c: ContAtd) -> None:
     sql = (
         f"INSERT INTO recepcao_atendimentos ({', '.join(_COLS_ATD)}) "
         f"VALUES ({', '.join(['%s'] * len(_COLS_ATD))})"
     )
-    for record in batch:
+    for rec in batch:
         try:
-            with pg_conn.cursor() as cur:
-                cur.execute(sql, record)
-            pg_conn.commit()
+            with pg.cursor() as cur:
+                cur.execute(sql, rec)
+            pg.commit()
             c.migrados += 1
         except Exception as exc:
-            pg_conn.rollback()
+            pg.rollback()
             c.erros += 1
-            log.error(f"ERRO SQL atendimento paciente_id={record[0]}: {exc}")
+            log.error(f"ERRO SQL atendimento paciente_id={rec[0]}: {exc}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  RELATÓRIO FINAL
+#  RELATORIO FINAL
 # ══════════════════════════════════════════════════════════════════════════════
 
-def exibir_relatorio(
-    c: Contadores,
-    c_atd: ContadoresAtd,
-    dry_run: bool,
-    duracao: object,
-) -> None:
+def exibir_relatorio(c: ContPac, c_atd: ContAtd, dry_run: bool, duracao) -> None:
     SEP  = "=" * 62
     SEP2 = "-" * 62
     log.info("")
@@ -955,43 +765,45 @@ def exibir_relatorio(
     if dry_run:
         log.info("  [DRY-RUN] Nenhum dado foi gravado no PostgreSQL")
     log.info(SEP)
-    log.info(f"  Origem     : {os.path.abspath(SQLITE_PATH)}")
-    log.info(f"  Destino    : {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
+    log.info(f"  Origem  : {os.path.abspath(SQLITE_PATH)}")
+    log.info(f"  Destino : {POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
 
     log.info(SEP2)
     log.info("  PACIENTES")
     log.info(SEP2)
-    log.info(f"  Total SQLite          : {c.total:>8,}")
-    log.info(f"  Migrados              : {c.migrados:>8,}")
-    log.info(f"  Ignorados (dup exata) : {c.ignorados:>8,}  (mesmo CPF ou CNS)")
-    log.info(f"  Sem CPF nem CNS       : {c.sem_documento:>8,}  (descartados)")
-    log.info(f"  CPF invalido (barrado): {c.cpf_invalido:>8,}  (digito verificador)")
-    log.info(f"  CNS invalido (barrado): {c.cns_invalido:>8,}  (checksum DATASUS)")
-    log.info(f"  Erros                 : {c.erros:>8,}")
-    log.info(f"  Avisos de dados       : {len(c.avisos):>8,}")
+    log.info(f"  Total SQLite            : {c.total:>8,}")
+    log.info(f"  Migrados                : {c.migrados:>8,}")
+    log.info(f"  Duplicatas (pulados)    : {c.duplicatas:>8,}  (CPF ou CNS ja existia)")
+    log.info(f"  Sem CPF nem CNS valido  : {c.sem_doc:>8,}  (descartados)")
+    log.info(f"  CPF invalido (mod 11)   : {c.cpf_invalido:>8,}  (num_cpf = NULL)")
+    log.info(f"  CNS invalido (DATASUS)  : {c.cns_invalido:>8,}  (cns = NULL)")
+    log.info(f"  Erros                   : {c.erros:>8,}")
+    log.info(f"  Avisos de qualidade     : {len(c.avisos):>8,}")
+
     if c.total:
-        processados = c.migrados + c.ignorados + c.sem_documento + c.erros
-        log.info(f"  Processados           : {processados / c.total * 100:>7.1f}%")
+        processados = c.migrados + c.duplicatas + c.sem_doc + c.erros
+        log.info(f"  Processados             : {processados / c.total * 100:>7.1f}%")
 
     if c.avisos:
         log.info(SEP2)
-        log.info(f"  AVISOS pacientes (primeiros 30 de {len(c.avisos):,}):")
-        for aviso in c.avisos[:30]:
+        log.info(f"  AVISOS (primeiros 20 de {len(c.avisos):,}):")
+        for aviso in c.avisos[:20]:
             log.warning(f"    [!] {aviso}")
-        if len(c.avisos) > 30:
-            log.info(f"    ... +{len(c.avisos) - 30} avisos — veja: {LOG_FILE}")
+        if len(c.avisos) > 20:
+            log.info(f"    ... +{len(c.avisos) - 20} avisos — veja: {LOG_FILE}")
 
     log.info(SEP2)
     log.info("  ATENDIMENTOS")
     log.info(SEP2)
-    log.info(f"  Total SQLite          : {c_atd.total:>8,}")
-    log.info(f"  Migrados              : {c_atd.migrados:>8,}")
-    log.info(f"  Ignorados (dup exata) : {c_atd.ignorados:>8,}  (paciente_id + datetime)")
-    log.info(f"  Sem paciente (pulado) : {c_atd.sem_paciente:>8,}  (CPF/CNS nao encontrado)")
-    log.info(f"  Erros                 : {c_atd.erros:>8,}")
+    log.info(f"  Total SQLite            : {c_atd.total:>8,}")
+    log.info(f"  Migrados                : {c_atd.migrados:>8,}")
+    log.info(f"  Duplicatas (pulados)    : {c_atd.duplicatas:>8,}  (paciente_id + datetime)")
+    log.info(f"  Sem paciente encontrado : {c_atd.sem_pac:>8,}  (CPF/CNS nao no PG)")
+    log.info(f"  Erros                   : {c_atd.erros:>8,}")
+
     if c_atd.total:
-        processados_atd = c_atd.migrados + c_atd.ignorados + c_atd.sem_paciente + c_atd.erros
-        log.info(f"  Processados           : {processados_atd / c_atd.total * 100:>7.1f}%")
+        processados_atd = c_atd.migrados + c_atd.duplicatas + c_atd.sem_pac + c_atd.erros
+        log.info(f"  Processados             : {processados_atd / c_atd.total * 100:>7.1f}%")
 
     log.info(SEP2)
     ok_geral = c.ok and c_atd.ok
@@ -1002,23 +814,23 @@ def exibir_relatorio(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  CLI
+#  CLI / MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description=(
-            "ETL: hospital.db (SQLite legado) -> PostgreSQL (HMPCF)\n"
-            "SQLite aberto em SOMENTE LEITURA — nenhuma escrita no legado.\n"
-            "Validacao matematica de CPF (mod 11) e CNS (DATASUS).\n"
-            "Dedup fuzzy por nome >= 90% + dtnasc para registros sem doc valido."
+            "Migracao completa: hospital.db (SQLite) -> PostgreSQL (HMPCF)\n"
+            "  Cria as tabelas, migra pacientes e atendimentos.\n"
+            "  SQLite aberto em SOMENTE LEITURA — nenhuma escrita no legado.\n"
+            "  Seguro para rodar mais de uma vez (deduplicacao automatica)."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p.add_argument("--dry-run",   action="store_true",
+    p.add_argument("--dry-run",  action="store_true",
                    help="Processa tudo sem gravar no PostgreSQL.")
-    p.add_argument("--truncate",  action="store_true",
-                   help="Limpa tabelas antes de inserir. IRREVERSIVEL.")
+    p.add_argument("--truncate", action="store_true",
+                   help="Limpa as tabelas antes de inserir. IRREVERSIVEL.")
     return p.parse_args()
 
 
@@ -1036,12 +848,53 @@ if __name__ == "__main__":
     if args.dry_run:
         log.info("  Modo    : DRY-RUN (nenhum dado sera gravado)")
     if args.truncate:
-        log.info("  Atencao : --truncate ativo — tabelas serao limpas antes")
+        log.info("  Atencao : --truncate ativo - tabelas serao limpas antes")
     log.info("")
 
-    inicio        = datetime.now()
-    c, c_atd      = migrar(dry_run=args.dry_run, truncate=args.truncate)
-    duracao       = datetime.now() - inicio
+    sq = pg = None
+    inicio = datetime.now()
+    c = ContPac()
+    c_atd = ContAtd()
 
+    try:
+        sq = conectar_sqlite()
+        pg = conectar_postgres()
+
+        # Etapa 0: criar tabelas
+        log.info("-- Etapa 0: Estrutura das tabelas --")
+        criar_tabelas(pg, dry_run=args.dry_run)
+
+        if not args.dry_run and args.truncate:
+            truncar_tabelas(pg)
+
+        # Etapa 1: pacientes
+        log.info("")
+        log.info("-- Etapa 1: Migracao de pacientes --")
+        c = migrar_pacientes(sq, pg, dry_run=args.dry_run)
+
+        # Etapa 2: atendimentos
+        log.info("")
+        log.info("-- Etapa 2: Migracao de atendimentos --")
+        c_atd = migrar_atendimentos(sq, pg, dry_run=args.dry_run)
+
+    except FileNotFoundError as exc:
+        log.critical(str(exc))
+        sys.exit(1)
+    except psycopg2.OperationalError as exc:
+        log.critical(f"Falha de conexao com o PostgreSQL: {exc}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        log.warning("Migracao interrompida pelo usuario.")
+        sys.exit(1)
+    except Exception as exc:
+        log.critical(f"Erro inesperado: {exc}", exc_info=True)
+        sys.exit(1)
+    finally:
+        if sq:
+            sq.close()
+        if pg and not pg.closed:
+            pg.close()
+
+    duracao = datetime.now() - inicio
     exibir_relatorio(c, c_atd, dry_run=args.dry_run, duracao=duracao)
     sys.exit(0 if (c.ok and c_atd.ok) else 1)
