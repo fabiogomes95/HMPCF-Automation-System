@@ -352,16 +352,16 @@ table.tabela-risco td {
   /* Section titles: cinza + negrito + fonte maior */
   .section-title { font-size: 13px; background: #d9d9d9; padding: 4px; }
 
-  /* Campos */
-  .field                { padding: 2px 5px; }
-  .field label          { font-size: 13px; }
+  /* Campos: 25px de altura, 15px de fonte */
+  .field                { padding: 5px 6px; }
+  .field label          { font-size: 15px; }
 
   .field input[type="text"],
   .field input[type="date"],
-  .field input[type="time"] { font-size: 12px; }
+  .field input[type="time"] { font-size: 15px; }
 
   .checkbox-group       { gap: 8px; }
-  .checkbox-group label { font-size: 12px; }
+  .checkbox-group label { font-size: 14px; }
 
   table.tabela-risco td { padding: 2px 6px; height: 18px; font-size: 11px; }
   .color-box            { font-size: 11px; }
