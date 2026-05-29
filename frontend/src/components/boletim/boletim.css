@@ -305,8 +305,8 @@ table.tabela-risco td {
   outline-offset: 1px;
 }
 
-/* ─── Print — idêntico ao legado ─── */
-@page { size: A4; margin: 0; }
+/* ─── Print ─── */
+@page { size: A4 portrait; margin: 0mm; }
 
 @media print {
   body {
