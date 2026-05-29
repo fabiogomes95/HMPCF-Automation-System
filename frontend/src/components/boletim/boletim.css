@@ -381,10 +381,24 @@ table.tabela-risco td {
 
   .writing-section {
     page-break-inside: avoid;
+    flex: 0 0 auto;
   }
 
-  .handwriting-area {
-    min-height: 40px;
+  /* Anotacoes da Classificacao: 3 linhas */
+  .annotations-section .writing-section:nth-child(1) .handwriting-area {
+    flex: none;
+    height: 75px;
+    min-height: 75px;
+    max-height: 75px;
+  }
+
+  /* Historia Clinica e Hipotese Diagnostica: 4 linhas cada */
+  .annotations-section .writing-section:nth-child(2) .handwriting-area,
+  .annotations-section .writing-section:nth-child(3) .handwriting-area {
+    flex: none;
+    height: 100px;
+    min-height: 100px;
+    max-height: 100px;
   }
 
   .spacer-row {
