@@ -641,11 +641,62 @@ def _construir_mapa_pacs(pg) -> dict[str, int]:
     return mapa
 
 
+def _dedup_atendimentos(pg, dry_run: bool) -> int:
+    """
+    Remove atendimentos duplicados (mesmo paciente_id + data_atendimento),
+    mantendo o registro de menor id. Retorna quantos foram removidos.
+    Executado sempre antes de carregar as chaves para garantir estado limpo.
+    """
+    sql_count = """
+        SELECT COUNT(*) FROM recepcao_atendimentos a
+        WHERE a.id > (
+            SELECT MIN(b.id) FROM recepcao_atendimentos b
+            WHERE b.paciente_id = a.paciente_id
+              AND b.data_atendimento = a.data_atendimento
+        )
+    """
+    sql_delete = """
+        DELETE FROM recepcao_atendimentos
+        WHERE id IN (
+            SELECT a.id FROM recepcao_atendimentos a
+            WHERE a.id > (
+                SELECT MIN(b.id) FROM recepcao_atendimentos b
+                WHERE b.paciente_id = a.paciente_id
+                  AND b.data_atendimento = a.data_atendimento
+            )
+        )
+    """
+    try:
+        with pg.cursor() as cur:
+            cur.execute(sql_count)
+            n = cur.fetchone()[0]
+        if n == 0:
+            return 0
+        if not dry_run:
+            with pg.cursor() as cur:
+                cur.execute(sql_delete)
+            pg.commit()
+            log.info(f"  Dedup: {n:,} atendimento(s) duplicado(s) removido(s).")
+        else:
+            log.info(f"  [dry-run] Dedup encontrou {n:,} duplicado(s) — nao removidos.")
+        return n
+    except psycopg2.errors.UndefinedTable:
+        pg.rollback()
+        return 0
+
+
 def _carregar_chaves_atd(pg) -> set[tuple]:
+    """
+    Carrega (paciente_id, data_atendimento_naive) para deduplicacao.
+    Strips timezone para comparar corretamente com datetimes naive do parser.
+    """
     try:
         with pg.cursor() as cur:
             cur.execute("SELECT paciente_id, data_atendimento FROM recepcao_atendimentos")
-            return {(r[0], r[1]) for r in cur.fetchall()}
+            return {
+                (r[0], r[1].replace(tzinfo=None) if r[1] and hasattr(r[1], "tzinfo") else r[1])
+                for r in cur.fetchall()
+            }
     except psycopg2.errors.UndefinedTable:
         pg.rollback()
         return set()
@@ -668,6 +719,8 @@ def _norm_dt_atd(data_str: str, hora_str: str) -> Optional[datetime]:
 
 def migrar_atendimentos(sq: sqlite3.Connection, pg, dry_run: bool) -> ContAtd:
     c = ContAtd()
+    # Remove duplicados existentes antes de inserir (idempotencia)
+    _dedup_atendimentos(pg, dry_run)
     mapa      = _construir_mapa_pacs(pg)
     chaves_pg = _carregar_chaves_atd(pg)
 
