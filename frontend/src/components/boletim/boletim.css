@@ -349,15 +349,12 @@ table.tabela-risco td {
     height: calc(297mm - 10mm);
   }
 
-  /* 65% da página para dados do paciente */
   .patient-info-section {
-    flex: 0 0 65%;
-    overflow: hidden;
+    flex: 0 0 auto;
   }
 
-  /* 35% restantes para as anotações clínicas */
   .annotations-section {
-    flex: 0 0 35%;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
   }
