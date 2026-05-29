@@ -339,19 +339,19 @@ table.tabela-risco td {
   .header-text          { font-size: 10px; }
   .header-logo img      { max-height: 40px; }
 
-  .field                { padding: 2px 4px; }
-  .field label          { font-size: 10px; }
+  .field                { padding: 3px 5px; }
+  .field label          { font-size: 13px; }
 
   .field input[type="text"],
   .field input[type="date"],
-  .field input[type="time"] { font-size: 10px; }
+  .field input[type="time"] { font-size: 13px; }
 
-  .checkbox-group       { font-size: 10px; gap: 6px; }
-  .checkbox-group label { font-size: 10px; }
+  .checkbox-group       { font-size: 13px; gap: 8px; }
+  .checkbox-group label { font-size: 13px; }
 
-  table.tabela-risco td { padding: 2px 5px; height: 16px; font-size: 9px; }
-  .color-box            { font-size: 9px; }
-  .input-ssvv           { font-size: 9px; width: 35px !important; }
+  table.tabela-risco td { padding: 3px 6px; height: 20px; font-size: 11px; }
+  .color-box            { font-size: 11px; }
+  .input-ssvv           { font-size: 11px; width: 40px !important; }
 
   /* Alturas reduzidas no print — exatamente como o legado */
   .ha-anotacoes { height: 55px; }
