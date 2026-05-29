@@ -172,3 +172,62 @@ PC de recepção Windows 24h não se beneficia do Docker — adiciona ~500 MB RA
 
 ### Próximo passo
 Deploy em PC de **teste** primeiro para validar migração e fluxo completo antes do PC real da recepção.
+
+---
+
+## 2026-05-28/29 — Migração definitiva, validação e preparação do deploy Windows
+
+### Ambiente de teste (CachyOS)
+- PostgreSQL do HMPCF subido via Docker na porta **5433** (porta 5432 ocupada por outro projeto)
+- `backend/.env` criado com credenciais e porta correta
+- Tabelas criadas via `SQLAlchemy create_all()` (projeto não usa Alembic)
+- Backend iniciado com `uvicorn --reload`, frontend com `vite --host 0.0.0.0`
+- **Bug corrigido:** `api.js` chamava `POST /pacientes` sem trailing slash → 405 Method Not Allowed. Corrigido para `/pacientes/`
+
+### Melhorias no script de migração (`migrate_to_postgres.py`)
+
+**Validação matemática adicionada:**
+
+| Documento | Regra anterior | Regra nova |
+|-----------|---------------|------------|
+| CPF | Remove não-dígitos, aceita 8–11 dígitos | Exige exatamente 11 dígitos + algoritmo mod 11 |
+| CNS/SUS | Remove não-dígitos, limita a 15 chars | Exige 15 dígitos + soma ponderada DATASUS divisível por 11 |
+
+**Política de pacientes sem documento:**
+- Antes: tentava dedup fuzzy por nome≥90% + dtnasc; se não duplicado, entrava sem identificador
+- Agora: **rejeitado na origem** — sem CPF válido E sem CNS válido = descartado com contador próprio
+
+**Atendimentos migrados** (novo pipeline adicionado ao script):
+- Resolve `paciente_id` pelo CPF ou CNS do atendimento (lookup no PostgreSQL)
+- Combina `data_atendimento` + `hora_atendimento` → `TIMESTAMPTZ`
+- Dedup por `(paciente_id, data_atendimento)` exato
+- Atendimentos cujo paciente foi barrado pela validação são descartados com aviso
+
+**Bug de dry-run corrigido:** `if pg_conn:` trocado por `if not dry_run:` em todos os pontos de inserção — o dry-run conecta ao PG para leitura (mapa de pacientes, dedup) mas não escreve nada.
+
+### Resultado da migração definitiva
+
+| Tabela | SQLite | Migrados | Descartados |
+|--------|--------|----------|-------------|
+| `pacientes` | 30.877 | **29.464** | 1.259 dup + 587 CPF inválido + 274 CNS inválido + 154 sem documento |
+| `recepcao_atendimentos` | 12.926 | **12.831** | 67 dup + 28 sem paciente |
+
+### Limpeza de dados no banco
+- **154 pacientes** sem CPF nem CNS deletados do PostgreSQL (nenhum tinha atendimento vinculado)
+- Atendimento de teste criado durante verificação removido
+
+### Tela de Histórico — simplificação das colunas
+Removido da tabela de atendimentos expandida: **Classificação de Risco**, **Procedência**, **Observações** (campos que só são preenchidos manualmente no sistema novo).
+
+Adicionado: **CPF**, **Cartão SUS**, **Dt. Nascimento** — vindos do `paciente` já disponível no escopo.
+
+### Estado final do banco (pronto para produção)
+
+```
+pacientes:             29.464  (todos com CPF ou CNS válido)
+recepcao_atendimentos: 12.831
+sem_documento:             0
+```
+
+### Próximo passo
+Deploy no PC da recepção (Windows) seguindo `docs/DEPLOY_HOSPITAL.md`.

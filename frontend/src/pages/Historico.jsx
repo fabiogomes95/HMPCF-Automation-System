@@ -6,16 +6,6 @@ import {
 import { formatCPF } from "../utils";
 import "./Historico.css";
 
-function formatDataHora(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  const dd   = String(d.getDate()).padStart(2, "0");
-  const mm   = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  const hh   = String(d.getHours()).padStart(2, "0");
-  const min  = String(d.getMinutes()).padStart(2, "0");
-  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
-}
 
 function formatData(iso) {
   if (!iso) return "—";
@@ -29,17 +19,12 @@ function formatHora(iso) {
   return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 }
 
-function buildEdicao(atd) {
-  return {
-    atendimentoId: atd.id,
-    documento:     atd.paciente?.num_cpf || atd.paciente?.cns || "",
-    procedencia:   atd.procedencia || "NORMAL",
-    data:          formatData(atd.data_atendimento),
-    hora:          formatHora(atd.data_atendimento),
-  };
+function formatDtnasc(dtnasc) {
+  if (!dtnasc || dtnasc.length !== 8) return "—";
+  return `${dtnasc.slice(6, 8)}/${dtnasc.slice(4, 6)}/${dtnasc.slice(0, 4)}`;
 }
 
-export default function Historico({ onNavigate, onEditar }) {
+export default function Historico({ onNavigate }) {
   const [items, setItems]         = useState([]);
   const [total, setTotal]         = useState(0);
   const [pages, setPages]         = useState(1);
@@ -115,11 +100,6 @@ export default function Historico({ onNavigate, onEditar }) {
 
   function toggleExpandido(pacienteId) {
     setPacienteExpandido(prev => (prev === pacienteId ? null : pacienteId));
-  }
-
-  function handleEditar(e, atd) {
-    e.stopPropagation();
-    if (onEditar) onEditar(buildEdicao(atd));
   }
 
   return (
@@ -231,10 +211,9 @@ export default function Historico({ onNavigate, onEditar }) {
                                         <th>ID</th>
                                         <th>Data</th>
                                         <th>Hora</th>
-                                        <th>Class. Risco</th>
-                                        <th>Procedência</th>
-                                        <th>Observações</th>
-                                        <th></th>
+                                        <th>CPF</th>
+                                        <th>Cartão SUS</th>
+                                        <th>Dt. Nascimento</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -243,23 +222,9 @@ export default function Historico({ onNavigate, onEditar }) {
                                           <td className="cel-id">{ha.id}</td>
                                           <td>{formatData(ha.data_atendimento)}</td>
                                           <td>{formatHora(ha.data_atendimento)}</td>
-                                          <td>
-                                            {ha.classificacao_risco ? (
-                                              <span className={`risco-badge risco-${(ha.classificacao_risco || "").toLowerCase()}`}>
-                                                {ha.classificacao_risco}
-                                              </span>
-                                            ) : "—"}
-                                          </td>
-                                          <td>{ha.procedencia || "—"}</td>
-                                          <td className="cel-obs">{ha.observacoes || "—"}</td>
-                                          <td>
-                                            <button
-                                              className="btn-editar-inline"
-                                              onClick={e => handleEditar(e, ha)}
-                                            >
-                                              Editar
-                                            </button>
-                                          </td>
+                                          <td>{pac.num_cpf ? formatCPF(pac.num_cpf) : "—"}</td>
+                                          <td>{pac.cns || "—"}</td>
+                                          <td>{formatDtnasc(pac.dtnasc)}</td>
                                         </tr>
                                       ))}
                                     </tbody>
@@ -278,14 +243,6 @@ export default function Historico({ onNavigate, onEditar }) {
                                 {pac.num_cpf ? formatCPF(pac.num_cpf) : "—"}
                               </strong>
                             </span>
-                            {hp?.items?.[0] && (
-                              <button
-                                className="btn-editar-recepcao"
-                                onClick={e => handleEditar(e, hp.items[0])}
-                              >
-                                Editar Atendimento
-                              </button>
-                            )}
                             <button
                               className="btn-ir-recepcao"
                               onClick={e => { e.stopPropagation(); onNavigate("recepcao"); }}

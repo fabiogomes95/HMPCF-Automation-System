@@ -46,7 +46,7 @@ export async function buscarPaciente(documento) {
 }
 
 export function criarPaciente(dados) {
-  return api.post("/pacientes", desnormalizePaciente(dados));
+  return api.post("/pacientes/", desnormalizePaciente(dados));
 }
 
 export function atualizarPaciente(id, dados) {
