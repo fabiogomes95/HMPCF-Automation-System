@@ -336,12 +336,16 @@ table.tabela-risco td {
 
   .spacer-row { margin-bottom: 4px; }
 
-  /* Areas de escrita: 4 linhas cada, tamanho fixo */
+  /* Formulario ocupa a folha inteira */
+  #formBoletim { height: calc(297mm - 6mm); }
+
+  /* As 3 areas crescem igualmente para preencher o restante da folha */
   .ha-anotacoes,
   .ha-historia,
   .ha-hipotese {
-    flex: none;
-    height: 100px;
+    flex: 1 1 0;
+    height: auto;
+    min-height: 0;
   }
 
   /* Header maior no print */
