@@ -179,11 +179,18 @@ if (Test-Path ($INSTALL_ROOT + "\.git")) {
 foreach ($f in @(
     ($INSTALL_ROOT + "\backend\app\main.py"),
     ($INSTALL_ROOT + "\frontend\src\App.jsx"),
-    ($INSTALL_ROOT + "\scripts\migrate_to_postgres.py"),
-    ($INSTALL_ROOT + "\legado\hospital.db")
+    ($INSTALL_ROOT + "\scripts\migrate_to_postgres.py")
 )) {
     if (Test-Path $f) { Log-Ok ("Encontrado: " + $f) }
     else { Log-Error ("Arquivo nao encontrado: " + $f) }
+}
+$hospitalDb = $INSTALL_ROOT + "\legado\hospital.db"
+if (Test-Path $hospitalDb) {
+    Log-Ok ("Encontrado: " + $hospitalDb)
+} else {
+    Log-Warn ("hospital.db nao encontrado em: " + $hospitalDb)
+    Log-Warn "  --> Copie o hospital.db manualmente antes de continuar."
+    Log-Warn "  --> O deploy continuara, mas a migracao falhara sem o arquivo."
 }
 
 # =============================================================================
@@ -202,7 +209,7 @@ $dbExists = & "$PG_BIN\psql.exe" -U postgres -h localhost -tAc ("SELECT 1 FROM p
 if ($dbExists -eq "1") {
     Log-Warn ("Banco '" + $PG_DB + "' ja existe -- pulando criacao")
 } else {
-    $sql = "CREATE DATABASE " + $PG_DB + " WITH ENCODING 'UTF8' LC_COLLATE 'Portuguese_Brazil.1252' LC_CTYPE 'Portuguese_Brazil.1252' TEMPLATE template0;"
+    $sql = "CREATE DATABASE " + $PG_DB + " WITH ENCODING 'UTF8' TEMPLATE template0;"
     & "$PG_BIN\psql.exe" -U postgres -h localhost -c $sql
     Log-Ok ("Banco '" + $PG_DB + "' criado")
 }
