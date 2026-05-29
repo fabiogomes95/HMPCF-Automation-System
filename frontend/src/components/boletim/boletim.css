@@ -345,14 +345,24 @@ table.tabela-risco td {
     overflow: hidden;
   }
 
+  /* Formulario ocupa exatamente a folha A4 (menos o padding da .page) */
   #formBoletim {
     height: calc(297mm - 10mm);
   }
 
+  /* Dados do paciente crescem para preencher o espaco antes das anotacoes */
   .patient-info-section {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
+  /* As spacer-rows absorvem o espaco extra, empurrando as anotacoes para baixo */
+  .patient-info-section .spacer-row {
+    flex-grow: 1;
+    margin-bottom: 0;
+  }
+
+  /* Anotacoes ficam fixas no rodape da folha */
   .annotations-section {
     flex: 0 0 auto;
     display: flex;
@@ -374,6 +384,8 @@ table.tabela-risco td {
 
   .section-title {
     page-break-after: avoid;
+    font-size: 12px;
+    padding: 3px;
   }
 
   .writing-section {
@@ -398,11 +410,7 @@ table.tabela-risco td {
     max-height: 100px;
   }
 
-  .spacer-row {
-    margin-bottom: 2px;
-  }
-
-  /* ── Fontes maiores para os dados do paciente ── */
+  /* ── Header ── */
   .header-text {
     font-size: 11px;
   }
@@ -411,48 +419,43 @@ table.tabela-risco td {
     max-height: 45px;
   }
 
+  /* ── Campos de dados — fonte maior para preencher a folha ── */
   .field {
-    padding: 3px 5px;
+    padding: 4px 6px;
   }
 
   .field label {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .field input[type="text"],
   .field input[type="date"],
   .field input[type="time"] {
-    font-size: 12px;
+    font-size: 15px;
   }
 
   .checkbox-group {
-    font-size: 12px;
+    font-size: 13px;
     gap: 8px;
   }
 
   .checkbox-group label {
-    font-size: 12px;
+    font-size: 13px;
   }
 
-  /* ── Tabela de classificação de risco ── */
+  /* ── Tabela de classificacao de risco ── */
   table.tabela-risco td {
     padding: 3px 6px;
-    height: 18px;
-    font-size: 11px;
+    height: 22px;
+    font-size: 12px;
   }
 
   .color-box {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .input-ssvv {
-    font-size: 11px;
-    width: 40px !important;
-  }
-
-  /* ── Títulos das seções de anotação ── */
-  .section-title {
     font-size: 12px;
-    padding: 3px;
+    width: 40px !important;
   }
 }
