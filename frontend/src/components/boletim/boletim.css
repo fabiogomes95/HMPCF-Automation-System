@@ -132,7 +132,7 @@
   align-items: center;
   box-sizing: border-box;
   font-family: Arial, sans-serif;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .field:last-child {
@@ -143,7 +143,7 @@
   font-weight: bold;
   margin-right: 6px;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .field input[type="text"],
@@ -152,7 +152,7 @@
   flex: 1;
   border: none;
   outline: none;
-  font-size: 12px;
+  font-size: 13px;
   background: transparent;
   padding: 1px;
   min-width: 0;
@@ -170,6 +170,7 @@
 .checkbox-group label {
   font-weight: normal;
   white-space: nowrap;
+  font-size: 13px;
 }
 
 /* ─── Risk Table ─── */
@@ -338,35 +339,9 @@ table.tabela-risco td {
 
   .page {
     box-shadow: none;
-    margin: 0;
+    margin: 0 auto;
     padding: 5mm 8mm;
     border: none;
-    height: 297mm;
-    overflow: hidden;
-  }
-
-  /* Formulario ocupa exatamente a folha A4 (menos o padding da .page) */
-  #formBoletim {
-    height: calc(297mm - 10mm);
-  }
-
-  /* Dados do paciente crescem para preencher o espaco antes das anotacoes */
-  .patient-info-section {
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-
-  /* As spacer-rows absorvem o espaco extra, empurrando as anotacoes para baixo */
-  .patient-info-section .spacer-row {
-    flex-grow: 1;
-    margin-bottom: 0;
-  }
-
-  /* Anotacoes ficam fixas no rodape da folha */
-  .annotations-section {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
   }
 
   .no-print {
@@ -378,84 +353,14 @@ table.tabela-risco td {
     print-color-adjust: exact !important;
   }
 
-  .row {
-    page-break-inside: avoid;
-  }
+  .row { page-break-inside: avoid; }
+  .section-title { page-break-after: avoid; }
+  .writing-section { page-break-inside: avoid; }
 
-  .section-title {
-    page-break-after: avoid;
-    font-size: 12px;
-    padding: 3px;
-  }
+  .spacer-row { margin-bottom: 4px; }
 
-  .writing-section {
-    page-break-inside: avoid;
-    flex: 0 0 auto;
-  }
+  .header-logo img { max-height: 40px; }
+  .header-text { font-size: 10px; }
 
-  /* Anotacoes da Classificacao: 3 linhas */
-  .annotations-section .writing-section:nth-child(1) .handwriting-area {
-    flex: none;
-    height: 75px;
-    min-height: 75px;
-    max-height: 75px;
-  }
-
-  /* Historia Clinica e Hipotese Diagnostica: 4 linhas cada */
-  .annotations-section .writing-section:nth-child(2) .handwriting-area,
-  .annotations-section .writing-section:nth-child(3) .handwriting-area {
-    flex: none;
-    height: 100px;
-    min-height: 100px;
-    max-height: 100px;
-  }
-
-  /* ── Header ── */
-  .header-text {
-    font-size: 11px;
-  }
-
-  .header-logo img {
-    max-height: 45px;
-  }
-
-  /* ── Campos de dados — fonte maior para preencher a folha ── */
-  .field {
-    padding: 4px 6px;
-  }
-
-  .field label {
-    font-size: 13px;
-  }
-
-  .field input[type="text"],
-  .field input[type="date"],
-  .field input[type="time"] {
-    font-size: 15px;
-  }
-
-  .checkbox-group {
-    font-size: 13px;
-    gap: 8px;
-  }
-
-  .checkbox-group label {
-    font-size: 13px;
-  }
-
-  /* ── Tabela de classificacao de risco ── */
-  table.tabela-risco td {
-    padding: 3px 6px;
-    height: 22px;
-    font-size: 12px;
-  }
-
-  .color-box {
-    font-size: 12px;
-  }
-
-  .input-ssvv {
-    font-size: 12px;
-    width: 40px !important;
-  }
+  /* Fontes de tela mantidas no print — sem reducao */
 }
