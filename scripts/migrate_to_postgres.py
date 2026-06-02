@@ -218,13 +218,13 @@ log = _setup_logging()
 # ══════════════════════════════════════════════════════════════════════════════
 
 def conectar_sqlite() -> sqlite3.Connection:
-    path = os.path.abspath(SQLITE_PATH)
+    path = SQLITE_PATH
     if not os.path.exists(path):
         raise FileNotFoundError(f"Banco SQLite nao encontrado: {path}")
-    uri = "file:///{}?mode=ro".format(path.replace("\\", "/").lstrip("/"))
-    conn = sqlite3.connect(uri, uri=True)
+    # UNC paths (\\servidor\...) nao sao suportados pelo modo URI do SQLite
+    conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
-    log.info(f"SQLite (read-only): {path}")
+    log.info(f"SQLite: {path}")
     return conn
 
 
@@ -499,11 +499,16 @@ def transformar_pac(row: sqlite3.Row, c: ContPac) -> Optional[tuple]:
 
 
 def _carregar_chaves_pg(pg) -> tuple[set, set]:
-    with pg.cursor() as cur:
-        cur.execute("SELECT num_cpf FROM pacientes WHERE num_cpf IS NOT NULL")
-        cpfs = {r[0] for r in cur.fetchall()}
-        cur.execute("SELECT cns FROM pacientes WHERE cns IS NOT NULL")
-        cnss = {r[0] for r in cur.fetchall()}
+    try:
+        with pg.cursor() as cur:
+            cur.execute("SELECT num_cpf FROM pacientes WHERE num_cpf IS NOT NULL")
+            cpfs = {r[0] for r in cur.fetchall()}
+            cur.execute("SELECT cns FROM pacientes WHERE cns IS NOT NULL")
+            cnss = {r[0] for r in cur.fetchall()}
+        pg.commit()
+    except Exception:
+        pg.rollback()
+        cpfs, cnss = set(), set()
     log.info(f"  PG existente: {len(cpfs):,} CPFs | {len(cnss):,} CNSs")
     return cpfs, cnss
 
@@ -630,13 +635,17 @@ _INSERT_ATD = f"INSERT INTO recepcao_atendimentos ({', '.join(_COLS_ATD)}) VALUE
 
 def _construir_mapa_pacs(pg) -> dict[str, int]:
     mapa: dict[str, int] = {}
-    with pg.cursor() as cur:
-        cur.execute("SELECT id, num_cpf FROM pacientes WHERE num_cpf IS NOT NULL")
-        for pid, cpf in cur.fetchall():
-            mapa[cpf] = pid
-        cur.execute("SELECT id, cns FROM pacientes WHERE cns IS NOT NULL")
-        for pid, cns in cur.fetchall():
-            mapa[cns] = pid
+    try:
+        with pg.cursor() as cur:
+            cur.execute("SELECT id, num_cpf FROM pacientes WHERE num_cpf IS NOT NULL")
+            for pid, cpf in cur.fetchall():
+                mapa[cpf] = pid
+            cur.execute("SELECT id, cns FROM pacientes WHERE cns IS NOT NULL")
+            for pid, cns in cur.fetchall():
+                mapa[cns] = pid
+        pg.commit()
+    except Exception:
+        pg.rollback()
     log.info(f"  Mapa de pacientes: {len(mapa):,} identificadores (CPF + CNS)")
     return mapa
 
