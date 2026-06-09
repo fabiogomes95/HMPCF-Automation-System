@@ -159,7 +159,7 @@ def executar_pyautogui(medico, data_atend, procedimento, pacientes: list[dict], 
             try:
                 pyautogui.write(doc)
                 pyautogui.press('tab')
-                time.sleep(1.0)
+                time.sleep(0.8)
                 pyautogui.press('f7')
                 time.sleep(0.8)
 
@@ -168,15 +168,15 @@ def executar_pyautogui(medico, data_atend, procedimento, pacientes: list[dict], 
 
                 pyautogui.write(procedimento)
                 pyautogui.press('1')
-                time.sleep(0.5)
+                time.sleep(0.4)
 
                 pyautogui.press(['tab', 'tab', 'tab'])
                 pyautogui.write('2')
-                time.sleep(0.5)
+                time.sleep(0.4)
 
                 pyautogui.press(['tab', 'tab'])
                 pyautogui.press('enter')
-                time.sleep(1.7)
+                time.sleep(1.0)
 
             except pyautogui.FailSafeException:
                 if callback:
