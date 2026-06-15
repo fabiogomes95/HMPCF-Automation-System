@@ -650,15 +650,26 @@ def iniciar() -> None:
     def manter_vivo(rota, websockets):
         pass
 
-    eel.start(
-        'index.html',
-        mode='msedge',
-        size=(1250, 850),
-        host='localhost',
-        port=8001,
-        block=False,
-        close_callback=manter_vivo
-    )
+    _iniciou = False
+    for _mode in ('msedge', 'chrome', 'default'):
+        try:
+            eel.start(
+                'index.html',
+                mode=_mode,
+                size=(1250, 850),
+                host='localhost',
+                port=8001,
+                block=False,
+                close_callback=manter_vivo
+            )
+            logger.info(f"Painel iniciado com navegador mode={_mode!r}")
+            _iniciou = True
+            break
+        except Exception as _e:
+            logger.warning(f"Falha ao abrir com mode={_mode!r}: {_e}")
+
+    if not _iniciou:
+        logger.error("Nao foi possivel abrir o painel em nenhum navegador.")
 
     try:
         eel.adicionarEventoTerminal(f"Motor HMPCF 3.0 iniciado — {len(BASE_PACIENTES)} pacientes na RAM", "info")
