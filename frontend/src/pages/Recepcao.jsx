@@ -18,8 +18,6 @@ import {
   formatarIdade,
   validarCPF,
   validarCNS,
-  formatRegistro,
-  calcularTurno,
   horaAtual,
   dataAtual,
 } from "../utils";
@@ -76,26 +74,8 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   const debounceRef = useRef(null);
   const pacienteEncontradoRef = useRef(false);
   const cpfRef = useRef(null);
-  const ultimoRegistroRef = useRef(null);
-  const ultimoTurnoRef = useRef(null);
   const horaManualRef = useRef(false);
   const dataManualRef = useRef(false);
-
-  function sugerirAtdInfo() {
-    const data = dataAtual();
-    const hora = horaAtual();
-    const turno = calcularTurno(hora);
-    let registro = 1;
-    if (ultimoRegistroRef.current != null) {
-      if (ultimoTurnoRef.current === null || turno === ultimoTurnoRef.current) {
-        // Mesmo turno (ou primeiro uso): incrementa
-        registro = ultimoRegistroRef.current + 1;
-      }
-      // Turno diferente: reseta para 01
-    }
-    ultimoTurnoRef.current = turno;
-    setAtdInfo({ data, hora, registro: formatRegistro(registro) });
-  }
 
   useEffect(() => {
     cpfRef.current?.focus();
@@ -109,12 +89,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
       localStorage.setItem("terminal_nome", id);
       iniciarSessao(id, window.location.hostname);
     }
-    // Restaura último registro/turno do localStorage (sobrevive à navegação)
-    const regSalvo = parseInt(localStorage.getItem("ultimo_registro"), 10);
-    const turnoSalvo = localStorage.getItem("ultimo_turno");
-    ultimoRegistroRef.current = isNaN(regSalvo) ? null : regSalvo;
-    ultimoTurnoRef.current = turnoSalvo || null;
-    sugerirAtdInfo();
+    setAtdInfo(prev => ({ ...prev, data: dataAtual(), hora: horaAtual(), registro: "" }));
   }, []);
 
   // Relógio em tempo real — atualiza hora/data automaticamente a cada 10s
@@ -298,8 +273,6 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
 
   function handleAtdRegistroChange(e) {
     const v = e.target.value.replace(/\D/g, "").slice(0, 4);
-    const num = parseInt(v, 10);
-    if (!isNaN(num)) ultimoRegistroRef.current = num;
     setAtdInfo((prev) => ({ ...prev, registro: v }));
   }
 
@@ -410,14 +383,6 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
             bairro_pcnte: dados.bairro_pcnte || "",
           }));
         }
-        const turno = calcularTurno(atdInfo.hora);
-        const regNum = parseInt(atdInfo.registro, 10);
-        if (!isNaN(regNum)) {
-          ultimoRegistroRef.current = regNum;
-          ultimoTurnoRef.current = turno;
-          localStorage.setItem("ultimo_registro", regNum);
-          localStorage.setItem("ultimo_turno", turno);
-        }
         setMsg("✓ Registrado!");
         setRegistrado(true);
       }
@@ -447,16 +412,6 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   }
 
   function handleLimpar() {
-    // Persiste o registro/turno atuais para que sugerirAtdInfo possa incrementar
-    const regAtual = parseInt(atdInfo.registro, 10);
-    const turnoAtual = calcularTurno(atdInfo.hora || horaAtual());
-    if (!isNaN(regAtual) && regAtual > 0) {
-      ultimoRegistroRef.current = regAtual;
-      localStorage.setItem("ultimo_registro", regAtual);
-    }
-    ultimoTurnoRef.current = turnoAtual;
-    localStorage.setItem("ultimo_turno", turnoAtual);
-
     // Reativa atualização automática de hora e data
     horaManualRef.current = false;
     dataManualRef.current = false;
@@ -472,7 +427,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     setErroDtnasc("");
     setProcedencia("NORMAL");
     pacienteEncontradoRef.current = false;
-    sugerirAtdInfo();
+    setAtdInfo({ data: dataAtual(), hora: horaAtual(), registro: "" });
     cpfRef.current?.focus();
   }
 
