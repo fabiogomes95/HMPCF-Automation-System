@@ -45,17 +45,17 @@ export default function BoletimA4({
 
         {/* ─── Linha 1: Data / Hora / Registro ─── */}
         <div className="row top-border spacer-row">
-          <div className="field" style={{ flex: 1 }}>
+          <div className="field campo-data">
             <label>DATA DE ATENDIMENTO:</label>
             <input type="text" value={atdInfo.data || ""} onChange={onDataChange} />
           </div>
-          <div className="field" style={{ flex: "0 0 100px" }}>
+          <div className="field campo-hora">
             <label>HORA:</label>
             <input type="text" value={atdInfo.hora || ""} onChange={onHoraChange} />
           </div>
-          <div className="field" style={{ flex: "0 0 120px" }}>
+          <div className="field campo-registro">
             <label>REG.:</label>
-            <input type="text" value={atdInfo.registro || ""} onChange={onRegistroChange} />
+            <input type="text" value={atdInfo.registro || ""} onChange={onRegistroChange} maxLength={3} />
           </div>
         </div>
 
@@ -207,11 +207,11 @@ export default function BoletimA4({
 
         {/* ─── Linha 9: Responsável + Tel ─── */}
         <div className="row">
-          <div className="field" style={{ flex: 2.5 }}>
+          <div className="field" style={{ flex: 1 }}>
             <label>RESPONSÁVEL:</label>
             <input type="text" name="responsavel" value={form.responsavel || ""} onChange={onFieldChange} />
           </div>
-          <div className="field" style={{ flex: 1.5 }}>
+          <div className="field" style={{ flex: "0 0 175px" }}>
             <label>TEL:</label>
             <input
               type="text"
@@ -224,7 +224,7 @@ export default function BoletimA4({
 
         {/* ─── Linha 10: Endereço + Nº ─── */}
         <div className="row">
-          <div className="field" style={{ flex: 3.2 }}>
+          <div className="field" style={{ flex: 1 }}>
             <label>ENDEREÇO:</label>
             <input type="text" name="logpcn" value={form.logpcn || ""} onChange={onFieldChange} />
             {onFamilia && (
@@ -238,9 +238,9 @@ export default function BoletimA4({
               </button>
             )}
           </div>
-          <div className="field" style={{ flex: 0.8 }}>
+          <div className="field campo-num">
             <label>Nº:</label>
-            <input type="text" name="numpcn" value={form.numpcn || ""} onChange={onFieldChange} />
+            <input type="text" name="numpcn" value={form.numpcn || ""} onChange={onFieldChange} maxLength={6} />
           </div>
         </div>
 

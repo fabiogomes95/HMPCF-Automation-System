@@ -113,9 +113,11 @@ if DIST.exists():
     if (DIST / "img").exists():
         app.mount("/img", StaticFiles(directory=DIST / "img"), name="static-img")
 
+    _NO_CACHE = {"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"}
+
     @app.get("/", include_in_schema=False)
     async def serve_index():
-        return FileResponse(DIST / "index.html")
+        return FileResponse(DIST / "index.html", headers=_NO_CACHE)
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str):
@@ -123,4 +125,4 @@ if DIST.exists():
         p = DIST / full_path
         if p.is_file():
             return FileResponse(p)
-        return FileResponse(DIST / "index.html")
+        return FileResponse(DIST / "index.html", headers=_NO_CACHE)
