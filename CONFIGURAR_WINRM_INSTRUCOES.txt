@@ -1,0 +1,71 @@
+==========================================
+  HMPCF -- Configurar Acesso Remoto (WinRM)
+==========================================
+
+Siga os passos abaixo UMA UNICA VEZ neste computador.
+Apos isso, a equipe podera rodar scripts sem precisar
+usar este PC fisicamente.
+
+------------------------------------------
+PASSO 1 -- Rodar o script de configuracao
+------------------------------------------
+
+1. Abra o Explorer e va ate a pasta:
+   C:\HMPCF-Automation-System\
+
+2. Clique com o BOTAO DIREITO no arquivo:
+   CONFIGURAR_WINRM.bat
+
+3. Escolha: "Executar como administrador"
+
+4. Pressione qualquer tecla para continuar
+   quando solicitado.
+
+5. Ao final, o script mostrara o IP deste PC.
+   Anote o IP! Exemplo: 192.168.1.50
+
+   Informe esse IP para a equipe que vai
+   acessar remotamente.
+
+------------------------------------------
+PASSO 2 -- O que a outra maquina precisa fazer
+          (feito apenas uma vez la tambem)
+------------------------------------------
+
+No outro PC, abrir o PowerShell como Administrador
+e rodar:
+
+  Set-Item WSMan:\localhost\Client\TrustedHosts -Value "Desktop-9c4s1co" -Force
+
+------------------------------------------
+PASSO 3 -- Testar se funcionou
+------------------------------------------
+
+No outro PC, rodar no PowerShell:
+
+  $cred = Get-Credential
+  Invoke-Command -ComputerName Desktop-9c4s1co -Credential $cred -ScriptBlock { hostname }
+
+  Na janela de credenciais, informar:
+    Usuario: Desktop-9c4s1co\NomeDoUsuarioDestePC
+    Senha:   a senha deste PC
+
+  Se aparecer "Desktop-9c4s1co" na tela,
+  o acesso remoto esta funcionando!
+
+------------------------------------------
+OBSERVACOES
+------------------------------------------
+
+- O servico WinRM foi configurado para iniciar
+  automaticamente com o Windows. Nao precisa
+  repetir estes passos apos reiniciar.
+
+- Apenas maquinas da rede local (Wi-Fi/cabo
+  da clinica) conseguem se conectar.
+  Nao ha risco de acesso externo.
+
+- Em caso de duvida, chamar o responsavel
+  pelo sistema.
+
+==========================================
