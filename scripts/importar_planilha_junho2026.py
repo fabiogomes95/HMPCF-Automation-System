@@ -14,10 +14,21 @@ Lógica:
 """
 
 import csv
+import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+# Carrega .env do projeto se existir
+_ENV = Path(__file__).parent.parent / "scripts" / ".env"
+if not _ENV.exists():
+    _ENV = Path(__file__).parent / ".env"
+if _ENV.exists():
+    for _line in _ENV.read_text(encoding="utf-8").splitlines():
+        if "=" in _line and not _line.startswith("#"):
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
 
 try:
     import psycopg2
@@ -28,8 +39,13 @@ except ImportError:
     sys.exit(1)
 
 # ── Configuração ───────────────────────────────────────────────────────────────
-PG = dict(host="localhost", port=5432, dbname="hmpcf",
-          user="postgres", password="hmpcf2026")
+PG = dict(
+    host=os.getenv("POSTGRES_HOST", "localhost"),
+    port=int(os.getenv("POSTGRES_PORT", "5432")),
+    dbname=os.getenv("POSTGRES_DB", "hmpcf"),
+    user=os.getenv("POSTGRES_USER", "postgres"),
+    password=os.getenv("POSTGRES_PASSWORD", ""),
+)
 
 PLANILHA    = Path(__file__).parent.parent / "PLANILHA 2026 RECEP - JUNHO 2026.csv"
 DATA_BASE   = "2026-06-16"

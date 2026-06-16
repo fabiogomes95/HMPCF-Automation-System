@@ -27,3 +27,6 @@ legado/venv/
 legado/credentials.json
 legado/__pycache__/
 opencode/
+
+# Planilhas com dados de pacientes
+*.csv

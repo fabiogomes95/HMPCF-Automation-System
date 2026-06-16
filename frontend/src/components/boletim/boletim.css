@@ -73,6 +73,34 @@
   margin: 0;
 }
 
+/* ─── Linha 1: Data / Hora / Registro ─── */
+.campo-data {
+  flex: 0 0 280px !important;
+}
+
+.campo-hora {
+  flex: 0 0 85px !important;
+}
+
+.campo-registro {
+  flex: 1 !important;
+}
+
+.campo-registro input[type="text"] {
+  font-weight: bold;
+}
+
+/* ─── Campo Nº (número da casa) ─── */
+.campo-num {
+  flex: 0 0 110px !important;
+  min-width: 0;
+}
+
+.campo-num input[type="text"] {
+  width: 78px;
+  min-width: 0;
+}
+
 /* ─── Botão Família ─── */
 .btn-familia {
   flex-shrink: 0;
