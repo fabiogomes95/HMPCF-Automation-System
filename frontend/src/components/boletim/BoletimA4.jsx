@@ -45,16 +45,16 @@ export default function BoletimA4({
 
         {/* ─── Linha 1: Data / Hora / Registro ─── */}
         <div className="row top-border spacer-row">
-          <div className="field">
+          <div className="field" style={{ flex: 1 }}>
             <label>DATA DE ATENDIMENTO:</label>
             <input type="text" value={atdInfo.data || ""} onChange={onDataChange} />
           </div>
-          <div className="field">
+          <div className="field" style={{ flex: "0 0 100px" }}>
             <label>HORA:</label>
             <input type="text" value={atdInfo.hora || ""} onChange={onHoraChange} />
           </div>
-          <div className="field">
-            <label>REGISTRO:</label>
+          <div className="field" style={{ flex: "0 0 120px" }}>
+            <label>REG.:</label>
             <input type="text" value={atdInfo.registro || ""} onChange={onRegistroChange} />
           </div>
         </div>
@@ -246,7 +246,7 @@ export default function BoletimA4({
 
         {/* ─── Linha 11: Bairro / Cidade / UF ─── */}
         <div className="row spacer-row">
-          <div className="field" style={{ flex: 1.5 }}>
+          <div className="field" style={{ flex: 3 }}>
             <label>BAIRRO:</label>
             <input type="text" name="bairro_pcnte" value={form.bairro_pcnte || ""} onChange={onFieldChange} />
           </div>
@@ -254,9 +254,9 @@ export default function BoletimA4({
             <label>CIDADE:</label>
             <input type="text" name="cidade" value={form.cidade || ""} onChange={onFieldChange} />
           </div>
-          <div className="field" style={{ flex: 0.5 }}>
+          <div className="field" style={{ flex: "0 0 58px" }}>
             <label>UF:</label>
-            <input type="text" name="estado" value={form.estado || ""} maxLength={2} onChange={onFieldChange} />
+            <input type="text" name="estado" value={form.estado || ""} maxLength={2} onChange={onFieldChange} style={{ width: 24 }} />
           </div>
         </div>
 

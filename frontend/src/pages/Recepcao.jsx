@@ -71,11 +71,10 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   const [erroDtnasc, setErroDtnasc] = useState("");
   const [procedencia, setProcedencia] = useState("NORMAL");
   const [atdInfo, setAtdInfo] = useState({ data: "", hora: "", registro: "" });
+  const [relogioAtivo, setRelogioAtivo] = useState(true);
   const debounceRef = useRef(null);
   const pacienteEncontradoRef = useRef(false);
   const cpfRef = useRef(null);
-  const horaManualRef = useRef(false);
-  const dataManualRef = useRef(false);
 
   useEffect(() => {
     cpfRef.current?.focus();
@@ -92,25 +91,18 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     setAtdInfo(prev => ({ ...prev, data: dataAtual(), hora: horaAtual(), registro: "" }));
   }, []);
 
-  // Relógio em tempo real — atualiza hora/data automaticamente a cada 10s
-  // Para de atualizar o campo se o usuário tiver editado manualmente
+  // Relógio em tempo real — para completamente ao primeiro campo digitado
   useEffect(() => {
+    if (!relogioAtivo) return;
     const tick = setInterval(() => {
-      setAtdInfo(prev => {
-        const novaHora = horaAtual();
-        const novaData = dataAtual();
-        const atualizaHora = !horaManualRef.current && novaHora !== prev.hora;
-        const atualizaData = !dataManualRef.current && novaData !== prev.data;
-        if (!atualizaHora && !atualizaData) return prev;
-        return {
-          ...prev,
-          ...(atualizaHora ? { hora: novaHora } : {}),
-          ...(atualizaData ? { data: novaData } : {}),
-        };
-      });
+      setAtdInfo(prev => ({
+        ...prev,
+        hora: horaAtual(),
+        data: dataAtual(),
+      }));
     }, 10000);
     return () => clearInterval(tick);
-  }, []);
+  }, [relogioAtivo]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -193,8 +185,13 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     }
   }, [edicao, autoBusca]);
 
+  function congelarRelogio() {
+    setRelogioAtivo(false);
+  }
+
   function handleCPFChange(e) {
     const raw = apenasNumeros(e.target.value).slice(0, 11);
+    if (raw.length >= 1) congelarRelogio();
     setForm((prev) => ({ ...prev, num_cpf: raw }));
     if (raw.length === 11 && !validarCPF(raw)) {
       setErroCpf("CPF inválido");
@@ -211,6 +208,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
 
   function handleCNSChange(e) {
     const raw = apenasNumeros(e.target.value).slice(0, 15);
+    if (raw.length >= 1) congelarRelogio();
     setForm((prev) => ({ ...prev, cns: raw }));
     if (raw.length === 15 && !validarCNS(raw)) {
       setErroCns("CNS inválido");
@@ -226,6 +224,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   }
 
   function handleChange(e) {
+    congelarRelogio();
     const { name, value } = e.target;
     if (camposTexto.includes(name)) {
       setForm((prev) => ({ ...prev, [name]: uc(value) }));
@@ -235,6 +234,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   }
 
   function handleDtnascChange(e) {
+    congelarRelogio();
     const fmt = formatDateBR(e.target.value);
     setForm((prev) => ({ ...prev, dtnasc: fmt }));
     calcIdade(fmt);
@@ -242,15 +242,18 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   }
 
   function handleTelChange(e) {
+    congelarRelogio();
     const fmt = formatTelefone(e.target.value);
     setForm((prev) => ({ ...prev, telefone: fmt }));
   }
 
   function handleRacaChange(cod) {
+    congelarRelogio();
     setForm((prev) => ({ ...prev, raca: cod }));
   }
 
   function handleSexoChange(v) {
+    congelarRelogio();
     setForm((prev) => ({ ...prev, sexo: v }));
   }
 
@@ -259,13 +262,13 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   }
 
   function handleAtdDataChange(e) {
-    dataManualRef.current = true;
+    congelarRelogio();
     const raw = formatDateBR(e.target.value);
     setAtdInfo((prev) => ({ ...prev, data: raw }));
   }
 
   function handleAtdHoraChange(e) {
-    horaManualRef.current = true;
+    congelarRelogio();
     let v = e.target.value.replace(/[^0-9:]/g, "").slice(0, 5);
     if (v.length === 2 && !v.includes(":")) v += ":";
     setAtdInfo((prev) => ({ ...prev, hora: v }));
@@ -412,10 +415,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   }
 
   function handleLimpar() {
-    // Reativa atualização automática de hora e data
-    horaManualRef.current = false;
-    dataManualRef.current = false;
-
+    setRelogioAtivo(true);
     setRegistrado(false);
     setForm({ ...vazio });
     setPacienteId(null);
