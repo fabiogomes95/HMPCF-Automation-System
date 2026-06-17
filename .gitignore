@@ -30,3 +30,6 @@ opencode/
 
 # Planilhas com dados de pacientes
 *.csv
+
+# Arquivo de lock/sincronização gerado pelo SO (nome ilegível)
+dashboard/.*00050000000716d2630ff9e1aa84aad6
