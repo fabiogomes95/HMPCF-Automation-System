@@ -5,6 +5,126 @@ estão no código e nos commits do git.
 
 ---
 
+## 2026-06-17 — Painel Gerencial (Streamlit): construção, correção de dados reais e importação mensal
+
+### Contexto
+
+Pedido: um painel separado da recepção, para coordenadores do hospital e TI
+acompanharem pacientes em tempo real (hoje/semana/mês/desde o início), sem
+risco nenhum de afetar o backend/frontend da recepção (que está em produção
+e não deveria ser tocado).
+
+### Decisão de arquitetura
+
+Aplicação **Streamlit totalmente independente** em `dashboard/`:
+- Ambiente virtual próprio (`dashboard/.venv`), instalado e executado
+  **diretamente no Desktop-9c4s1co** (a máquina real da recepção), não no
+  backend.
+- Porta própria (**8502**), separada da porta 8001 do backend.
+- Conexão somente leitura ao mesmo PostgreSQL, reaproveitando as credenciais
+  de `backend/.env` (sem duplicar segredo, sem nenhuma alteração no backend).
+- Tarefa Agendada própria (`HMPCF-Dashboard`), com `BootTrigger` e reinício
+  automático — mesmo padrão da `HMPCF-Backend`, mas totalmente desacoplada.
+- Regra de firewall própria (porta 8502) — a do backend (8001) não foi tocada.
+
+Alternativa descartada: rodar o Streamlit em outra máquina (PC do TI) e
+expor o PostgreSQL na rede. Rejeitada para não aumentar a superfície de
+exposição do banco de produção; o processo continua só no Desktop-9c4s1co e
+qualquer máquina da rede acessa via navegador.
+
+### Armadilha: dois ambientes parecidos
+
+Boa parte da sessão foi gasta tentando rodar e testar o dashboard — sem
+perceber, inicialmente, que o ambiente de execução (Bash local) era o PC
+pessoal do desenvolvedor, não o Desktop-9c4s1co real. O `.venv` e os testes
+iniciais rodaram contra uma **cópia local do backup noturno** do Postgres
+(dados reais, mas até 1 dia desatualizados), não contra o banco em produção.
+Identificado pela disparidade de hostname/IP/usuário (`DESKTOP-MPE1OD9` /
+`192.168.1.100` / `pedro` vs. o real `DESKTOP-9C4S1CO` / `192.168.1.14` /
+`Recepção 02`). Resolvido recriando a `.venv` e reinstalando tudo via WinRM,
+executando de fato no Desktop-9c4s1co.
+
+### Páginas implementadas
+
+| Página | Função |
+|---|---|
+| `app.py` (principal) | KPIs (hoje/semana/mês/total), volume diário, sexo, faixa etária, top 10 bairros |
+| `pages/1_Historico_Diario.py` | Lista completa de atendimentos de um dia (hoje/ontem/escolher data), com CPF, CNS, nascimento, idade, sexo, endereço, telefone |
+| `pages/2_Importar_Planilha_Mensal.py` | Upload do `.tsv` de plantão → compara com o banco → importa só o que falta, com prévia e confirmação manual |
+| `pages/3_Buscar_Paciente.py` | Busca por nome/CPF/CNS → todas as entradas (data e horário) daquele paciente |
+
+Código compartilhado em `db.py` (conexão, formatação de CPF/telefone/endereço,
+cálculo de idade, correção de fuso, deduplicação) e `importador.py` (parser
+do `.tsv`, comparação e importação).
+
+### Bugs reais encontrados e corrigidos
+
+**1. Fuso horário (+3h em todos os horários exibidos).**
+`pandas.read_sql` convertia os `timestamptz` para UTC, descartando o
+offset `-03:00`. O Postgres em si estava com a hora certa (`now()` batia
+com o relógio do Windows) — o bug era só na exibição. Corrigido com
+`corrigir_fuso()` (reaplica `America/Sao_Paulo` após a leitura).
+
+**2. `TypeError` em campos nulos.** CPF, telefone e endereço nulos chegam
+como `NaN` (float) via pandas, não como `None`/string vazia — quebrava
+`len(cpf)`. Corrigido com normalização (`_texto()`) em todas as funções de
+formatação.
+
+**3. Parser do `.tsv` confundindo data de nascimento com cabeçalho de dia.**
+Uma linha tinha o CPF digitado por engano no campo de número de registro;
+como esse campo não era um número puro, o parser caía num fallback e
+interpretava a data de nascimento do paciente (`22/03/1989`) como se fosse
+o cabeçalho do dia, corrompendo a data de todos os atendimentos seguintes.
+Corrigido: só vira cabeçalho de dia uma linha que bate exatamente com o
+padrão de data isolada ou contém "PLANT" (plantão). Linhas não reconhecidas
+vão para uma lista de "ignoradas", exibida na tela para revisão manual.
+
+**4. Erro de digitação no ano do cabeçalho.** Um cabeçalho de plantão tinha
+"13/06/**2016**" em vez de 2026 (erro humano da recepção). Corrigido com
+correção automática: o mês/ano do **primeiro** cabeçalho válido do arquivo
+é usado como referência; qualquer cabeçalho que destoe tem o ano/mês
+substituído (mantendo o dia).
+
+**5. Regra do plantão noturno.** Confirmado contra dados reais: um
+atendimento da madrugada (ex: 00:04) sob o cabeçalho "PLANTÃO NOTURNO
+01/06" é gravado no sistema com a data do dia **seguinte** (02/06) — o
+plantão noturno cruza a meia-noite e a recepção digita pela data/hora real,
+não pela data de início do plantão. O parser agora aplica essa mesma regra
+(virada de dia para horários antes das 07h sob plantão noturno), o que
+**reduziu de 554 para 254** o número de atendimentos realmente faltantes no
+sistema (o número de 554 estava inflado por essa divergência de data).
+
+**6. Lançamentos duplicados por erro de digitação da recepção.** Mesmo
+paciente, mesmo dia, mesmo número de registro ou horário a poucos minutos de
+distância (ex: 10:09 e 10:14) — não são duas visitas reais, são reentrada
+por engano. `remover_quase_duplicados()` (limite padrão: 30 minutos) mantém
+só o lançamento mais recente do par, em todas as páginas do painel
+(KPIs, gráficos, histórico diário, busca de paciente). Os duplicados nunca
+são apagados do banco — só ficam ocultos na visualização, com um aviso
+expansível mostrando o que foi escondido.
+
+### Importação de dados reais
+
+Durante os testes, dois atendimentos manuais que nunca tinham sido digitados
+foram identificados e importados (Izadora Liz Ferreira Bezerra, registro 59;
+Rafaela Silva do Nascimento, registro 60 — ambos de madrugada, plantão
+noturno). A varredura completa de junho/2026 identificou **254 atendimentos**
+registrados no papel mas ausentes do sistema — ficou disponível para
+importação assistida (com prévia e confirmação manual) na página
+"Importar Planilha Mensal", reutilizável em qualquer mês seguinte.
+
+### Decisões de segurança
+
+- O dashboard nunca escreve no banco fora da tela de importação, e mesmo lá
+  exige confirmação explícita (checkbox + botão) antes de qualquer `INSERT`.
+- Toda alteração de infraestrutura (firewall, tarefa agendada, exclusão de
+  pasta) foi feita com confirmação explícita do usuário quando o sistema de
+  segurança do agente sinalizou risco — nenhuma tentativa de contornar essas
+  proteções (ex: elevação de privilégio via tarefa agendada) foi realizada.
+- `dashboard/.venv` está no `.gitignore` (já coberto pelo padrão `.venv/`).
+
+---
+
 ## 2026-05-29 — Migração definitiva, auditoria e boletim A4
 
 ### Script de migração (`scripts/migrate_to_postgres.py`)
