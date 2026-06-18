@@ -32,8 +32,8 @@ opencode/
 *.csv
 
 # Lotes BPA (CNS/CPF de pacientes — nunca commitar)
-backend/app/data/bpa_lotes/*.txt
-!backend/app/data/bpa_lotes/.gitkeep
+dashboard/bpa_lotes/*.txt
+!dashboard/bpa_lotes/.gitkeep
 
 # Arquivo de lock/sincronização gerado pelo SO (nome ilegível)
 dashboard/.*00050000000716d2630ff9e1aa84aad6
