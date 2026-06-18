@@ -1,17 +1,45 @@
-# Checklist — Validação BPA-I com Firebird Real
+# Checklist — Validação BPA-I com Firebird (Ambiente de Teste)
 
 > Roteiro para amanhã na máquina do hospital que tem o BPA Magnético instalado.
-> Objetivo: validar o `gerar_bpa_i.py` contra dados e arquivo real, ajustar o que for necessário e deixar o gerador pronto para uso em produção.
+>
+> ⚠️ **Estratégia segura:** usaremos um **usuário/BPA de teste** com cópia da produção real.
+> O BPA de produção **NUNCA** será tocado durante esses testes. Toda a validação
+> acontece no ambiente isolado — só depois de tudo aprovado é que pensamos em rodar
+> contra a produção.
 
 ---
 
-## 0. Preparação da máquina
+## 0. Preparação do ambiente de TESTE (isolado da produção)
 
-- [ ] **Backup obrigatório** do banco antes de qualquer teste:
+### 0.1 Criar ambiente isolado
+
+- [ ] Identificar a pasta da produção real (provavelmente `C:\BPA\`)
+- [ ] Criar pasta de teste **completamente separada**:
   ```cmd
-  copy C:\BPA\BPAMAG.GDB C:\BPA\BPAMAG.GDB.backup_AAAAMMDD
+  mkdir C:\BPA_TESTE
   ```
-- [ ] Fechar o BPA Magnético (libera o arquivo `.GDB` para leitura)
+- [ ] **Fechar o BPA Magnético de produção** (libera o `.GDB` para cópia)
+- [ ] Copiar o banco de produção para o ambiente de teste:
+  ```cmd
+  copy C:\BPA\BPAMAG.GDB C:\BPA_TESTE\BPAMAG.GDB
+  ```
+- [ ] Copiar também a pasta `Exporta` (se existir):
+  ```cmd
+  xcopy C:\BPA\Exporta C:\BPA_TESTE\Exporta\ /E /I
+  ```
+
+### 0.2 Configurar usuário/BPA de teste
+
+- [ ] Abrir o BPA Magnético usando o **banco de teste** (`C:\BPA_TESTE\BPAMAG.GDB`)
+  - Geralmente trocar o caminho no atalho ou no `.ini` do BPA
+  - Confirmar no topo da tela que está apontando para `BPA_TESTE`
+- [ ] Logar com o usuário de teste (não o de produção)
+- [ ] **Confirmar duas vezes** antes de seguir:
+  - Caminho do banco aberto = `C:\BPA_TESTE\BPAMAG.GDB`? ✅
+  - Usuário logado = teste? ✅
+
+### 0.3 Preparar Python no ambiente
+
 - [ ] Verificar Python instalado:
   ```cmd
   python --version
@@ -23,6 +51,14 @@
   ```
 - [ ] Copiar a pasta `scripts/bpa/` do repo para a máquina (via git pull ou pen drive).
 
+### 0.4 Ajustar o script para apontar para teste
+
+Editar `gerar_bpa_i.py` temporariamente:
+```python
+DB_PATH = r"C:\BPA_TESTE\BPAMAG.GDB"   # ← apontar para teste
+```
+⚠️ Reverter para `C:\BPA\BPAMAG.GDB` antes do commit final.
+
 ---
 
 ## 1. Localizar arquivo `.txt` exportado pelo BPA
@@ -30,12 +66,12 @@
 Antes de gerar qualquer coisa nova, precisamos de uma referência real para comparar.
 
 - [ ] Procurar arquivo `.txt` já gerado pelo BPA em:
-  - `C:\BPA\Exporta\`
+  - `C:\BPA\Exporta\` (produção — só **copiar**, não modificar)
   - `C:\BPA\`
   - `C:\Users\<usuario>\Documents\BPA\`
-- [ ] Copiar um arquivo recente para `C:\BPA\amostra_real.txt`
+- [ ] Copiar um arquivo recente para `C:\BPA_TESTE\amostra_real.txt`
 
-Se **não houver** arquivo exportado: gerar um pequeno pelo próprio BPA Magnético com 2-3 pacientes manuais como referência.
+Se **não houver** arquivo exportado pela produção: usar o BPA de teste (com a cópia do banco real) para **exportar** um TXT pequeno com a produção existente — vai sair idêntico ao que a produção exportaria, mas sem mexer no banco real.
 
 ---
 
@@ -47,7 +83,7 @@ Criar arquivo `inspecionar_banco.py` na pasta `scripts/bpa/`:
 import firebirdsql
 
 con = firebirdsql.connect(
-    host="localhost", database=r"C:\BPA\BPAMAG.GDB",
+    host="localhost", database=r"C:\BPA_TESTE\BPAMAG.GDB",   # ← TESTE
     user="SYSDBA", password="masterkey", charset="WIN1252",
 )
 cur = con.cursor()
@@ -145,7 +181,7 @@ python inspecionar_banco.py > inspecao.txt
 Criar `comparar_layout.py`:
 
 ```python
-ARQ_REAL = r"C:\BPA\amostra_real.txt"
+ARQ_REAL = r"C:\BPA_TESTE\amostra_real.txt"
 
 with open(ARQ_REAL, encoding="latin-1", newline="") as f:
     for i, linha in enumerate(f):
@@ -230,10 +266,15 @@ Com base no que descobriu nas etapas 2 e 3, atualizar no script:
 
 ---
 
-## 6. Importação real no BPA Magnético
+## 6. Importação no BPA de TESTE
 
-- [ ] Abrir o BPA Magnético
-- [ ] **Backup novamente** (`copy C:\BPA\BPAMAG.GDB ...`)
+⚠️ **Atenção:** essa importação acontece **no BPA de teste** apontando para `C:\BPA_TESTE\BPAMAG.GDB`. O BPA de produção continua intocado.
+
+- [ ] **Reconfirmar** que o BPA aberto está apontando para `C:\BPA_TESTE\BPAMAG.GDB`
+- [ ] **Backup do banco de teste** antes de importar (para poder repetir testes):
+  ```cmd
+  copy C:\BPA_TESTE\BPAMAG.GDB C:\BPA_TESTE\BPAMAG.GDB.antes_import
+  ```
 - [ ] Menu → Importação → Importar Produção BPA
 - [ ] Selecionar o arquivo gerado
 - [ ] **Conferir:**
@@ -245,31 +286,42 @@ Com base no que descobriu nas etapas 2 e 3, atualizar no script:
 
 Se aceitar: ✅ layout confirmado. Se rejeitar: anotar o erro exato do BPA e voltar à etapa 3.
 
+**Para repetir testes**: restaurar o banco de teste:
+```cmd
+copy C:\BPA_TESTE\BPAMAG.GDB.antes_import C:\BPA_TESTE\BPAMAG.GDB
+```
+
 ---
 
-## 7. Teste em escala (50 pacientes)
+## 7. Teste em escala (50 pacientes) — ainda no banco de teste
 
+- [ ] Restaurar banco de teste limpo:
+  ```cmd
+  copy C:\BPA_TESTE\BPAMAG.GDB.antes_import C:\BPA_TESTE\BPAMAG.GDB
+  ```
 - [ ] Selecionar 50 CNS reais de um dia completo de atendimento
 - [ ] Gerar arquivo
-- [ ] Importar no BPA
+- [ ] Importar no BPA de TESTE
 - [ ] Conferir contagem: registros = 50, folhas = 1 (51-99 = 1 folha, 100+ = 2 folhas)
 - [ ] Verificar se há pacientes "não encontrados" → analisar caso a caso
 
 ---
 
-## 8. Teste de quebra de folha (150 pacientes)
+## 8. Teste de quebra de folha (150 pacientes) — ainda no banco de teste
 
+- [ ] Restaurar banco de teste novamente
 - [ ] Selecionar 150 CNS reais
-- [ ] Gerar e importar
+- [ ] Gerar e importar no BPA de TESTE
 - [ ] Verificar que o BPA aceita 2 folhas (001 com seq 01-99, 002 com seq 01-51)
 
 ---
 
-## 9. Validar fluxo completo de produção
+## 9. Validar fluxo completo (simulação de produção)
 
-- [ ] Fluxo de uso real: pegar a lista do dia (como já fazem no legado), passar pro script, importar no BPA
+- [ ] Restaurar banco de teste limpo
+- [ ] Fluxo de uso real: pegar a lista do dia (como já fazem no legado), passar pro script, importar no BPA de teste
 - [ ] Tempo total da operação vs. fluxo do robô atual
-- [ ] **Decisão**: substituir o robô ou rodar em paralelo por uma semana?
+- [ ] **Decisão**: substituir o robô ou rodar em paralelo por uma semana (sempre no banco de teste)?
 
 ---
 
@@ -281,13 +333,30 @@ Atualizar este arquivo com:
 - [ ] Layout do BPA-I confirmado (com posições corretas dos últimos campos)
 - [ ] Bugs encontrados e corrigidos
 - [ ] Procedimento operacional para os usuários do hospital
+- [ ] **Reverter `DB_PATH`** no `gerar_bpa_i.py` para `C:\BPA\BPAMAG.GDB` antes do commit final
 
 Commit final:
 ```cmd
 git add scripts/bpa/
-git commit -m "fix(bpa): ajustes apos validacao com banco real e BPA Magnetico"
+git commit -m "fix(bpa): ajustes apos validacao em ambiente de teste"
 git push
 ```
+
+---
+
+## 11. Quando (e SE) for usar em produção real
+
+> Etapa separada — só executar depois que tudo acima estiver ✅ por vários dias de teste.
+
+- [ ] Decisão tomada com a equipe do hospital
+- [ ] **Backup** do banco de produção:
+  ```cmd
+  copy C:\BPA\BPAMAG.GDB C:\BPA\BPAMAG.GDB.backup_AAAAMMDD
+  ```
+- [ ] Confirmar com olho humano: o script lê `C:\BPA\BPAMAG.GDB` (produção)
+- [ ] Rodar com lista pequena primeiro (5-10 pacientes)
+- [ ] Verificar importação no BPA de produção
+- [ ] Só então liberar volume completo
 
 ---
 
@@ -303,9 +372,15 @@ git push
 
 ---
 
-## Contato de emergência
+## Plano de contingência
 
-Se algo der errado no banco em produção:
+Como tudo acontece em `C:\BPA_TESTE\`, qualquer problema durante os testes:
+
+1. Fechar o BPA de teste
+2. Restaurar o banco de teste: `copy C:\BPA_TESTE\BPAMAG.GDB.antes_import C:\BPA_TESTE\BPAMAG.GDB`
+3. Recomeçar — produção segue intocada
+
+Se algum dia for usar em produção (etapa 11) e algo der errado:
 
 1. **PARAR** imediatamente
 2. Restaurar backup: `copy C:\BPA\BPAMAG.GDB.backup_AAAAMMDD C:\BPA\BPAMAG.GDB`
