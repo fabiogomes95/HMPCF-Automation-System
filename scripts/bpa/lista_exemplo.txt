@@ -1,0 +1,12 @@
+# Lista de CNS para geração do BPA-I
+# Uma linha por CNS (15 dígitos). Linhas com # são ignoradas.
+# Substitua pelos CNS reais dos pacientes atendidos.
+#
+# Uso: python gerar_bpa_i.py --mock --entrada lista_exemplo.txt
+#      python gerar_bpa_i.py --entrada lista_exemplo.txt
+
+700000000000001
+700000000000002
+700000000000003
+700000000000004
+700000000000005
