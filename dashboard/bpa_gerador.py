@@ -6,21 +6,26 @@ Validado em 2026-06-18 byte a byte contra o layout oficial DATASUS
 (C:/BPA/Layout_Exportacao_BPA.pdf) e um arquivo .MAR já exportado pelo BPA
 Magnético em produção (checksum do cabeçalho reproduzido com sucesso).
 
-Este módulo é PURO: sem input(), sem print() de interação, sem sys.exit().
-Toda decisão ambígua (profissional não encontrado, categoria desconhecida)
-é devolvida para quem chamou decidir — usado por app/services/bpa_service.py,
-que faz a ponte com a API web (o fluxo interativo de terminal vive apenas no
-script histórico scripts/bpa/gerar_bpa_i.py).
+Processo 100% independente — não importa nada do backend/ (Recepção) nem
+do frontend/. Usa as próprias credenciais em dashboard/.env.
 """
 
 from __future__ import annotations
 
 import os
 from datetime import date, datetime
+from pathlib import Path
 
 import firebirdsql
+from dotenv import load_dotenv
 
-from app.core.config import settings
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
+
+FIREBIRD_PATH     = os.getenv("FIREBIRD_PATH", r"C:\BPA\BPAMAG.GDB")
+FIREBIRD_USER     = os.getenv("FIREBIRD_USER", "SYSDBA")
+FIREBIRD_PASSWORD = os.getenv("FIREBIRD_PASSWORD", "masterkey")
+BPA_LOTES_DIR     = os.getenv("BPA_LOTES_DIR", str(BASE_DIR / "bpa_lotes"))
 
 # ── Configurações fixas da unidade ──────────────────────────────────────────
 # ORGAO_RESP, SIGLA_ORGAO, CNPJ_PRESTADOR, ORGAO_DEST e DESTINO_INDICADOR
@@ -51,15 +56,134 @@ class LoteError(Exception):
     """Erro de domínio ao processar um lote BPA (arquivo ausente/vazio/inválido)."""
 
 
+# ── Triagem: validação de CNS/CPF (dígito verificador real) ─────────────────
+def valida_cns(cns: str) -> bool:
+    if not cns or len(cns) != 15 or cns[0] not in "12789":
+        return False
+    if cns[0] in "789":
+        return sum(int(cns[i]) * (15 - i) for i in range(15)) % 11 == 0
+    pis = cns[:11]
+    soma = sum(int(pis[i]) * (15 - i) for i in range(11))
+    resto = soma % 11
+    dv = 11 - resto
+    if dv == 11:
+        dv = 0
+    if dv == 10:
+        soma += 2
+        resto = soma % 11
+        dv = 11 - resto
+        resultado = pis + "001" + str(dv)
+    else:
+        resultado = pis + "000" + str(dv)
+    return cns == resultado
+
+
+def valida_cpf(cpf: str) -> bool:
+    if not cpf or len(cpf) != 11 or len(set(cpf)) == 1:
+        return False
+    soma_1 = sum(int(cpf[i]) * (10 - i) for i in range(9))
+    digito_1 = (soma_1 * 10 % 11) % 10
+    soma_2 = sum(int(cpf[i]) * (11 - i) for i in range(10))
+    digito_2 = (soma_2 * 10 % 11) % 10
+    return str(digito_1) == cpf[9] and str(digito_2) == cpf[10]
+
+
+def extrair_documentos_validos(texto_sujo: str) -> list[str]:
+    """
+    Varre um texto "sujo" linha a linha, extrai o primeiro CNS/CPF válido
+    de cada linha e remove repetições consecutivas (digitação dupla
+    acidental). Mesma lógica do antigo legado/automacao/limpeza.py.
+    """
+    resultado = []
+    ultimo = None
+    for linha in (texto_sujo or "").splitlines():
+        if not linha.strip():
+            continue
+        sus_encontrado = ""
+        cpf_encontrado = ""
+        for token in linha.split():
+            num = "".join(c for c in token if c.isdigit())
+            if len(num) == 15 and valida_cns(num):
+                sus_encontrado = num
+            elif len(num) == 11 and valida_cpf(num):
+                cpf_encontrado = num
+        escolhido = sus_encontrado or cpf_encontrado
+        if escolhido and escolhido != ultimo:
+            ultimo = escolhido
+            resultado.append(escolhido)
+    return resultado
+
+
+def dividir_em_lotes(documentos: list[str], profissionais: list[str], data_br: str) -> str:
+    """
+    Divide a lista de documentos em blocos de até 99 (limite do BPA por
+    folha), distribuindo entre os profissionais informados em rodízio
+    (round-robin), no formato "PROFISSIONAL: X | DATA: Y".
+    """
+    nomes = [p.strip().upper() for p in profissionais if p.strip()] or ["PROFISSIONAL SEM NOME"]
+    TAMANHO_LOTE = 99
+    blocos = []
+    idx_prof = 0
+    for i in range(0, len(documentos), TAMANHO_LOTE):
+        chunk = documentos[i:i + TAMANHO_LOTE]
+        prof_atual = nomes[idx_prof % len(nomes)]
+        idx_prof += 1
+        blocos.append(f"PROFISSIONAL: {prof_atual} | DATA: {data_br}")
+        blocos.extend(chunk)
+        blocos.append("")
+    return "\n".join(blocos)
+
+
+def nome_arquivo_lote(data_br: str) -> str:
+    """'16/04/2026' → '16-04-2026.txt' — mesmo arquivo do dia para Digitação/Triagem/Geração."""
+    return f"{(data_br or '').replace('/', '-')}.txt"
+
+
 # ── Conexão Firebird ─────────────────────────────────────────────────────────
 def conectar():
     return firebirdsql.connect(
         host="localhost",
-        database=settings.FIREBIRD_PATH,
-        user=settings.FIREBIRD_USER,
-        password=settings.FIREBIRD_PASSWORD,
+        database=FIREBIRD_PATH,
+        user=FIREBIRD_USER,
+        password=FIREBIRD_PASSWORD,
         charset="WIN1252",
     )
+
+
+# ── Cache de pacientes (CADCNS) para busca em tempo real na Digitação ──────
+def carregar_pacientes_cadcns() -> list[dict]:
+    """Carrega CNS/NOME/DTNASC/CPF de toda a CADCNS — usado pela busca instantânea."""
+    con = conectar()
+    try:
+        cur = con.cursor()
+        cur.execute("SELECT CNS, NOME, DTNASC, NUM_CPF FROM CADCNS")
+        pacientes = []
+        for cns, nome, dtnasc, cpf in cur.fetchall():
+            dn_raw = str(dtnasc or "").strip()
+            dtnasc_fmt = f"{dn_raw[6:8]}/{dn_raw[4:6]}/{dn_raw[0:4]}" if len(dn_raw) == 8 else ""
+            pacientes.append({
+                "sus": str(cns or "").strip(),
+                "nome": str(nome or "").strip().upper(),
+                "dtnasc": dtnasc_fmt,
+                "cpf": str(cpf or "").strip(),
+            })
+        return pacientes
+    finally:
+        con.close()
+
+
+def buscar_pacientes_memoria(termo: str, base_pacientes: list[dict], limite: int = 50) -> list[dict]:
+    """Busca por nome/SUS/CPF na lista já carregada na memória (instantâneo)."""
+    if not termo:
+        return base_pacientes[:limite]
+    termo = termo.upper().strip()
+    resultados = []
+    for p in base_pacientes:
+        if termo in p["nome"] or termo in p["sus"] or termo in p["cpf"]:
+            resultados.append(p)
+            if len(resultados) == limite:
+                break
+    return resultados
 
 
 # ── Leitura do arquivo de lote ───────────────────────────────────────────────
@@ -160,7 +284,7 @@ def resolver_profissional_por_nome(profissionais: list[tuple[str, str]], nome_ra
     Todo token do nome_raw precisa aparecer como palavra inteira no nome
     cadastrado (evita falso-positivo tipo "STELA" casar com "ESTELA").
 
-    Retorna dict sem efeitos colaterais:
+    Retorna dict:
       {"status": "auto", "cns": ..., "nome": ...}                         — achou exatamente 1
       {"status": "ambiguo", "candidatos": [(cns, nome), ...]}             — achou mais de 1
       {"status": "nao_encontrado", "candidatos": <profissionais inteiro>} — não achou nenhum
@@ -179,7 +303,7 @@ def resolver_profissional_por_nome(profissionais: list[tuple[str, str]], nome_ra
     return {"status": "nao_encontrado", "candidatos": profissionais}
 
 
-# ── Busca de pacientes ───────────────────────────────────────────────────────
+# ── Busca de pacientes (geração) ─────────────────────────────────────────────
 def _normalizar_dtnasc(valor) -> str:
     """Normaliza DTNASC para string AAAAMMDD (CADCNS já guarda nesse formato)."""
     if valor is None:
@@ -402,3 +526,64 @@ def gerar_arquivo(linhas: list[str], cabecalho: str, competencia: str) -> str:
         for linha in linhas:
             f.write(linha + "\r\n")
     return nome
+
+
+# ── Lotes (.txt) ──────────────────────────────────────────────────────────────
+def garantir_pasta_lotes() -> str:
+    os.makedirs(BPA_LOTES_DIR, exist_ok=True)
+    return BPA_LOTES_DIR
+
+
+def caminho_lote(nome_arquivo: str) -> str:
+    pasta = garantir_pasta_lotes()
+    return os.path.join(pasta, nome_arquivo)
+
+
+def listar_lotes() -> list[dict]:
+    pasta = garantir_pasta_lotes()
+    arquivos = []
+    for nome in os.listdir(pasta):
+        if not nome.lower().endswith(".txt"):
+            continue
+        caminho = os.path.join(pasta, nome)
+        stat = os.stat(caminho)
+        arquivos.append({
+            "nome": nome,
+            "tamanho": stat.st_size,
+            "modificado_em": datetime.fromtimestamp(stat.st_mtime),
+        })
+    arquivos.sort(key=lambda a: a["nome"], reverse=True)
+    return arquivos
+
+
+def criar_cabecalho_lote(nome_arquivo: str, medico: str, data: str) -> None:
+    caminho = caminho_lote(nome_arquivo)
+    with open(caminho, "a", encoding="utf-8") as f:
+        f.write(f"PROFISSIONAL: {medico.upper()} | DATA: {data}\n")
+
+
+def adicionar_documento_lote(nome_arquivo: str, documento: str) -> None:
+    """Adiciona um CNS/CPF ao bloco atual, com rollover automático de 99 por folha."""
+    caminho = caminho_lote(nome_arquivo)
+    doc_limpo = documento.strip().replace(".", "").replace("-", "").replace(" ", "")
+    if not doc_limpo:
+        raise LoteError("Documento inválido.")
+
+    pacientes_no_lote = 0
+    ultimo_cabecalho = ""
+    if os.path.exists(caminho):
+        with open(caminho, encoding="utf-8") as f:
+            linhas = f.readlines()
+        for linha in reversed(linhas):
+            linha_limpa = linha.strip()
+            if not linha_limpa:
+                continue
+            if linha_limpa.upper().startswith("PROFISSIONAL:"):
+                ultimo_cabecalho = linha_limpa
+                break
+            pacientes_no_lote += 1
+
+    with open(caminho, "a", encoding="utf-8") as f:
+        if pacientes_no_lote >= 99 and ultimo_cabecalho:
+            f.write(f"\n{ultimo_cabecalho}\n")
+        f.write(f"{doc_limpo}\n")

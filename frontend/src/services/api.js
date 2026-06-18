@@ -100,49 +100,4 @@ export function pingSessao(terminal_nome) {
   return api.post("/terminal/ping", null, { params: { terminal_nome } });
 }
 
-// ── BPA ───────────────────────────────────────────────────────────────────
-export function bpaListarProfissionais() {
-  return api.get("/bpa/profissionais");
-}
-
-export function bpaBuscarPacientes(termo) {
-  return api.get("/bpa/pacientes/busca", { params: { termo } });
-}
-
-export function bpaAtualizarCache() {
-  return api.post("/bpa/cache/atualizar");
-}
-
-export function bpaListarLotes() {
-  return api.get("/bpa/lotes");
-}
-
-export function bpaLerLote(nome) {
-  return api.get(`/bpa/lotes/${encodeURIComponent(nome)}`);
-}
-
-export function bpaSalvarLote(nome, conteudo) {
-  return api.put(`/bpa/lotes/${encodeURIComponent(nome)}`, { conteudo });
-}
-
-export function bpaCriarCabecalho(arquivo, medico, data) {
-  return api.post("/bpa/lotes/cabecalho", { arquivo, medico, data });
-}
-
-export function bpaAdicionarDocumento(arquivo, documento) {
-  return api.post("/bpa/lotes/documento", { arquivo, documento });
-}
-
-export function bpaAnalisarLote(nome) {
-  return api.post(`/bpa/lotes/${encodeURIComponent(nome)}/analisar`);
-}
-
-export function bpaGerarLote(nome, resolucoes) {
-  return api.post(`/bpa/lotes/${encodeURIComponent(nome)}/gerar`, { resolucoes });
-}
-
-export function bpaUrlDownload(nomeArquivo) {
-  return `/api/v1/bpa/gerar/download/${encodeURIComponent(nomeArquivo)}`;
-}
-
 export default api;
