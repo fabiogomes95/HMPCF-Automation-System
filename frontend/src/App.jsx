@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Recepcao from "./pages/Recepcao";
 import Historico from "./pages/Historico";
+import Bpa from "./pages/Bpa";
 import "./App.css";
 
 export default function App() {
@@ -14,6 +15,10 @@ export default function App() {
 
   function navHistorico() {
     setTela("historico");
+  }
+
+  function navBpa() {
+    setTela("bpa");
   }
 
   function abrirEdicao(dadosEdicao) {
@@ -42,13 +47,17 @@ export default function App() {
         >
           Histórico
         </button>
+        <button
+          className={`app-nav-btn${tela === "bpa" ? " ativo" : ""}`}
+          onClick={navBpa}
+        >
+          BPA
+        </button>
       </nav>
 
-      {tela === "recepcao" ? (
-        <Recepcao edicao={edicao} onVoltar={fecharEdicao} />
-      ) : (
-        <Historico onNavigate={setTela} onEditar={abrirEdicao} />
-      )}
+      {tela === "recepcao" && <Recepcao edicao={edicao} onVoltar={fecharEdicao} />}
+      {tela === "historico" && <Historico onNavigate={setTela} onEditar={abrirEdicao} />}
+      {tela === "bpa" && <Bpa />}
     </>
   );
 }

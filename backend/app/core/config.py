@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     DATABASE_MAX_OVERFLOW: int = 20
     DATABASE_POOL_PRE_PING: bool = True
 
+    # ── BPA / Firebird (BPA Magnético) ──────────────────────────────────────
+    FIREBIRD_PATH: str = r"C:\BPA\BPAMAG.GDB"
+    FIREBIRD_USER: str = "SYSDBA"
+    FIREBIRD_PASSWORD: str
+    BPA_LOTES_DIR: str = r"C:\HMPCF-Automation-System\backend\app\data\bpa_lotes"
+
     @computed_field
     @property
     def database_url(self) -> str:
