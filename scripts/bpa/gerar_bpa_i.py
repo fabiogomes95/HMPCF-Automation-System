@@ -132,6 +132,8 @@ def main():
     ap = argparse.ArgumentParser(description="Gerador BPA-I — CLI (lê backend/app/services/bpa_gerador.py)")
     ap.add_argument("--lote", required=True, metavar="ARQUIVO",
                      help="Arquivo de lote (PROFISSIONAL: nome | DATA: dd/mm/aaaa)")
+    ap.add_argument("--saida", metavar="PASTA", default=None,
+                     help="Pasta de saída do arquivo BPA-I (padrão: BPA_SAIDA_DIR do .env, ou ~/Downloads)")
     args = ap.parse_args()
 
     print("=" * 55)
@@ -156,7 +158,7 @@ def main():
     ok, tam   = bpa.validar(linhas)
     print(f"\n{'✅' if ok else '⚠️ '} Validação: {len(linhas)} linha(s) de detalhe, {tam} chars cada")
 
-    caminho = bpa.gerar_arquivo(linhas, cabecalho, competencia)
+    caminho = bpa.gerar_arquivo(linhas, cabecalho, competencia, pasta=args.saida)
     print(f"\n✅ Arquivo: {caminho}")
     print(f"   Registros   : {len(linhas)}")
     print(f"   Folhas      : {n_folhas}")

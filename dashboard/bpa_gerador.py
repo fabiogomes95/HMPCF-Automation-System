@@ -26,6 +26,7 @@ FIREBIRD_PATH     = os.getenv("FIREBIRD_PATH", r"C:\BPA\BPAMAG.GDB")
 FIREBIRD_USER     = os.getenv("FIREBIRD_USER", "SYSDBA")
 FIREBIRD_PASSWORD = os.getenv("FIREBIRD_PASSWORD", "masterkey")
 BPA_LOTES_DIR     = os.getenv("BPA_LOTES_DIR", str(BASE_DIR / "bpa_lotes"))
+BPA_SAIDA_DIR      = os.getenv("BPA_SAIDA_DIR")  # se vazio, usa ~/Downloads
 
 # ── Configurações fixas da unidade ──────────────────────────────────────────
 # ORGAO_RESP, SIGLA_ORGAO, CNPJ_PRESTADOR, ORGAO_DEST e DESTINO_INDICADOR
@@ -516,8 +517,8 @@ def validar(linhas: list[str]) -> tuple[bool, int]:
     return not erros, tam
 
 
-def gerar_arquivo(linhas: list[str], cabecalho: str, competencia: str) -> str:
-    pasta = os.path.join(os.path.expanduser("~"), "Downloads")
+def gerar_arquivo(linhas: list[str], cabecalho: str, competencia: str, pasta: str | None = None) -> str:
+    pasta = pasta or BPA_SAIDA_DIR or os.path.join(os.path.expanduser("~"), "Downloads")
     os.makedirs(pasta, exist_ok=True)
     nome  = os.path.join(pasta, f"BPAI_{CNES}_{competencia}.txt")
     # newline="" garante CRLF real sem duplicação em qualquer plataforma
