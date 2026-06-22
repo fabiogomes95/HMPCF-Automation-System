@@ -38,6 +38,11 @@ dashboard/bpa_lotes/*.txt
 # Saida de inspecao do Firebird (dados reais de pacientes — nunca commitar)
 scripts/bpa/inspecao.txt
 
+# Exports reais do BPA Magnetico (dados de pacientes — nunca commitar)
+*.ABR
+*.PRN
+*.MAR
+
 # Binario do NSSM (baixado por maquina, nao e codigo)
 nssm/
 
