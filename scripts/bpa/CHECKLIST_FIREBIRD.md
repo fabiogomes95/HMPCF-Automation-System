@@ -164,19 +164,27 @@ python inspecionar_banco.py > inspecao.txt
 
 ### Perguntas que essa saída precisa responder
 
-- [ ] `DTNASC` retorna `str` ou objeto `date`?
-- [ ] `RACA`, `ETNIA`, `NACIONALIDADE` vêm com zeros à esquerda ou não?
-- [ ] `IBGE` é `int` ou `str`?
-- [ ] `CADMED` tem coluna `CADMED_CBO`? (se sim, conseguimos automatizar a categoria)
-- [ ] `PRD_QT_P` é `1`, `"001"` ou `"000001"`?
-- [ ] `PRD_CATEN` é `2` ou `"02"`?
-- [ ] `PRD_ORG` é `"BPA"` ou outro valor?
+- [x] `DTNASC` retorna `str` ou objeto `date`? → **`str`**, formato `AAAAMMDD` (ex: `'20011014'`). Tratado em `_normalizar_dtnasc()`.
+- [x] `RACA`, `ETNIA`, `NACIONALIDADE` vêm com zeros à esquerda ou não? → **Sim, zero-padded como `str`** (`RACA='03'`, `NACIONALIDADE='010'`; `ETNIA` vem em branco `'    '` quando raça ≠ indígena — só preenchida quando `RACA='05'`).
+- [x] `IBGE` é `int` ou `str`? → **`str`** (ex: `'240360'`).
+- [x] `CADMED` tem coluna `CADMED_CBO`? → **Não direto** — a categoria (médico/enfermeiro) vem de `CADMED_CBO_CNES` (tabela separada, `MED_CNS`/`MED_CBO`). Já implementado em `mapa_categorias_por_profissional()` / `detectar_categoria()`.
+- [x] `PRD_QT_P` é `1`, `"001"` ou `"000001"`? → **`float`** (`1.0`). No layout de saída usamos `"000001"` fixo (6 dígitos), já que cada linha = 1 atendimento.
+- [x] `PRD_CATEN` é `2` ou `"02"`? → **`str` zero-padded, `'02'`**.
+- [x] `PRD_ORG` é `"BPA"` ou outro valor?  → **`'BPI'`** no `S_PRD` real (registros já digitados manualmente pelo BPA Magnético). No layout de exportação BPA-I gerado por nós usamos `"BPA"` fixo (campo `prd-org`, ver `_linha_detalhe()`) — são contextos diferentes (registro interno do BPA vs. arquivo de exportação), sem conflito.
 
-**Anotar respostas neste arquivo** e ajustar `gerar_bpa_i.py` conforme necessário.
+⚠️ **Descoberta extra (não prevista neste checklist):** `TRIM()` no Firebird falha — `Use of UDF library at location udflib.DLL is not allowed by server configuration`. O servidor bloqueia essa UDF. **Nunca usar `TRIM()` em SQL** — sempre trazer a coluna raw e fazer `.strip()` em Python (já é assim em todo o `bpa_gerador.py`).
+
+✅ Respostas confirmadas em `scripts/bpa/inspecao.txt` (consulta real, somente leitura, rodada em 18/06/2026) e já incorporadas em `dashboard/bpa_gerador.py`.
 
 ---
 
 ## 3. Comparar layout byte a byte com arquivo real
+
+✅ **Já feito em 18/06/2026** — `scripts/bpa/verificar_checksum.py` reproduziu a fórmula do
+checksum (`cbc-smt-vrf`) contra `C:\BPA\EXPORTA\PAkauan-.MAR` (export real de produção) e bateu
+exatamente. Layout de 350 chars/linha de detalhe e 130 chars de cabeçalho confirmado em
+`dashboard/bpa_gerador.py`. Os passos abaixo (script `comparar_layout.py`) descrevem o método
+manual usado, mantidos aqui como referência caso seja preciso revalidar contra um novo export.
 
 Criar `comparar_layout.py`:
 
@@ -360,15 +368,17 @@ git push
 
 ---
 
-## Bugs/melhorias já identificados para corrigir amanhã
+## Bugs/melhorias já identificados
 
-1. ⚠️  **`--entrada` valida arquivo tarde demais** — se o caminho está errado, usuário responde data + competência antes de ver o erro. Validar no `parse_args`.
+1. ✅ **Corrigido** — `ler_arquivo_lote()` valida a existência/conteúdo do arquivo (`LoteError`) antes de qualquer pergunta interativa de profissional/categoria, tanto no CLI (`gerar_bpa_i.py`) quanto no dashboard.
 
-2. 🟡 **Sem suporte a CPF como entrada** — só aceita CNS. Se a lista do legado vem com CPF, precisamos saber qual coluna da `CADCNS` tem o CPF e adicionar lógica de detecção (CPF tem 11 dígitos, CNS tem 15).
+2. ✅ **Corrigido** — `CADCNS` tem coluna `NUM_CPF`. `buscar_pacientes()` aceita CNS (15 dígitos) e CPF (11 dígitos) misturados na mesma lista.
 
-3. 🟡 **Sem detecção automática de categoria** — usuário escolhe Médico/Enfermeiro toda vez. Se `CADMED` tiver CBO, dá pra automatizar.
+3. ✅ **Corrigido** — `detectar_categoria()` usa `CADMED_CBO_CNES` (`MED_CNS`/`MED_CBO`) para detectar Médico/Enfermeiro automaticamente quando há exatamente 1 CBO conhecido; pede escolha manual só em caso de ambiguidade ou CBO desconhecido.
 
-4. 🟡 **Sem `--saida`** — arquivo sempre vai pra `~/Downloads`. Talvez precisemos permitir customizar.
+4. ✅ **Corrigido (2026-06-22)** — `gerar_arquivo()` aceita pasta de saída customizada (parâmetro `pasta`, ou env `BPA_SAIDA_DIR`); padrão continua `~/Downloads` se nada for configurado. CLI ganhou `--saida`.
+
+5. 🟡 **Pendente (depende do banco real)** — `firebirdsql` estava no `requirements.txt` do dashboard mas não instalado no venv em produção (`Desktop-9c4s1co`); corrigido manualmente em 2026-06-22, mas vale conferir após qualquer reinstalação/rebuild do venv.
 
 ---
 

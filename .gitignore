@@ -35,5 +35,11 @@ opencode/
 dashboard/bpa_lotes/*.txt
 !dashboard/bpa_lotes/.gitkeep
 
+# Saida de inspecao do Firebird (dados reais de pacientes — nunca commitar)
+scripts/bpa/inspecao.txt
+
+# Binario do NSSM (baixado por maquina, nao e codigo)
+nssm/
+
 # Arquivo de lock/sincronização gerado pelo SO (nome ilegível)
 dashboard/.*00050000000716d2630ff9e1aa84aad6
