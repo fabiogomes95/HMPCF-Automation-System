@@ -54,8 +54,8 @@ export default function BoletimA4({
             <input type="text" value={atdInfo.hora || ""} onChange={onHoraChange} />
           </div>
           <div className="field campo-registro">
-            <label>REG.:</label>
-            <input type="text" value={atdInfo.registro || ""} onChange={onRegistroChange} maxLength={3} />
+            <label>REGISTRO:</label>
+            <input type="text" value={atdInfo.registro || ""} onChange={onRegistroChange} maxLength={4} />
           </div>
         </div>
 
@@ -77,11 +77,11 @@ export default function BoletimA4({
 
         {/* ─── Linha 4: Naturalidade / DN / Idade ─── */}
         <div className="row">
-          <div className="field" style={{ flex: 2 }}>
+          <div className="field campo-naturalidade">
             <label>NATURALIDADE:</label>
             <input type="text" name="naturalidade" value={form.naturalidade || ""} onChange={onFieldChange} />
           </div>
-          <div className="field" style={{ flex: 1.2 }}>
+          <div className="field campo-dn">
             <label>DN:</label>
             <input
               type="text"
@@ -93,7 +93,7 @@ export default function BoletimA4({
             />
             {erroDtnasc && <span style={{ color: "#dc2626", fontSize: 10, whiteSpace: "nowrap" }}>{erroDtnasc}</span>}
           </div>
-          <div className="field" style={{ flex: 0.8 }}>
+          <div className="field campo-idade">
             <label>IDADE:</label>
             <input type="text" value={idade} readOnly tabIndex={-1} />
           </div>
@@ -240,7 +240,7 @@ export default function BoletimA4({
           </div>
           <div className="field campo-num">
             <label>Nº:</label>
-            <input type="text" name="numpcn" value={form.numpcn || ""} onChange={onFieldChange} maxLength={6} />
+            <input type="text" name="numpcn" value={form.numpcn || ""} onChange={onFieldChange} maxLength={20} />
           </div>
         </div>
 
