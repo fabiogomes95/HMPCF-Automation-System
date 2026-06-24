@@ -75,6 +75,11 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   const debounceRef = useRef(null);
   const pacienteEncontradoRef = useRef(false);
   const cpfRef = useRef(null);
+  const formRef = useRef(form);
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
 
   useEffect(() => {
     cpfRef.current?.focus();
@@ -129,11 +134,14 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
         const dtnascEncontrada = parseDateFromDB(p.dtnasc);
         // Regra: dados digitados manualmente têm prioridade máxima.
         // CPF/CNS/integrações só preenchem campos que ainda estão vazios.
-        let dtnascFinal;
+        // dtnascFinal precisa ser calculado ANTES do setForm: o callback do
+        // setForm só roda quando o React processa a atualização (assíncrono
+        // aqui, pois estamos fora de um event handler), então usar seu valor
+        // logo abaixo (calcIdade/setAviso) pegaria undefined.
+        const preencheSeVazio = (atual, encontrado) =>
+          atual && String(atual).trim() !== "" ? atual : encontrado || "";
+        const dtnascFinal = preencheSeVazio(formRef.current.dtnasc, dtnascEncontrada);
         setForm((prev) => {
-          const preencheSeVazio = (atual, encontrado) =>
-            atual && String(atual).trim() !== "" ? atual : encontrado || "";
-          dtnascFinal = preencheSeVazio(prev.dtnasc, dtnascEncontrada);
           return {
             ...prev,
             nome: preencheSeVazio(prev.nome, p.nome),
