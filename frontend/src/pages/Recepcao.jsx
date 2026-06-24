@@ -126,35 +126,44 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
       if (res.data) {
         pacienteEncontradoRef.current = true;
         const p = res.data;
-        const dtnasc = parseDateFromDB(p.dtnasc);
-        setForm({
-          nome: p.nome || "",
-          nome_social: p.nome_social || "",
-          cns: p.cns || "",
-          num_cpf: p.num_cpf || "",
-          dtnasc,
-          sexo: p.sexo || "",
-          raca: p.raca || "03",
-          maepcn: p.maepcn || "",
-          logpcn: p.logpcn || "",
-          numpcn: p.numpcn || "",
-          bairro_pcnte: p.bairro_pcnte || "",
-          ceppcn: p.ceppcn || "",
-          cidade: p.cidade || "EXTREMOZ",
-          estado: p.estado || "RN",
-          telefone: formatTelefone(p.telefone),
-          naturalidade: p.naturalidade || "",
-          nacionalidade: "010",
-          estado_civil: p.estado_civil || "",
-          ocupacao: p.ocupacao || "",
-          responsavel: p.responsavel || "",
+        const dtnascEncontrada = parseDateFromDB(p.dtnasc);
+        // Regra: dados digitados manualmente têm prioridade máxima.
+        // CPF/CNS/integrações só preenchem campos que ainda estão vazios.
+        let dtnascFinal;
+        setForm((prev) => {
+          const preencheSeVazio = (atual, encontrado) =>
+            atual && String(atual).trim() !== "" ? atual : encontrado || "";
+          dtnascFinal = preencheSeVazio(prev.dtnasc, dtnascEncontrada);
+          return {
+            ...prev,
+            nome: preencheSeVazio(prev.nome, p.nome),
+            nome_social: preencheSeVazio(prev.nome_social, p.nome_social),
+            cns: preencheSeVazio(prev.cns, p.cns),
+            num_cpf: preencheSeVazio(prev.num_cpf, p.num_cpf),
+            dtnasc: dtnascFinal,
+            sexo: preencheSeVazio(prev.sexo, p.sexo),
+            raca: preencheSeVazio(prev.raca, p.raca || "03"),
+            maepcn: preencheSeVazio(prev.maepcn, p.maepcn),
+            logpcn: preencheSeVazio(prev.logpcn, p.logpcn),
+            numpcn: preencheSeVazio(prev.numpcn, p.numpcn),
+            bairro_pcnte: preencheSeVazio(prev.bairro_pcnte, p.bairro_pcnte),
+            ceppcn: preencheSeVazio(prev.ceppcn, p.ceppcn),
+            cidade: preencheSeVazio(prev.cidade, p.cidade || "EXTREMOZ"),
+            estado: preencheSeVazio(prev.estado, p.estado || "RN"),
+            telefone: preencheSeVazio(prev.telefone, formatTelefone(p.telefone)),
+            naturalidade: preencheSeVazio(prev.naturalidade, p.naturalidade),
+            nacionalidade: preencheSeVazio(prev.nacionalidade, "010"),
+            estado_civil: preencheSeVazio(prev.estado_civil, p.estado_civil),
+            ocupacao: preencheSeVazio(prev.ocupacao, p.ocupacao),
+            responsavel: preencheSeVazio(prev.responsavel, p.responsavel),
+          };
         });
         setPacienteId(p.id);
         setErroCpf("");
         setErroCns("");
-        calcIdade(dtnasc);
+        calcIdade(dtnascFinal);
         setMsg("✓ Paciente encontrado");
-        if (!p.dtnasc || p.dtnasc.trim() === "") {
+        if (!dtnascFinal || dtnascFinal.trim() === "") {
           setAviso("⚠️ Data de nascimento ausente — atualize");
         } else {
           setAviso("");
