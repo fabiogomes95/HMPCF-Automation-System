@@ -27,8 +27,14 @@ DASHBOARD = BASE.parent / "dashboard"
 BACKEND   = BASE.parent / "backend"
 
 sys.path.insert(0, str(DASHBOARD))
-load_dotenv(DASHBOARD / ".env")   # Firebird
-load_dotenv(BACKEND   / ".env", override=False)  # PostgreSQL (nao sobrescreve Firebird vars)
+# Ordem de carregamento (prioridade decrescente):
+#   1. bpa/.env         — configuracoes locais da maquina (nao versionado)
+#   2. dashboard/.env   — Firebird
+#   3. backend/.env     — PostgreSQL
+# Valores ja definidos nao sao sobrescritos pelas camadas seguintes.
+load_dotenv(BASE      / ".env")                  # local — maquina especifica
+load_dotenv(DASHBOARD / ".env", override=False)  # Firebird
+load_dotenv(BACKEND   / ".env", override=False)  # PostgreSQL
 
 import bpa_gerador as bpa
 
