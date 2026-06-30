@@ -272,8 +272,8 @@ def _pg_connect():
         user    =os.getenv("POSTGRES_USER",     "postgres"),
         password=os.getenv("POSTGRES_PASSWORD", ""),
         connect_timeout=5,
+        options ="-c client_encoding=LATIN1",
     )
-    conn.set_client_encoding("WIN1252")
     return conn
 
 
