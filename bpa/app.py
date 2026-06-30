@@ -1,27 +1,34 @@
 """
-BPA Digitação — app Flask separado, independente do dashboard Streamlit.
-
-Carrega toda a CADCNS do Firebird na RAM na inicialização.
-Busca é feita no Python via RAM (< 5 ms), retorna JSON pro JS.
-Salva APENAS o CPF no lote — nunca o SUS.
+BPA — Flask separado do dashboard Streamlit.
 
 Porta padrão: 8503
+Dois módulos:
+  - Digitação: busca RAM do Firebird, grava CPF no lote.
+  - Migração:  PostgreSQL (pacientes do mês com CPF) → Firebird CADCNS.
+               Progresso em tempo real via Server-Sent Events (SSE).
 """
 from __future__ import annotations
 
+import json
 import os
+import re
 import sys
+from datetime import date
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request, send_from_directory
+import firebirdsql
+import psycopg2
+from dotenv import load_dotenv
+from flask import Flask, Response, jsonify, render_template, request, send_from_directory, stream_with_context
 
-# ── Caminho para bpa_gerador e .env do dashboard ─────────────────────────────
+# ── Paths e .env ──────────────────────────────────────────────────────────────
 BASE      = Path(__file__).resolve().parent
 DASHBOARD = BASE.parent / "dashboard"
-sys.path.insert(0, str(DASHBOARD))
+BACKEND   = BASE.parent / "backend"
 
-from dotenv import load_dotenv
-load_dotenv(DASHBOARD / ".env")
+sys.path.insert(0, str(DASHBOARD))
+load_dotenv(DASHBOARD / ".env")   # Firebird
+load_dotenv(BACKEND   / ".env", override=False)  # PostgreSQL (nao sobrescreve Firebird vars)
 
 import bpa_gerador as bpa
 
@@ -46,8 +53,7 @@ def _carregar_pacientes() -> None:
 
 _carregar_pacientes()
 
-
-# ── Servir Bootstrap local (sem CDN) ─────────────────────────────────────────
+# ── Bootstrap local (legado/web_recepcao/assets) ──────────────────────────────
 _LEGADO_ASSETS = BASE.parent / "legado" / "web_recepcao" / "assets"
 
 
@@ -56,33 +62,40 @@ def assets(nome: str):
     return send_from_directory(_LEGADO_ASSETS, nome)
 
 
-# ── Páginas ───────────────────────────────────────────────────────────────────
+# ── Pagina principal ──────────────────────────────────────────────────────────
 @app.route("/")
 def index():
     return render_template(
         "index.html",
         total=len(_pacientes),
         erro_firebird=_erro_firebird,
+        mes_atual=date.today().strftime("%Y%m"),
+        mes_label=_nome_mes(date.today().month, date.today().year),
     )
 
 
-# ── API ───────────────────────────────────────────────────────────────────────
+def _nome_mes(m: int, a: int) -> str:
+    nomes = ["","Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+             "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
+    return f"{nomes[m]}/{a}"
+
+
+# ── API — Digitação ───────────────────────────────────────────────────────────
 @app.route("/api/buscar")
 def api_buscar():
     q = request.args.get("q", "").strip()
     if len(q) < 2:
         return jsonify([])
-    resultados = bpa.buscar_pacientes_memoria(q, _pacientes, limite=40)
-    return jsonify(resultados)
+    return jsonify(bpa.buscar_pacientes_memoria(q, _pacientes, limite=40))
 
 
 @app.route("/api/cabecalho", methods=["POST"])
 def api_cabecalho():
-    d = request.get_json(force=True)
+    d      = request.get_json(force=True)
     medico = (d.get("medico") or "").strip()
     data   = (d.get("data")   or "").strip()
     if not medico or len(data) < 10:
-        return jsonify({"ok": False, "erro": "Preencha médico e data completa."})
+        return jsonify({"ok": False, "erro": "Preencha medico e data completa."})
     arquivo = bpa.nome_arquivo_lote(data)
     bpa.criar_cabecalho_lote(arquivo, medico, data)
     return jsonify({"ok": True, "arquivo": arquivo})
@@ -90,12 +103,12 @@ def api_cabecalho():
 
 @app.route("/api/gravar", methods=["POST"])
 def api_gravar():
-    d      = request.get_json(force=True)
+    d       = request.get_json(force=True)
     arquivo = (d.get("arquivo") or "").strip()
     cpf     = (d.get("cpf")     or "").strip()
     nome    = (d.get("nome")    or "").strip()
     if not arquivo or not cpf:
-        return jsonify({"ok": False, "erro": "Arquivo ou CPF inválido."})
+        return jsonify({"ok": False, "erro": "Arquivo ou CPF invalido."})
     try:
         bpa.adicionar_documento_lote(arquivo, cpf)
         return jsonify({"ok": True, "nome": nome})
@@ -109,6 +122,253 @@ def api_recarregar():
     return jsonify({"ok": True, "total": len(_pacientes), "erro": _erro_firebird})
 
 
+# ── Helpers de migração ───────────────────────────────────────────────────────
+def _pg_connect():
+    return psycopg2.connect(
+        host    =os.getenv("POSTGRES_HOST",     "localhost"),
+        port    =int(os.getenv("POSTGRES_PORT", "5432")),
+        dbname  =os.getenv("POSTGRES_DB",       "hmpcf"),
+        user    =os.getenv("POSTGRES_USER",     "postgres"),
+        password=os.getenv("POSTGRES_PASSWORD", ""),
+        connect_timeout=5,
+    )
+
+
+def _limpar(valor) -> str:
+    if not valor:
+        return ""
+    return re.sub(r"\D", "", str(valor))
+
+
+def _texto(valor, max_len=9999) -> str:
+    if valor is None:
+        return ""
+    return str(valor).strip().upper()[:max_len]
+
+
+def _sexo(valor) -> str:
+    s = _texto(valor, 1)
+    return s if s in ("M", "F") else "I"
+
+
+def _dtnasc(valor) -> str | None:
+    if not valor:
+        return None
+    v = re.sub(r"\D", "", str(valor))
+    return v if len(v) == 8 else None
+
+
+def _paciente_existe_fb(cur, cns: str, cpf: str) -> bool:
+    if cns:
+        cur.execute("SELECT 1 FROM CADCNS WHERE CNS = ?", (cns,))
+        if cur.fetchone():
+            return True
+    if cpf:
+        cur.execute("SELECT 1 FROM CADCNS WHERE NUM_CPF = ?", (cpf,))
+        if cur.fetchone():
+            return True
+    return False
+
+
+_COLUNAS = [
+    "ID_CADCNS", "CNS", "NUM_CPF", "NOME", "DTNASC", "SEXO", "RACA", "MAEPCN",
+    "LOGPCN", "NUMPCN", "BAIRRO_PCNTE", "CEPPCN", "IBGE", "CO_LOGRAD",
+    "ETNIA", "NACIONALIDADE", "DDTEL_PCNTE", "TEL_PCNTE",
+]
+_SQL_INSERT = (
+    f"INSERT INTO CADCNS ({', '.join(_COLUNAS)}) "
+    f"VALUES ({', '.join(['?']*len(_COLUNAS))})"
+)
+
+
+def _query_pacientes_mes(mes_aaaamm: str) -> str:
+    """SQL que busca pacientes com CPF que tiveram atendimento no mes indicado."""
+    ano = mes_aaaamm[:4]
+    mes = mes_aaaamm[4:6]
+    inicio = f"{ano}-{mes}-01"
+    # primeiro dia do mes seguinte
+    mes_i = int(mes)
+    if mes_i == 12:
+        fim = f"{int(ano)+1}-01-01"
+    else:
+        fim = f"{ano}-{mes_i+1:02d}-01"
+    return f"""
+        SELECT DISTINCT
+            p.cns, p.num_cpf, p.nome, p.dtnasc, p.sexo, p.raca, p.maepcn,
+            p.logpcn, p.numpcn, p.bairro_pcnte, p.ceppcn, p.ibge,
+            p.nacionalidade, p.ddtel_pcnte, p.tel_pcnte
+        FROM pacientes p
+        INNER JOIN recepcao_atendimentos ra ON ra.paciente_id = p.id
+        WHERE p.num_cpf IS NOT NULL AND p.num_cpf <> ''
+          AND ra.data_atendimento >= '{inicio}'
+          AND ra.data_atendimento <  '{fim}'
+        ORDER BY p.nome
+    """
+
+
+# ── API — Migração: preview (contagem) ───────────────────────────────────────
+@app.route("/api/migracao/preview", methods=["POST"])
+def api_migracao_preview():
+    mes = (request.get_json(force=True) or {}).get("mes", date.today().strftime("%Y%m"))
+    try:
+        pg = _pg_connect()
+    except Exception as e:
+        return jsonify({"ok": False, "erro": f"PostgreSQL: {e}"})
+    try:
+        cur = pg.cursor()
+        # total de pacientes com CPF no mês
+        sql = _query_pacientes_mes(mes)
+        cur.execute(sql)
+        rows = cur.fetchall()
+        total = len(rows)
+
+        # quantos já existem no Firebird
+        fb = bpa.conectar()
+        fb_cur = fb.cursor()
+        ja_existem = sum(
+            1 for r in rows
+            if _paciente_existe_fb(fb_cur, _limpar(r[0]), _limpar(r[1]))
+        )
+        fb.close()
+        return jsonify({
+            "ok": True,
+            "total": total,
+            "novos": total - ja_existem,
+            "ja_existem": ja_existem,
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "erro": str(e)})
+    finally:
+        pg.close()
+
+
+# ── API — Migração: execução com SSE ─────────────────────────────────────────
+@app.route("/api/migracao/stream")
+def api_migracao_stream():
+    mes = request.args.get("mes", date.today().strftime("%Y%m"))
+
+    def _sse(payload: dict) -> str:
+        return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+    def generate():
+        # ── Conectar PostgreSQL ──────────────────────────────────────────────
+        try:
+            pg = _pg_connect()
+        except Exception as e:
+            yield _sse({"tipo": "erro", "msg": f"PostgreSQL indisponivel: {e}"})
+            return
+
+        yield _sse({"tipo": "log", "msg": "Conectado ao PostgreSQL."})
+
+        # ── Buscar pacientes do mês ──────────────────────────────────────────
+        try:
+            pg_cur = pg.cursor()
+            pg_cur.execute(_query_pacientes_mes(mes))
+            rows = pg_cur.fetchall()
+        except Exception as e:
+            yield _sse({"tipo": "erro", "msg": f"Erro na consulta PostgreSQL: {e}"})
+            pg.close()
+            return
+
+        total = len(rows)
+        yield _sse({"tipo": "log", "msg": f"{total} paciente(s) com CPF encontrado(s) no mes.", "total": total})
+
+        if total == 0:
+            yield _sse({"tipo": "fim", "inseridos": 0, "duplicatas": 0, "erros": 0})
+            pg.close()
+            return
+
+        # ── Conectar Firebird ────────────────────────────────────────────────
+        try:
+            fb = bpa.conectar()
+            fb_cur = fb.cursor()
+        except Exception as e:
+            yield _sse({"tipo": "erro", "msg": f"Firebird indisponivel: {e}"})
+            pg.close()
+            return
+
+        yield _sse({"tipo": "log", "msg": "Conectado ao Firebird."})
+
+        # ── MAX ID ───────────────────────────────────────────────────────────
+        fb_cur.execute("SELECT MAX(ID_CADCNS) FROM CADCNS")
+        max_id = fb_cur.fetchone()[0] or 0
+
+        inseridos = 0
+        duplicatas = 0
+        erros = 0
+        LOTE = 50
+
+        for i, row in enumerate(rows, 1):
+            cns_r, cpf_r, nome_r, dn_r, sexo_r, raca_r, mae_r, \
+                log_r, num_r, bairro_r, cep_r, ibge_r, \
+                nac_r, ddd_r, tel_r = row
+
+            cns = _limpar(cns_r)
+            cpf = _limpar(cpf_r)
+
+            if _paciente_existe_fb(fb_cur, cns, cpf):
+                duplicatas += 1
+            else:
+                max_id += 1
+                valores = [
+                    max_id, cns, cpf,
+                    _texto(nome_r, 30) or "SEM NOME",
+                    _dtnasc(dn_r),
+                    _sexo(sexo_r),
+                    _texto(raca_r, 2) or "03",
+                    _texto(mae_r, 30),
+                    _texto(log_r, 30) or "PRINCIPAL",
+                    _texto(num_r, 5)  or "S/N",
+                    _texto(bairro_r, 30) or "CENTRO",
+                    _limpar(cep_r)[:8] or "59575000",
+                    _limpar(ibge_r)[:6] or "240360",
+                    "081",
+                    "",
+                    _texto(nac_r, 3) or "010",
+                    _texto(ddd_r, 2),
+                    _texto(tel_r, 9),
+                ]
+                try:
+                    fb_cur.execute(_SQL_INSERT, valores)
+                    inseridos += 1
+                except Exception as e:
+                    erros += 1
+                    yield _sse({"tipo": "log", "msg": f"Erro CPF {cpf}: {e}"})
+
+            if i % LOTE == 0:
+                fb.commit()
+                yield _sse({
+                    "tipo": "progresso",
+                    "msg": f"{i}/{total} processados — inseridos: {inseridos} | duplicatas: {duplicatas}",
+                    "i": i, "total": total,
+                    "inseridos": inseridos, "duplicatas": duplicatas,
+                })
+
+        # ── Commit final + recarregar cache ──────────────────────────────────
+        try:
+            fb.commit()
+        except Exception as e:
+            yield _sse({"tipo": "log", "msg": f"Erro no commit final: {e}"})
+
+        fb.close()
+        pg.close()
+
+        _carregar_pacientes()
+
+        yield _sse({
+            "tipo": "fim",
+            "msg": f"Migracao concluida! Inseridos: {inseridos} | Duplicatas: {duplicatas} | Erros: {erros}",
+            "inseridos": inseridos, "duplicatas": duplicatas, "erros": erros,
+        })
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ── Inicialização ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     port = int(os.getenv("BPA_DIGITACAO_PORT", "8503"))
     print(f"\n  BPA Digitacao -> http://localhost:{port}\n")
