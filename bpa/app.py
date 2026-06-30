@@ -158,8 +158,6 @@ def api_recarregar():
 def api_gerar():
     d       = request.get_json(force=True) or {}
     arquivo = (d.get("arquivo") or "").strip()
-    medico  = (d.get("medico")  or "").strip().upper()
-    cns_req = (d.get("cns")     or "").strip()
 
     if not arquivo:
         return jsonify({"ok": False, "erro": "Nenhum arquivo ativo. Confirme o profissional e a data primeiro."})
@@ -170,14 +168,11 @@ def api_gerar():
     except bpa.LoteError as e:
         return jsonify({"ok": False, "erro": str(e)})
 
-    # Filtra apenas o profissional ativo (um BPA-I por profissional)
-    if medico:
-        grupos = [g for g in grupos if g["medico_raw"].upper() == medico and g["documentos"]]
-    else:
-        grupos = [g for g in grupos if g["documentos"]]
+    # Todos os profissionais do lote do dia
+    grupos = [g for g in grupos if g["documentos"]]
 
     if not grupos:
-        return jsonify({"ok": False, "erro": "Nenhum paciente gravado para este profissional."})
+        return jsonify({"ok": False, "erro": "Nenhum paciente gravado. Registre pacientes antes de gerar."})
 
     try:
         con = bpa.conectar()
@@ -192,7 +187,7 @@ def api_gerar():
 
         for grupo in grupos:
             # ── CNS do profissional ──────────────────────────────────────────
-            cns_raw = grupo.get("cns", "").strip() or cns_req
+            cns_raw = grupo.get("cns", "").strip()
             if cns_raw:
                 cns_prof = cns_raw.zfill(15)
             else:
@@ -240,16 +235,9 @@ def api_gerar():
         competencia_final = max(set(competencias), key=competencias.count)
         cabecalho = bpa.montar_cabecalho(competencia_final, len(todas_linhas), n_folhas_total, todas_linhas)
 
-        # Nome do arquivo inclui o nome do profissional + data
-        nome_base = medico or grupos[0]["medico_raw"].upper()
-        nome_slug = re.sub(r"[^A-Z0-9]", "-", nome_base)
-        nome_slug = re.sub(r"-+", "-", nome_slug).strip("-")
-        try:
-            dt_str = datetime.strptime(grupos[0]["data"], "%d/%m/%Y").strftime("%d%m%Y")
-        except Exception:
-            dt_str = date.today().strftime("%d%m%Y")
-
-        nome_arquivo   = f"BPA_{nome_slug}_{dt_str}.txt"
+        # Um arquivo por dia: BPA_01062026.txt
+        dt_str = arquivo.replace(".txt", "").replace("-", "")  # "01-06-2026.txt" → "01062026"
+        nome_arquivo   = f"BPA_{dt_str}.txt"
         pasta          = bpa.BPA_LOTES_DIR
         os.makedirs(pasta, exist_ok=True)
         caminho_gerado = os.path.join(pasta, nome_arquivo)
