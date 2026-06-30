@@ -158,6 +158,9 @@ def api_recarregar():
 def api_gerar():
     d       = request.get_json(force=True) or {}
     arquivo = (d.get("arquivo") or "").strip()
+    medico  = (d.get("medico")  or "").strip().upper()
+    cns_req = (d.get("cns")     or "").strip()
+
     if not arquivo:
         return jsonify({"ok": False, "erro": "Nenhum arquivo ativo. Confirme o profissional e a data primeiro."})
 
@@ -167,9 +170,14 @@ def api_gerar():
     except bpa.LoteError as e:
         return jsonify({"ok": False, "erro": str(e)})
 
-    grupos = [g for g in grupos if g["documentos"]]
+    # Filtra apenas o profissional ativo (um BPA-I por profissional)
+    if medico:
+        grupos = [g for g in grupos if g["medico_raw"].upper() == medico and g["documentos"]]
+    else:
+        grupos = [g for g in grupos if g["documentos"]]
+
     if not grupos:
-        return jsonify({"ok": False, "erro": "Nenhum paciente gravado. Registre pacientes antes de gerar."})
+        return jsonify({"ok": False, "erro": "Nenhum paciente gravado para este profissional."})
 
     try:
         con = bpa.conectar()
@@ -177,14 +185,14 @@ def api_gerar():
         return jsonify({"ok": False, "erro": f"Firebird indisponível: {e}"})
 
     try:
-        todas_linhas:  list[str] = []
-        n_folhas_total = 0
-        competencias:  list[str] = []
+        todas_linhas:    list[str] = []
+        n_folhas_total   = 0
+        competencias:    list[str] = []
         nao_encontrados: list[str] = []
 
         for grupo in grupos:
             # ── CNS do profissional ──────────────────────────────────────────
-            cns_raw = grupo.get("cns", "").strip()
+            cns_raw = grupo.get("cns", "").strip() or cns_req
             if cns_raw:
                 cns_prof = cns_raw.zfill(15)
             else:
@@ -206,7 +214,7 @@ def api_gerar():
 
             # ── Data de atendimento ──────────────────────────────────────────
             try:
-                dt       = datetime.strptime(grupo["data"], "%d/%m/%Y")
+                dt          = datetime.strptime(grupo["data"], "%d/%m/%Y")
                 data_aten   = dt.strftime("%Y%m%d")
                 competencia = data_aten[:6]
             except (ValueError, KeyError):
@@ -231,12 +239,30 @@ def api_gerar():
 
         competencia_final = max(set(competencias), key=competencias.count)
         cabecalho = bpa.montar_cabecalho(competencia_final, len(todas_linhas), n_folhas_total, todas_linhas)
-        caminho_gerado = bpa.gerar_arquivo(todas_linhas, cabecalho, competencia_final)
-        nome_gerado = os.path.basename(caminho_gerado)
+
+        # Nome do arquivo inclui o nome do profissional + data
+        nome_base = medico or grupos[0]["medico_raw"].upper()
+        nome_slug = re.sub(r"[^A-Z0-9]", "-", nome_base)
+        nome_slug = re.sub(r"-+", "-", nome_slug).strip("-")
+        try:
+            dt_str = datetime.strptime(grupos[0]["data"], "%d/%m/%Y").strftime("%d%m%Y")
+        except Exception:
+            dt_str = date.today().strftime("%d%m%Y")
+
+        nome_arquivo   = f"BPA_{nome_slug}_{dt_str}.txt"
+        pasta          = bpa.BPA_LOTES_DIR
+        os.makedirs(pasta, exist_ok=True)
+        caminho_gerado = os.path.join(pasta, nome_arquivo)
+
+        with open(caminho_gerado, "w", encoding="latin-1", newline="") as f:
+            f.write(cabecalho + "\r\n")
+            for linha in todas_linhas:
+                f.write(linha + "\r\n")
 
         return jsonify({
             "ok":              True,
-            "arquivo":         nome_gerado,
+            "arquivo":         nome_arquivo,
+            "caminho":         caminho_gerado,
             "registros":       len(todas_linhas),
             "folhas":          n_folhas_total,
             "competencia":     f"{competencia_final[4:]}/{competencia_final[:4]}",
@@ -247,12 +273,6 @@ def api_gerar():
         return jsonify({"ok": False, "erro": str(e)})
     finally:
         con.close()
-
-
-@app.route("/download/<nome>")
-def download_bpa(nome: str):
-    pasta = bpa.BPA_SAIDA_DIR or os.path.join(os.path.expanduser("~"), "Downloads")
-    return send_from_directory(pasta, nome, as_attachment=True)
 
 
 # ── Helpers migração ──────────────────────────────────────────────────────────
