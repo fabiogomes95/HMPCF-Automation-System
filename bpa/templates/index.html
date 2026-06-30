@@ -119,10 +119,7 @@
       <!-- 4. Resultado da geração -->
       <div id="ger_resultado" style="display:none" class="card-info shadow-sm">
         <div id="ger_msg" class="fw-bold mb-2"></div>
-        <div id="ger_detalhe" class="text-muted small mb-2"></div>
-        <a id="ger_download" href="#" class="btn btn-outline-primary btn-sm" style="display:none">
-          ⬇️ Baixar arquivo BPA-I
-        </a>
+        <div id="ger_detalhe" class="text-muted small"></div>
       </div>
 
     </div><!-- /tab-digitacao -->
@@ -377,7 +374,6 @@ async function gerarBPA() {
   const res = document.getElementById("ger_resultado");
   const msg = document.getElementById("ger_msg");
   const det = document.getElementById("ger_detalhe");
-  const dl  = document.getElementById("ger_download");
 
   btn.disabled = true;
   btn.textContent = "⏳ Gerando...";
@@ -385,7 +381,11 @@ async function gerarBPA() {
 
   const r = await fetch("/api/gerar",{
     method:"POST", headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({arquivo:arquivoAtivo})
+    body:JSON.stringify({
+      arquivo: arquivoAtivo,
+      medico:  _profEscolhido ? _profEscolhido.nome : "",
+      cns:     _profEscolhido ? _profEscolhido.cns  : "",
+    })
   }).then(r=>r.json());
 
   btn.disabled = false;
@@ -397,19 +397,17 @@ async function gerarBPA() {
     msg.className = "fw-bold text-danger mb-2";
     msg.textContent = "❌ " + r.erro;
     det.textContent = "";
-    dl.style.display = "none";
     return;
   }
 
   res.className = "card-info shadow-sm border-success";
   msg.className = "fw-bold text-success mb-2";
-  msg.textContent = `✅ Arquivo gerado: ${r.arquivo}`;
-  let detalhe = `Registros: ${r.registros} | Folhas: ${r.folhas} | Competência: ${r.competencia}`;
+  msg.innerHTML = `✅ <strong>${r.arquivo}</strong>`;
+  let detalhe = `📁 ${r.caminho}\nRegistros: ${r.registros} | Folhas: ${r.folhas} | Competência: ${r.competencia}`;
   if (r.nao_encontrados && r.nao_encontrados.length)
     detalhe += `\n⚠️ Não encontrados na CADCNS: ${r.nao_encontrados.join(", ")}`;
+  det.style.whiteSpace = "pre-line";
   det.textContent = detalhe;
-  dl.href = `/download/${r.arquivo}`;
-  dl.style.display = "inline-block";
 }
 
 // ══════════════════════════════════════════════
