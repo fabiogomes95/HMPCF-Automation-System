@@ -151,7 +151,14 @@ if st.button("🔄 Atualizar agora"):
     st.cache_data.clear()
     st.rerun()
 
-dados = carregar_atendimentos()
+try:
+    dados = carregar_atendimentos()
+except Exception:
+    st.warning(
+        "⚠️ Painel gerencial indisponível — PostgreSQL não acessível (modo offline ou servidor fora do ar)."
+    )
+    st.info("Para usar o BPA, clique em **🩺 BPA** no menu lateral.")
+    st.stop()
 
 kpis = calcular_kpis(dados)
 col1, col2, col3, col4 = st.columns(4)
