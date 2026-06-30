@@ -137,7 +137,7 @@ with aba_digitacao:
         else:
             prof = opcoes_prof[escolha_prof]
             arquivo = bpa.nome_arquivo_lote(data_dig)
-            bpa.criar_cabecalho_lote(arquivo, prof["nome"], data_dig)
+            bpa.criar_cabecalho_lote(arquivo, prof["nome"], data_dig, cns=prof["cns"])
             st.session_state.dig_arquivo = arquivo
             st.session_state.dig_confirmado = True
             st.success(f"Gravando em {arquivo} — {prof['nome']}")
@@ -199,7 +199,13 @@ with aba_geracao:
                 profissionais_raw = bpa.listar_profissionais(con)
                 analise = []
                 for idx, grupo in enumerate(grupos):
-                    resolucao = bpa.resolver_profissional_por_nome(profissionais_raw, grupo["medico_raw"])
+                    cns_direto = grupo.get("cns", "").strip()
+                    if cns_direto:
+                        # CNS gravado diretamente no lote — resolução de nome desnecessária
+                        resolucao = {"status": "auto", "cns": cns_direto, "nome": grupo["medico_raw"]}
+                    else:
+                        # Lote antigo sem CNS — fallback por nome
+                        resolucao = bpa.resolver_profissional_por_nome(profissionais_raw, grupo["medico_raw"])
                     item = {"indice": idx, "grupo": grupo, "resolucao": resolucao}
                     if resolucao["status"] == "auto":
                         categoria, automatico = bpa.detectar_categoria(con, resolucao["cns"])

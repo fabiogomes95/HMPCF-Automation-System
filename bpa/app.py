@@ -35,9 +35,10 @@ import bpa_gerador as bpa
 # ── Flask ─────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 
-# ── Cache de pacientes em RAM ─────────────────────────────────────────────────
-_pacientes: list[dict] = []
-_erro_firebird: str = ""
+# ── Cache em RAM ──────────────────────────────────────────────────────────────
+_pacientes:      list[dict] = []
+_profissionais:  list[dict] = []
+_erro_firebird:  str = ""
 
 
 def _carregar_pacientes() -> None:
@@ -48,10 +49,20 @@ def _carregar_pacientes() -> None:
         print(f"[BPA] {len(_pacientes)} pacientes carregados do Firebird.")
     except Exception as e:
         _erro_firebird = str(e)
-        print(f"[BPA] ERRO ao carregar Firebird: {e}")
+        print(f"[BPA] ERRO ao carregar pacientes: {e}")
+
+
+def _carregar_profissionais() -> None:
+    global _profissionais
+    try:
+        _profissionais = bpa.carregar_profissionais_cadmed()
+        print(f"[BPA] {len(_profissionais)} profissionais carregados do Firebird.")
+    except Exception as e:
+        print(f"[BPA] ERRO ao carregar profissionais: {e}")
 
 
 _carregar_pacientes()
+_carregar_profissionais()
 
 # ── Bootstrap local (legado/web_recepcao/assets) ──────────────────────────────
 _LEGADO_ASSETS = BASE.parent / "legado" / "web_recepcao" / "assets"
@@ -69,6 +80,7 @@ def index():
         "index.html",
         total=len(_pacientes),
         erro_firebird=_erro_firebird,
+        profissionais_json=json.dumps(_profissionais, ensure_ascii=False),
         mes_atual=date.today().strftime("%Y%m"),
         mes_label=_nome_mes(date.today().month, date.today().year),
     )
@@ -93,11 +105,12 @@ def api_buscar():
 def api_cabecalho():
     d      = request.get_json(force=True)
     medico = (d.get("medico") or "").strip()
+    cns    = (d.get("cns")    or "").strip()
     data   = (d.get("data")   or "").strip()
     if not medico or len(data) < 10:
-        return jsonify({"ok": False, "erro": "Preencha medico e data completa."})
+        return jsonify({"ok": False, "erro": "Preencha profissional e data completa."})
     arquivo = bpa.nome_arquivo_lote(data)
-    bpa.criar_cabecalho_lote(arquivo, medico, data)
+    bpa.criar_cabecalho_lote(arquivo, medico, data, cns=cns)
     return jsonify({"ok": True, "arquivo": arquivo})
 
 
@@ -119,7 +132,13 @@ def api_gravar():
 @app.route("/api/recarregar", methods=["POST"])
 def api_recarregar():
     _carregar_pacientes()
-    return jsonify({"ok": True, "total": len(_pacientes), "erro": _erro_firebird})
+    _carregar_profissionais()
+    return jsonify({
+        "ok":    True,
+        "total": len(_pacientes),
+        "erro":  _erro_firebird,
+        "profs": _profissionais,
+    })
 
 
 # ── Helpers de migração ───────────────────────────────────────────────────────

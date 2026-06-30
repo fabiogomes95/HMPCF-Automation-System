@@ -151,6 +151,27 @@ def conectar():
 
 
 # ── Cache de pacientes (CADCNS) para busca em tempo real na Digitação ──────
+def carregar_profissionais_cadmed() -> list[dict]:
+    """Carrega todos os profissionais do CADMED com categoria e CBO para uso em RAM."""
+    con = conectar()
+    try:
+        profs = listar_profissionais(con)
+        mapa  = mapa_categorias_por_profissional(con)
+        result = []
+        for cns, nome in profs:
+            categorias = mapa.get(cns, set())
+            if "medico" in categorias:
+                categoria, cbo = "medico",     PROCEDIMENTOS["medico"]["cbo"]
+            elif "enfermeiro" in categorias:
+                categoria, cbo = "enfermeiro", PROCEDIMENTOS["enfermeiro"]["cbo"]
+            else:
+                categoria, cbo = "", ""
+            result.append({"cns": cns, "nome": nome, "categoria": categoria, "cbo": cbo})
+        return sorted(result, key=lambda p: p["nome"])
+    finally:
+        con.close()
+
+
 def carregar_pacientes_cadcns() -> list[dict]:
     """Carrega CNS/NOME/DTNASC/CPF de toda a CADCNS — usado pela busca instantânea."""
     con = conectar()
@@ -224,10 +245,17 @@ def ler_arquivo_lote(caminho_arquivo: str) -> list[dict]:
         if "PROFISSIONAL:" in linha.upper():
             partes     = linha.split("|")
             medico_raw = partes[0].split(":", 1)[1].strip() if ":" in partes[0] else partes[0].strip()
-            data_raw   = partes[1].split(":", 1)[1].strip() if len(partes) > 1 and ":" in partes[1] else ""
+            cns_raw    = ""
+            data_raw   = ""
+            for parte in partes[1:]:
+                p = parte.strip()
+                if p.upper().startswith("CNS:"):
+                    cns_raw  = p.split(":", 1)[1].strip()
+                elif p.upper().startswith("DATA:"):
+                    data_raw = p.split(":", 1)[1].strip()
             chave = (medico_raw.upper(), data_raw)
             if chave not in grupos:
-                grupos[chave] = {"medico_raw": medico_raw, "data": data_raw, "documentos": []}
+                grupos[chave] = {"medico_raw": medico_raw, "cns": cns_raw, "data": data_raw, "documentos": []}
                 ordem.append(chave)
             grupo_atual = grupos[chave]
         elif grupo_atual is not None:
@@ -561,10 +589,11 @@ def listar_lotes() -> list[dict]:
     return arquivos
 
 
-def criar_cabecalho_lote(nome_arquivo: str, medico: str, data: str) -> None:
-    caminho = caminho_lote(nome_arquivo)
+def criar_cabecalho_lote(nome_arquivo: str, medico: str, data: str, cns: str = "") -> None:
+    caminho   = caminho_lote(nome_arquivo)
+    cns_part  = f" | CNS: {cns.strip()}" if cns and cns.strip() else ""
     with open(caminho, "a", encoding="utf-8") as f:
-        f.write(f"PROFISSIONAL: {medico.upper()} | DATA: {data}\n")
+        f.write(f"PROFISSIONAL: {medico.upper()}{cns_part} | DATA: {data}\n")
 
 
 def adicionar_documento_lote(nome_arquivo: str, documento: str) -> None:
