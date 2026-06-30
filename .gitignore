@@ -37,6 +37,8 @@ opencode/
 # Lotes BPA (CNS/CPF de pacientes — nunca commitar)
 dashboard/bpa_lotes/*.txt
 !dashboard/bpa_lotes/.gitkeep
+bpa/bpa_lotes/*.txt
+!bpa/bpa_lotes/.gitkeep
 
 # Saida de inspecao do Firebird (dados reais de pacientes — nunca commitar)
 scripts/bpa/inspecao.txt
