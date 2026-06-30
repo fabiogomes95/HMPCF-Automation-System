@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HMPCF — BPA Digitação</title>
+<link rel="stylesheet" href="/assets/bootstrap.min.css">
+<style>
+  body { background: #f0f4f8; }
+  .topbar {
+    background: linear-gradient(135deg,#1e3a5f,#2c5282);
+    color:#fff; padding:10px 20px;
+    display:flex; align-items:center; gap:12px;
+    font-weight:600; font-size:1.1rem;
+  }
+  .topbar small { opacity:.75; font-weight:400; font-size:.85rem; }
+  .card-header-info {
+    background:#fff; border-radius:10px; padding:14px 18px;
+    border:1px solid #d0dbe8; margin-bottom:12px;
+  }
+  .result-item {
+    background:#fff; border-left:5px solid #2c5282;
+    padding:10px 14px; margin-bottom:6px; border-radius:6px;
+    cursor:pointer; transition:.15s; display:flex;
+    justify-content:space-between; align-items:center;
+    outline:none;
+  }
+  .result-item:hover, .result-item:focus {
+    border-left-color:#f6ad2b; background:#f0f4f8;
+    transform:translateX(4px);
+  }
+  .result-item.sem-cpf { border-left-color:#dc3545; cursor:not-allowed; opacity:.7; }
+  .doc-tag {
+    font-size:.78rem; font-weight:700; padding:2px 6px;
+    border-radius:4px; background:#e9ecef; font-family:monospace;
+  }
+  #status_msg {
+    min-height:28px; font-weight:600; font-size:.95rem;
+    transition: opacity .3s;
+  }
+  #input_busca:focus { box-shadow:0 0 0 3px rgba(44,82,130,.25); }
+  .badge-gravar { font-size:.8rem; }
+  #contador { font-size:.78rem; color:#6c757d; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span>🩺 HMPCF — BPA Digitação</span>
+  <small id="contador">
+    {% if erro_firebird %}
+      ⚠️ Firebird indisponível
+    {% else %}
+      {{ total }} pacientes carregados
+    {% endif %}
+  </small>
+  <button class="btn btn-sm btn-outline-light ms-auto" onclick="recarregar()">🔄 Recarregar</button>
+</div>
+
+<div class="container-fluid py-3 px-3" style="max-width:860px">
+
+  {% if erro_firebird %}
+  <div class="alert alert-danger">
+    <strong>Erro ao conectar no Firebird:</strong> {{ erro_firebird }}<br>
+    Verifique se o BPA Magnético está aberto e tente recarregar.
+  </div>
+  {% endif %}
+
+  <!-- Cabeçalho do lote -->
+  <div class="card-header-info shadow-sm">
+    <div class="row g-2 align-items-end">
+      <div class="col-sm-3">
+        <label class="form-label fw-bold mb-1">📅 Data</label>
+        <input type="text" id="data_atual" class="form-control"
+               placeholder="DD/MM/AAAA" oninput="mascaraData(this)" maxlength="10">
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label fw-bold mb-1">👨‍⚕️ Profissional</label>
+        <input type="text" id="med_atual" class="form-control text-uppercase"
+               placeholder="Nome do médico/enfermeiro">
+      </div>
+      <div class="col-sm-3">
+        <button class="btn btn-primary fw-bold w-100" onclick="confirmarCabecalho()">
+          ✅ Confirmar
+        </button>
+      </div>
+    </div>
+    <div id="status_cabecalho" class="mt-2 text-success" style="font-size:.85rem; min-height:18px;"></div>
+  </div>
+
+  <!-- Busca -->
+  <div class="card-header-info shadow-sm">
+    <input type="text" id="input_busca" class="form-control form-control-lg"
+           placeholder="🔍 Pesquisar por nome, CPF ou SUS..."
+           oninput="pesquisar()" autocomplete="off" disabled>
+    <div id="status_msg" class="mt-2 text-success"></div>
+    <div id="lista_resultados" class="mt-2"></div>
+  </div>
+
+</div>
+
+<script src="/assets/bootstrap.bundle.min.js"></script>
+<script>
+let arquivoAtivo = "";
+let cabecalhoOk  = false;
+let _debounce    = null;
+
+// ── Máscara de data ─────────────────────────────────────────────────────────
+function mascaraData(el) {
+  let v = el.value.replace(/\D/g, "").substring(0, 8);
+  if (v.length >= 5) v = v.slice(0,2)+"/"+v.slice(2,4)+"/"+v.slice(4);
+  else if (v.length >= 3) v = v.slice(0,2)+"/"+v.slice(2);
+  el.value = v;
+}
+
+// ── Confirmar cabeçalho ─────────────────────────────────────────────────────
+async function confirmarCabecalho() {
+  const med  = document.getElementById("med_atual").value.trim();
+  const data = document.getElementById("data_atual").value.trim();
+  if (!med)           return alert("Informe o profissional!");
+  if (data.length<10) return alert("Digite a data completa (DD/MM/AAAA)!");
+
+  const r = await fetch("/api/cabecalho", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({medico:med, data})
+  }).then(r=>r.json());
+
+  if (!r.ok) return alert("Erro: " + r.erro);
+
+  arquivoAtivo = r.arquivo;
+  cabecalhoOk  = true;
+
+  document.getElementById("status_cabecalho").textContent =
+    `📌 Gravando em: ${arquivoAtivo}`;
+  document.getElementById("input_busca").disabled = false;
+  document.getElementById("input_busca").focus();
+}
+
+// ── Busca com debounce ──────────────────────────────────────────────────────
+function pesquisar() {
+  clearTimeout(_debounce);
+  const q = document.getElementById("input_busca").value.trim();
+  if (q.length < 2) {
+    document.getElementById("lista_resultados").innerHTML = "";
+    return;
+  }
+  _debounce = setTimeout(() => _executarBusca(q), 120);
+}
+
+async function _executarBusca(q) {
+  const lista = await fetch(`/api/buscar?q=${encodeURIComponent(q)}`)
+                        .then(r => r.json());
+  renderResultados(lista);
+}
+
+// ── Renderizar resultados ───────────────────────────────────────────────────
+function renderResultados(lista) {
+  const div = document.getElementById("lista_resultados");
+  if (!lista.length) {
+    div.innerHTML = `<div class="text-muted text-center py-3">Nenhum paciente encontrado.</div>`;
+    return;
+  }
+  div.innerHTML = lista.map((p, i) => {
+    const susFmt = p.sus
+      ? p.sus.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, "$1 $2 $3 $4")
+      : "—";
+    const cpfFmt = p.cpf
+      ? p.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+      : "—";
+    const semCpf = !p.cpf;
+    const cls    = semCpf ? "result-item sem-cpf" : "result-item";
+    const badge  = semCpf
+      ? `<span class="badge bg-danger badge-gravar">Sem CPF</span>`
+      : `<span class="badge bg-primary badge-gravar">GRAVAR</span>`;
+    return `
+      <div class="${cls}" tabindex="0"
+           data-cpf="${p.cpf||""}" data-nome="${p.nome}"
+           data-sem-cpf="${semCpf}"
+           onclick="gravarPaciente(this)">
+        <div>
+          <span class="fw-bold text-primary">${p.nome}</span><br>
+          <small class="text-muted">
+            DN: ${p.dtnasc||"—"} &nbsp;|&nbsp;
+            SUS: <span class="doc-tag">${susFmt}</span> &nbsp;|&nbsp;
+            CPF: <span class="doc-tag">${cpfFmt}</span>
+          </small>
+        </div>
+        ${badge}
+      </div>`;
+  }).join("");
+}
+
+// ── Gravar paciente ─────────────────────────────────────────────────────────
+async function gravarPaciente(el) {
+  if (!cabecalhoOk) { alert("Confirme o profissional e a data primeiro!"); return; }
+  if (el.dataset.semCpf === "true") { alert("Paciente sem CPF cadastrado na CADCNS — não é possível gravar."); return; }
+
+  const cpf  = el.dataset.cpf;
+  const nome = el.dataset.nome;
+
+  const r = await fetch("/api/gravar", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({arquivo: arquivoAtivo, cpf, nome})
+  }).then(r=>r.json());
+
+  const msgEl = document.getElementById("status_msg");
+  if (r.ok) {
+    msgEl.className = "mt-2 fw-bold text-success";
+    msgEl.textContent = `✅ Gravado: ${nome}`;
+  } else {
+    msgEl.className = "mt-2 fw-bold text-danger";
+    msgEl.textContent = `❌ Erro: ${r.erro}`;
+  }
+  setTimeout(() => { msgEl.textContent = ""; }, 3000);
+
+  // Limpa e refoca para próximo paciente
+  document.getElementById("input_busca").value = "";
+  document.getElementById("lista_resultados").innerHTML = "";
+  document.getElementById("input_busca").focus();
+}
+
+// ── Navegação por teclado (Tab/Setas/Enter) ─────────────────────────────────
+document.addEventListener("keydown", function(e) {
+  const busca     = document.getElementById("input_busca");
+  const selecionado = document.activeElement;
+  const items     = Array.from(document.querySelectorAll(".result-item"));
+
+  if (document.activeElement === busca) {
+    if (e.key === "Tab" || e.key === "ArrowDown") {
+      e.preventDefault();
+      if (items[0]) items[0].focus();
+    }
+    return;
+  }
+
+  if (items.includes(selecionado)) {
+    const idx = items.indexOf(selecionado);
+    if (e.key === "ArrowDown" || e.key === "Tab") {
+      e.preventDefault();
+      if (items[idx+1]) items[idx+1].focus(); else items[0]?.focus();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (idx > 0) items[idx-1].focus(); else busca.focus();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      gravarPaciente(selecionado);
+    } else if (e.key === "Escape") {
+      busca.focus();
+    }
+  }
+});
+
+// ── Recarregar base do Firebird ─────────────────────────────────────────────
+async function recarregar() {
+  const r = await fetch("/api/recarregar", {method:"POST"}).then(r=>r.json());
+  document.getElementById("contador").textContent =
+    r.erro ? `⚠️ ${r.erro}` : `${r.total} pacientes carregados`;
+}
+</script>
+</body>
+</html>

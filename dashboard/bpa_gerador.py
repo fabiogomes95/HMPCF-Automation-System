@@ -173,17 +173,17 @@ def carregar_pacientes_cadcns() -> list[dict]:
 
 
 def buscar_pacientes_memoria(termo: str, base_pacientes: list[dict], limite: int = 50) -> list[dict]:
-    """Busca por nome/CPF na lista já carregada na memória (instantâneo).
+    """Busca por nome, SUS ou CPF na lista já carregada na memória (instantâneo).
 
-    SUS deixou de ser chave de identificação do paciente desde a atualização
-    do BPA; a busca passa a ser por nome ou CPF.
+    A busca aceita SUS para localizar o paciente, mas o documento gravado no
+    lote deve ser sempre o CPF (responsabilidade do chamador).
     """
     if not termo:
         return base_pacientes[:limite]
     termo = termo.upper().strip()
     resultados = []
     for p in base_pacientes:
-        if termo in p["nome"] or termo in p["cpf"]:
+        if termo in p["nome"] or termo in p["sus"] or termo in p["cpf"]:
             resultados.append(p)
             if len(resultados) == limite:
                 break
