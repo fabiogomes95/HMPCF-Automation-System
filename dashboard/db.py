@@ -22,7 +22,11 @@ DB_URL = (
 
 @st.cache_resource
 def get_engine():
-    return create_engine(DB_URL, pool_pre_ping=True)
+    return create_engine(
+        DB_URL,
+        pool_pre_ping=True,
+        connect_args={"connect_timeout": 3},
+    )
 
 
 FUSO_LOCAL = "America/Sao_Paulo"
