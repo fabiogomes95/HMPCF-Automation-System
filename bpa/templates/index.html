@@ -6,9 +6,9 @@
 <title>HMPCF — BPA Digitação</title>
 <link rel="stylesheet" href="/assets/bootstrap.min.css">
 <style>
-  body { background: #f0f4f8; }
+  body { background:#f0f4f8; }
   .topbar {
-    background: linear-gradient(135deg,#1e3a5f,#2c5282);
+    background:linear-gradient(135deg,#1e3a5f,#2c5282);
     color:#fff; padding:10px 20px;
     display:flex; align-items:center; gap:12px;
     font-weight:600; font-size:1.1rem;
@@ -18,39 +18,37 @@
     background:#fff; border-radius:10px; padding:14px 18px;
     border:1px solid #d0dbe8; margin-bottom:12px;
   }
+  /* pacientes */
   .result-item {
     background:#fff; border-left:5px solid #2c5282;
     padding:10px 14px; margin-bottom:6px; border-radius:6px;
     cursor:pointer; transition:.15s; display:flex;
-    justify-content:space-between; align-items:center;
-    outline:none;
+    justify-content:space-between; align-items:center; outline:none;
   }
-  .result-item:hover, .result-item:focus {
-    border-left-color:#f6ad2b; background:#f0f4f8;
-    transform:translateX(4px);
+  .result-item:hover,.result-item:focus {
+    border-left-color:#f6ad2b; background:#f0f4f8; transform:translateX(4px);
   }
   .result-item.sem-cpf { border-left-color:#dc3545; cursor:not-allowed; opacity:.7; }
   .doc-tag {
     font-size:.78rem; font-weight:700; padding:2px 6px;
     border-radius:4px; background:#e9ecef; font-family:monospace;
   }
-  #status_msg {
-    min-height:28px; font-weight:600; font-size:.95rem;
-    transition: opacity .3s;
+  /* profissional dropdown */
+  .prof-op {
+    padding:8px 12px; cursor:pointer;
+    border-bottom:1px solid #f0f4f8; transition:.1s;
   }
-  #input_busca:focus { box-shadow:0 0 0 3px rgba(44,82,130,.25); }
-  .badge-gravar { font-size:.8rem; }
-  #contador { font-size:.78rem; color: rgba(255,255,255,.8); }
-  /* Log de migração */
+  .prof-op:hover { background:#f0f4f8; }
+  .prof-op:last-child { border-bottom:none; }
+  /* log migração */
   #mig_log {
     background:#1a1a2e; color:#a8ffa8; font-family:monospace;
     font-size:.82rem; padding:12px; border-radius:6px;
-    max-height:240px; overflow-y:auto; white-space:pre-wrap;
-    display:none;
+    max-height:240px; overflow-y:auto; white-space:pre-wrap; display:none;
   }
-  .mig-stat {
-    font-size:1.8rem; font-weight:700; line-height:1;
-  }
+  .mig-stat { font-size:1.8rem; font-weight:700; line-height:1; }
+  #status_msg { min-height:28px; font-weight:600; font-size:.95rem; }
+  #contador { font-size:.78rem; color:rgba(255,255,255,.8); }
 </style>
 </head>
 <body>
@@ -58,11 +56,8 @@
 <div class="topbar">
   <span>🩺 HMPCF — BPA</span>
   <small id="contador">
-    {% if erro_firebird %}
-      ⚠️ Firebird indisponível
-    {% else %}
-      {{ total }} pacientes carregados
-    {% endif %}
+    {% if erro_firebird %}⚠️ Firebird indisponível
+    {% else %}{{ total }} pacientes carregados{% endif %}
   </small>
   <button class="btn btn-sm btn-outline-light ms-auto" onclick="recarregar()">🔄 Recarregar</button>
 </div>
@@ -71,13 +66,13 @@
 
   {% if erro_firebird %}
   <div class="alert alert-danger">
-    <strong>Erro ao conectar no Firebird:</strong> {{ erro_firebird }}<br>
-    Verifique se o BPA Magnético está aberto e tente recarregar.
+    <strong>Erro Firebird:</strong> {{ erro_firebird }}<br>
+    Verifique se o BPA Magnético está aberto e recarregue a página.
   </div>
   {% endif %}
 
-  <!-- Abas -->
-  <ul class="nav nav-tabs mb-3" id="abas">
+  <!-- Abas Bootstrap 5 -->
+  <ul class="nav nav-tabs mb-3">
     <li class="nav-item">
       <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-digitacao">
         ✍️ Digitação
@@ -92,32 +87,54 @@
 
   <div class="tab-content">
 
-    <!-- ═══════════════════════════════════ ABA DIGITAÇÃO ═══════════════════════ -->
+    <!-- ═══════════════════════ ABA DIGITAÇÃO ══════════════════════════════ -->
     <div class="tab-pane fade show active" id="tab-digitacao">
 
       <!-- Cabeçalho do lote -->
       <div class="card-info shadow-sm">
         <div class="row g-2 align-items-end">
+
+          <!-- Data -->
           <div class="col-sm-3">
             <label class="form-label fw-bold mb-1">📅 Data</label>
             <input type="text" id="data_atual" class="form-control"
                    placeholder="DD/MM/AAAA" oninput="mascaraData(this)" maxlength="10">
           </div>
-          <div class="col-sm-6">
-            <label class="form-label fw-bold mb-1">👨‍⚕️ Profissional</label>
-            <input type="text" id="med_atual" class="form-control text-uppercase"
-                   placeholder="Nome do médico/enfermeiro">
+
+          <!-- Profissional (Firebird) -->
+          <div class="col-sm-6" style="position:relative">
+            <label class="form-label fw-bold mb-1">👨‍⚕️ Profissional (Firebird)</label>
+            <input type="text" id="prof_busca" class="form-control"
+                   placeholder="🔍 Nome do profissional..."
+                   oninput="buscarProf()" autocomplete="off">
+            <!-- dropdown de resultados -->
+            <div id="prof_dropdown"
+                 style="display:none; position:absolute; left:0; right:0; top:100%;
+                        background:#fff; border:1px solid #d0dbe8;
+                        border-radius:0 0 8px 8px; z-index:300;
+                        max-height:220px; overflow-y:auto;
+                        box-shadow:0 4px 12px rgba(0,0,0,.12)">
+            </div>
+            <!-- chip do profissional selecionado -->
+            <div id="prof_chip" class="mt-1" style="display:none; font-size:.82rem; line-height:1.6">
+              <span id="prof_chip_cat"  class="badge me-1"></span>
+              <span id="prof_chip_nome" class="fw-bold text-dark"></span>
+              <span id="prof_chip_cbo"  class="badge bg-info text-dark ms-1"></span>
+            </div>
           </div>
+
+          <!-- Confirmar -->
           <div class="col-sm-3">
             <button class="btn btn-primary fw-bold w-100" onclick="confirmarCabecalho()">
               ✅ Confirmar
             </button>
           </div>
+
         </div>
         <div id="status_cabecalho" class="mt-2 text-success" style="font-size:.85rem; min-height:18px;"></div>
       </div>
 
-      <!-- Busca -->
+      <!-- Busca de paciente -->
       <div class="card-info shadow-sm">
         <input type="text" id="input_busca" class="form-control form-control-lg"
                placeholder="🔍 Pesquisar por nome, CPF ou SUS..."
@@ -128,11 +145,11 @@
 
     </div><!-- /tab-digitacao -->
 
-    <!-- ═══════════════════════════════════ ABA MIGRAÇÃO ════════════════════════ -->
+    <!-- ═══════════════════════ ABA MIGRAÇÃO ═══════════════════════════════ -->
     <div class="tab-pane fade" id="tab-migracao">
 
       <div class="card-info shadow-sm">
-        <h6 class="fw-bold mb-3">Migrar pacientes do PostgreSQL → Firebird (CADCNS)</h6>
+        <h6 class="fw-bold mb-1">Migrar pacientes do PostgreSQL → Firebird (CADCNS)</h6>
         <p class="text-muted small mb-3">
           Importa pacientes <strong>com CPF</strong> que tiveram atendimento no mês selecionado
           e ainda não existem no Firebird (verificado por CNS e CPF).
@@ -146,12 +163,12 @@
               <option value="{{ mes_atual }}" selected>{{ mes_label }}</option>
             </select>
           </div>
-          <div class="col-sm-3">
+          <div class="col-sm-4">
             <button class="btn btn-outline-secondary fw-bold w-100" onclick="migPreview()">
               🔍 Ver resumo
             </button>
           </div>
-          <div class="col-sm-3">
+          <div class="col-sm-4">
             <button class="btn btn-success fw-bold w-100" id="btn_migrar"
                     onclick="migExecutar()" disabled>
               ▶ Migrar
@@ -159,8 +176,8 @@
           </div>
         </div>
 
-        <!-- Resumo do preview -->
-        <div id="mig_preview" class="row text-center g-2 mb-3" style="display:none !important">
+        <!-- Resumo preview -->
+        <div id="mig_preview" class="row text-center g-2 mb-3" style="display:none">
           <div class="col-4">
             <div class="border rounded p-2">
               <div class="mig-stat text-primary" id="mig_total">—</div>
@@ -184,8 +201,9 @@
         <!-- Barra de progresso -->
         <div id="mig_barra_wrap" style="display:none" class="mb-2">
           <div class="progress" style="height:22px">
-            <div id="mig_barra" class="progress-bar progress-bar-striped progress-bar-animated
-                                       bg-success" style="width:0%">0%</div>
+            <div id="mig_barra"
+                 class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                 style="width:0%">0%</div>
           </div>
         </div>
 
@@ -201,17 +219,25 @@
 
   </div><!-- /tab-content -->
 
-</div>
+</div><!-- /container -->
 
 <script src="/assets/bootstrap.bundle.min.js"></script>
 <script>
-// ══════════════════════════════════════════════════════════
-//  DIGITAÇÃO
-// ══════════════════════════════════════════════════════════
-let arquivoAtivo = "";
-let cabecalhoOk  = false;
-let _debounce    = null;
+// ═══════════════════════════════════════════════════════════
+//  DADOS DO SERVIDOR (injetados pelo Flask)
+// ═══════════════════════════════════════════════════════════
+let PROFISSIONAIS = {{ profissionais_json|safe }};
 
+// ═══════════════════════════════════════════════════════════
+//  DIGITAÇÃO — estado
+// ═══════════════════════════════════════════════════════════
+let arquivoAtivo  = "";
+let cabecalhoOk   = false;
+let _debounce     = null;
+let _profFiltrado = [];
+let _profEscolhido = null;
+
+// ── Máscara de data ──────────────────────────────────────────
 function mascaraData(el) {
   let v = el.value.replace(/\D/g, "").substring(0, 8);
   if (v.length >= 5) v = v.slice(0,2)+"/"+v.slice(2,4)+"/"+v.slice(4);
@@ -219,34 +245,107 @@ function mascaraData(el) {
   el.value = v;
 }
 
+// ── Busca de profissional (Firebird, cliente) ─────────────────
+function buscarProf() {
+  const q  = document.getElementById("prof_busca").value.trim().toUpperCase();
+  const dd = document.getElementById("prof_dropdown");
+  // resetar seleção
+  _profEscolhido = null;
+  document.getElementById("prof_chip").style.display = "none";
+
+  if (q.length < 1) { dd.style.display = "none"; return; }
+
+  _profFiltrado = PROFISSIONAIS.filter(p => p.nome.toUpperCase().includes(q)).slice(0, 20);
+
+  if (!_profFiltrado.length) {
+    dd.innerHTML = '<div class="p-2 text-muted small">Nenhum profissional encontrado no Firebird.</div>';
+    dd.style.display = "block";
+    return;
+  }
+
+  dd.innerHTML = _profFiltrado.map((p, i) => {
+    const catLabel = p.categoria === "medico"     ? "Médico"
+                   : p.categoria === "enfermeiro" ? "Enfermeiro" : "Sem CBO";
+    const catBg    = p.categoria === "medico"     ? "#0d6efd"
+                   : p.categoria === "enfermeiro" ? "#198754"    : "#6c757d";
+    const cboBadge = p.cbo
+      ? `<span style="background:#0dcaf0;color:#000;font-size:.72rem;padding:1px 5px;border-radius:3px">CBO ${p.cbo}</span>`
+      : "";
+    return `<div class="prof-op" onclick="escolherProf(${i})">
+              <strong>${p.nome}</strong>
+              <span style="background:${catBg};color:#fff;font-size:.72rem;
+                    padding:1px 5px;border-radius:3px;margin-left:5px">${catLabel}</span>
+              ${cboBadge}
+            </div>`;
+  }).join("");
+  dd.style.display = "block";
+}
+
+function escolherProf(i) {
+  const p = _profFiltrado[i];
+  _profEscolhido = p;
+
+  document.getElementById("prof_busca").value = p.nome;
+  document.getElementById("prof_dropdown").style.display = "none";
+
+  const catLabel = p.categoria === "medico"     ? "Médico"
+                 : p.categoria === "enfermeiro" ? "Enfermeiro" : "—";
+  const catBg    = p.categoria === "medico"     ? "bg-primary"
+                 : p.categoria === "enfermeiro" ? "bg-success" : "bg-secondary";
+
+  document.getElementById("prof_chip_cat").className  = `badge ${catBg} me-1`;
+  document.getElementById("prof_chip_cat").textContent = catLabel;
+  document.getElementById("prof_chip_nome").textContent = p.nome;
+  document.getElementById("prof_chip_cbo").textContent  = p.cbo ? `CBO ${p.cbo}` : "";
+  document.getElementById("prof_chip_cbo").style.display = p.cbo ? "" : "none";
+  document.getElementById("prof_chip").style.display = "block";
+}
+
+// Fechar dropdown ao clicar fora
+document.addEventListener("click", function(e) {
+  const dd   = document.getElementById("prof_dropdown");
+  const inp  = document.getElementById("prof_busca");
+  if (dd && !dd.contains(e.target) && !inp.contains(e.target))
+    dd.style.display = "none";
+});
+
+// ── Confirmar cabeçalho ───────────────────────────────────────
 async function confirmarCabecalho() {
-  const med  = document.getElementById("med_atual").value.trim();
+  if (!_profEscolhido)     return alert("Selecione o profissional na lista do Firebird!");
   const data = document.getElementById("data_atual").value.trim();
-  if (!med)           return alert("Informe o profissional!");
-  if (data.length<10) return alert("Digite a data completa (DD/MM/AAAA)!");
+  if (data.length < 10)   return alert("Digite a data completa (DD/MM/AAAA)!");
 
   const r = await fetch("/api/cabecalho", {
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({medico:med, data})
+    body: JSON.stringify({medico: _profEscolhido.nome, cns: _profEscolhido.cns, data})
   }).then(r=>r.json());
 
   if (!r.ok) return alert("Erro: " + r.erro);
+
   arquivoAtivo = r.arquivo;
   cabecalhoOk  = true;
-  document.getElementById("status_cabecalho").textContent = `📌 Gravando em: ${arquivoAtivo}`;
+
+  const catLabel = _profEscolhido.categoria === "medico" ? "Médico"
+                 : _profEscolhido.categoria === "enfermeiro" ? "Enfermeiro" : "";
+  document.getElementById("status_cabecalho").innerHTML =
+    `📌 <strong>${arquivoAtivo}</strong> — ${_profEscolhido.nome}`
+    + (catLabel ? ` · ${catLabel}` : "")
+    + (_profEscolhido.cbo ? ` · CBO ${_profEscolhido.cbo}` : "");
+
   document.getElementById("input_busca").disabled = false;
   document.getElementById("input_busca").focus();
 }
 
+// ── Busca de paciente ─────────────────────────────────────────
 function pesquisar() {
   clearTimeout(_debounce);
   const q = document.getElementById("input_busca").value.trim();
   if (q.length < 2) { document.getElementById("lista_resultados").innerHTML = ""; return; }
-  _debounce = setTimeout(() => _executarBusca(q), 120);
+  _debounce = setTimeout(() => _execBusca(q), 120);
 }
 
-async function _executarBusca(q) {
+async function _execBusca(q) {
   const lista = await fetch(`/api/buscar?q=${encodeURIComponent(q)}`).then(r=>r.json());
   renderResultados(lista);
 }
@@ -257,49 +356,46 @@ function renderResultados(lista) {
     div.innerHTML = `<div class="text-muted text-center py-3">Nenhum paciente encontrado.</div>`;
     return;
   }
-  div.innerHTML = lista.map((p) => {
+  div.innerHTML = lista.map(p => {
     const susFmt = p.sus ? p.sus.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, "$1 $2 $3 $4") : "—";
     const cpfFmt = p.cpf ? p.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") : "—";
     const semCpf = !p.cpf;
     const cls    = semCpf ? "result-item sem-cpf" : "result-item";
     const badge  = semCpf
-      ? `<span class="badge bg-danger badge-gravar">Sem CPF</span>`
-      : `<span class="badge bg-primary badge-gravar">GRAVAR</span>`;
-    return `
-      <div class="${cls}" tabindex="0"
-           data-cpf="${p.cpf||""}" data-nome="${p.nome}"
-           data-sem-cpf="${semCpf}"
-           onclick="gravarPaciente(this)">
-        <div>
-          <span class="fw-bold text-primary">${p.nome}</span><br>
-          <small class="text-muted">
-            DN: ${p.dtnasc||"—"} &nbsp;|&nbsp;
-            SUS: <span class="doc-tag">${susFmt}</span> &nbsp;|&nbsp;
-            CPF: <span class="doc-tag">${cpfFmt}</span>
-          </small>
-        </div>
-        ${badge}
-      </div>`;
+      ? `<span class="badge bg-danger">Sem CPF</span>`
+      : `<span class="badge bg-primary">GRAVAR</span>`;
+    return `<div class="${cls}" tabindex="0"
+                 data-cpf="${p.cpf||""}" data-nome="${p.nome}" data-sem-cpf="${semCpf}"
+                 onclick="gravarPaciente(this)">
+              <div>
+                <span class="fw-bold text-primary">${p.nome}</span><br>
+                <small class="text-muted">
+                  DN: ${p.dtnasc||"—"} &nbsp;|&nbsp;
+                  SUS: <span class="doc-tag">${susFmt}</span> &nbsp;|&nbsp;
+                  CPF: <span class="doc-tag">${cpfFmt}</span>
+                </small>
+              </div>
+              ${badge}
+            </div>`;
   }).join("");
 }
 
 async function gravarPaciente(el) {
-  if (!cabecalhoOk) { alert("Confirme o profissional e a data primeiro!"); return; }
-  if (el.dataset.semCpf === "true") { alert("Paciente sem CPF — não é possível gravar."); return; }
+  if (!cabecalhoOk)                { alert("Confirme o profissional e a data primeiro!"); return; }
+  if (el.dataset.semCpf === "true"){ alert("Paciente sem CPF — não é possível gravar."); return; }
   const r = await fetch("/api/gravar", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
+    method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify({arquivo:arquivoAtivo, cpf:el.dataset.cpf, nome:el.dataset.nome})
   }).then(r=>r.json());
-  const msgEl = document.getElementById("status_msg");
+  const msg = document.getElementById("status_msg");
   if (r.ok) {
-    msgEl.className = "mt-2 fw-bold text-success";
-    msgEl.textContent = `✅ Gravado: ${el.dataset.nome}`;
+    msg.className = "mt-2 fw-bold text-success";
+    msg.textContent = `✅ Gravado: ${el.dataset.nome}`;
   } else {
-    msgEl.className = "mt-2 fw-bold text-danger";
-    msgEl.textContent = `❌ Erro: ${r.erro}`;
+    msg.className = "mt-2 fw-bold text-danger";
+    msg.textContent = `❌ ${r.erro}`;
   }
-  setTimeout(() => { msgEl.textContent = ""; }, 3000);
+  setTimeout(() => { msg.textContent = ""; }, 3000);
   document.getElementById("input_busca").value = "";
   document.getElementById("lista_resultados").innerHTML = "";
   document.getElementById("input_busca").focus();
@@ -307,91 +403,75 @@ async function gravarPaciente(el) {
 
 // Navegação teclado
 document.addEventListener("keydown", function(e) {
-  const busca     = document.getElementById("input_busca");
-  const ativo     = document.activeElement;
-  const items     = Array.from(document.querySelectorAll(".result-item"));
+  const busca = document.getElementById("input_busca");
+  const ativo = document.activeElement;
+  const items = Array.from(document.querySelectorAll(".result-item"));
   if (ativo === busca) {
-    if (e.key === "Tab" || e.key === "ArrowDown") {
-      e.preventDefault();
-      if (items[0]) items[0].focus();
-    }
+    if (e.key==="Tab"||e.key==="ArrowDown") { e.preventDefault(); if(items[0]) items[0].focus(); }
     return;
   }
   if (items.includes(ativo)) {
     const idx = items.indexOf(ativo);
-    if (e.key === "ArrowDown" || e.key === "Tab") {
-      e.preventDefault();
-      if (items[idx+1]) items[idx+1].focus(); else items[0]?.focus();
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      if (idx > 0) items[idx-1].focus(); else busca.focus();
-    } else if (e.key === "Enter") {
-      e.preventDefault(); gravarPaciente(ativo);
-    } else if (e.key === "Escape") {
-      busca.focus();
-    }
+    if (e.key==="ArrowDown"||e.key==="Tab") {
+      e.preventDefault(); if(items[idx+1]) items[idx+1].focus(); else items[0]?.focus();
+    } else if (e.key==="ArrowUp") {
+      e.preventDefault(); if(idx>0) items[idx-1].focus(); else busca.focus();
+    } else if (e.key==="Enter") { e.preventDefault(); gravarPaciente(ativo); }
+    else if (e.key==="Escape") { busca.focus(); }
   }
 });
 
+// ── Recarregar ────────────────────────────────────────────────
 async function recarregar() {
   const r = await fetch("/api/recarregar", {method:"POST"}).then(r=>r.json());
+  if (r.profs) { PROFISSIONAIS.length = 0; PROFISSIONAIS.push(...r.profs); }
   document.getElementById("contador").textContent =
     r.erro ? `⚠️ ${r.erro}` : `${r.total} pacientes carregados`;
 }
 
-// ══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 //  MIGRAÇÃO
-// ══════════════════════════════════════════════════════════
-let _migNovosPrev = 0;
-
+// ═══════════════════════════════════════════════════════════
 async function migPreview() {
   const mes = document.getElementById("mig_mes").value;
-  const btn = document.getElementById("btn_migrar");
-  btn.disabled = true;
-
-  // Esconder resultado anterior
+  document.getElementById("btn_migrar").disabled = true;
   document.getElementById("mig_resultado").style.display = "none";
   document.getElementById("mig_log").style.display = "none";
   document.getElementById("mig_log").textContent = "";
+  document.getElementById("mig_preview").style.display = "none";
 
   const r = await fetch("/api/migracao/preview", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
+    method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify({mes})
   }).then(r=>r.json());
 
-  const previewDiv = document.getElementById("mig_preview");
-  if (!r.ok) {
-    previewDiv.style.setProperty("display","none","important");
-    alert("Erro: " + r.erro);
-    return;
-  }
+  if (!r.ok) { alert("Erro: " + r.erro); return; }
 
   document.getElementById("mig_total").textContent   = r.total;
   document.getElementById("mig_novos").textContent   = r.novos;
   document.getElementById("mig_existem").textContent = r.ja_existem;
-  previewDiv.style.removeProperty("display");
-  previewDiv.style.display = "flex";  // override important
+  document.getElementById("mig_preview").style.display = "flex";
 
-  _migNovosPrev = r.novos;
+  const btn = document.getElementById("btn_migrar");
   if (r.novos > 0) {
     btn.disabled = false;
     btn.textContent = `▶ Migrar ${r.novos} paciente(s)`;
   } else {
+    btn.disabled = true;
     btn.textContent = "▶ Nada a migrar";
   }
 }
 
 function migExecutar() {
-  const mes     = document.getElementById("mig_mes").value;
-  const barraW  = document.getElementById("mig_barra_wrap");
-  const barra   = document.getElementById("mig_barra");
-  const logEl   = document.getElementById("mig_log");
-  const resEl   = document.getElementById("mig_resultado");
-  const btnMig  = document.getElementById("btn_migrar");
+  const mes    = document.getElementById("mig_mes").value;
+  const barraW = document.getElementById("mig_barra_wrap");
+  const barra  = document.getElementById("mig_barra");
+  const logEl  = document.getElementById("mig_log");
+  const resEl  = document.getElementById("mig_resultado");
+  const btn    = document.getElementById("btn_migrar");
 
-  btnMig.disabled = true;
-  btnMig.textContent = "⏳ Migrando...";
+  btn.disabled    = true;
+  btn.textContent = "⏳ Migrando...";
   barraW.style.display = "block";
   barra.style.width    = "2%";
   barra.textContent    = "0%";
@@ -408,59 +488,39 @@ function migExecutar() {
 
   es.onmessage = function(e) {
     const d = JSON.parse(e.data);
-
     if (d.tipo === "log") {
       _log(d.msg);
-      if (d.total) {
-        barra.style.width = "5%";
-        barra.textContent = "5%";
-      }
+      if (d.total) { barra.style.width="5%"; barra.textContent="5%"; }
     }
-
     if (d.tipo === "progresso") {
       _log(d.msg);
-      const pct = Math.round((d.i / d.total) * 95) + 5;
-      barra.style.width = pct + "%";
-      barra.textContent = pct + "%";
+      const pct = Math.round((d.i/d.total)*95)+5;
+      barra.style.width = pct+"%"; barra.textContent = pct+"%";
     }
-
     if (d.tipo === "erro") {
-      _log("ERRO: " + d.msg);
-      es.close();
-      resEl.className    = "alert alert-danger mb-2";
-      resEl.textContent  = "❌ " + d.msg;
+      _log("ERRO: " + d.msg); es.close();
+      resEl.className   = "alert alert-danger mb-2";
+      resEl.textContent = "❌ " + d.msg;
       resEl.style.display = "block";
-      barra.classList.remove("bg-success");
+      barra.classList.remove("bg-success","progress-bar-animated");
       barra.classList.add("bg-danger");
-      barra.classList.remove("progress-bar-animated");
-      btnMig.disabled    = false;
-      btnMig.textContent = "▶ Tentar novamente";
+      btn.disabled = false; btn.textContent = "▶ Tentar novamente";
     }
-
     if (d.tipo === "fim") {
-      _log(d.msg);
-      es.close();
-      barra.style.width = "100%";
-      barra.textContent = "100%";
+      _log(d.msg); es.close();
+      barra.style.width = "100%"; barra.textContent = "100%";
       barra.classList.remove("progress-bar-animated");
-      resEl.className = d.erros > 0
-        ? "alert alert-warning mb-2"
-        : "alert alert-success mb-2";
+      resEl.className = d.erros > 0 ? "alert alert-warning mb-2" : "alert alert-success mb-2";
       resEl.innerHTML =
         `<strong>✅ Migração concluída</strong><br>` +
         `Inseridos: <strong>${d.inseridos}</strong> &nbsp;|&nbsp; ` +
         `Duplicatas ignoradas: <strong>${d.duplicatas}</strong> &nbsp;|&nbsp; ` +
         `Erros: <strong>${d.erros}</strong>`;
       resEl.style.display = "block";
-      // Atualizar contador do cabeçalho
       recarregar();
     }
   };
-
-  es.onerror = function() {
-    es.close();
-    _log("Conexão SSE encerrada.");
-  };
+  es.onerror = function() { es.close(); _log("Conexão SSE encerrada."); };
 }
 </script>
 </body>
