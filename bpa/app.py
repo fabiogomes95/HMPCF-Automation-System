@@ -143,7 +143,7 @@ def api_recarregar():
 
 # ── Helpers de migração ───────────────────────────────────────────────────────
 def _pg_connect():
-    return psycopg2.connect(
+    conn = psycopg2.connect(
         host    =os.getenv("POSTGRES_HOST",     "localhost"),
         port    =int(os.getenv("POSTGRES_PORT", "5432")),
         dbname  =os.getenv("POSTGRES_DB",       "hmpcf"),
@@ -151,6 +151,10 @@ def _pg_connect():
         password=os.getenv("POSTGRES_PASSWORD", ""),
         connect_timeout=5,
     )
+    # Banco legado com dados em WIN1252 — sem isso psycopg2 tenta decodificar
+    # bytes como UTF-8 e quebra nos caracteres especiais portugueses (ç, ã, ê…)
+    conn.set_client_encoding("WIN1252")
+    return conn
 
 
 def _limpar(valor) -> str:
