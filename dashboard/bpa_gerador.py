@@ -346,7 +346,8 @@ def _buscar_dados_pacientes(con, cns_list: list[str], cpf_list: list[str]) -> di
 
     por_documento: dict[str, dict] = {}
     for row in cur.fetchall():
-        cns    = str(row[0]).strip().zfill(15)
+        cns_raw = str(row[0]).strip() if row[0] else ""
+        cns     = cns_raw.zfill(15) if cns_raw else " " * 15
         nome   = str(row[1]).strip()[:30].ljust(30).upper() if row[1] else " " * 30
         nasc   = _normalizar_dtnasc(row[2])
         sexo   = str(row[3]).strip()[0].upper() if row[3] else "M"
@@ -437,7 +438,7 @@ def _linha_detalhe(pac, proc, cbo, cns_prof, data_aten, competencia, folha, seq)
         + str(folha).zfill(3)                       # 003 | prd-flh
         + str(seq).zfill(2)                         # 002 | prd-seq
         + proc.zfill(10)                            # 010 | prd-pa
-        + pac["cns"].zfill(15)                      # 015 | prd-cnspac
+        + pac["cns"]                                   # 015 | prd-cnspac
         + pac["sexo"][0]                            # 001 | prd-sexo
         + pac["ibge"].zfill(6)                      # 006 | prd-ibge
         + CID                                       # 004 | prd-cid
