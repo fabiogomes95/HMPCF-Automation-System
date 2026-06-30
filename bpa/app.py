@@ -111,5 +111,5 @@ def api_recarregar():
 
 if __name__ == "__main__":
     port = int(os.getenv("BPA_DIGITACAO_PORT", "8503"))
-    print(f"\n  BPA Digitação → http://localhost:{port}\n")
+    print(f"\n  BPA Digitacao -> http://localhost:{port}\n")
     app.run(host="127.0.0.1", port=port, debug=False)
