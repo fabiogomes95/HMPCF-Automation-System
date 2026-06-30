@@ -381,11 +381,7 @@ async function gerarBPA() {
 
   const r = await fetch("/api/gerar",{
     method:"POST", headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      arquivo: arquivoAtivo,
-      medico:  _profEscolhido ? _profEscolhido.nome : "",
-      cns:     _profEscolhido ? _profEscolhido.cns  : "",
-    })
+    body:JSON.stringify({arquivo: arquivoAtivo})
   }).then(r=>r.json());
 
   btn.disabled = false;
