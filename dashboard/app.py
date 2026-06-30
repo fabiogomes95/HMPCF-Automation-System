@@ -157,7 +157,6 @@ except Exception:
     st.warning(
         "⚠️ Painel gerencial indisponível — PostgreSQL não acessível (modo offline ou servidor fora do ar)."
     )
-    st.info("Para usar o BPA, clique em **🩺 BPA** no menu lateral.")
     st.stop()
 
 kpis = calcular_kpis(dados)
