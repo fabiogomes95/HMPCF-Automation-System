@@ -91,27 +91,26 @@ def valida_cpf(cpf: str) -> bool:
 
 def extrair_documentos_validos(texto_sujo: str) -> list[str]:
     """
-    Varre um texto "sujo" linha a linha, extrai o primeiro CNS/CPF válido
-    de cada linha e remove repetições consecutivas (digitação dupla
-    acidental). Mesma lógica do antigo legado/automacao/limpeza.py.
+    Varre um texto "sujo" linha a linha, extrai o primeiro CPF válido de
+    cada linha e remove repetições consecutivas (digitação dupla acidental).
+
+    Desde a atualização do BPA, o paciente é identificado APENAS por CPF;
+    números de SUS/CNS são ignorados na triagem (ver valida_cns, mantida
+    só para uso histórico).
     """
     resultado = []
     ultimo = None
     for linha in (texto_sujo or "").splitlines():
         if not linha.strip():
             continue
-        sus_encontrado = ""
         cpf_encontrado = ""
         for token in linha.split():
             num = "".join(c for c in token if c.isdigit())
-            if len(num) == 15 and valida_cns(num):
-                sus_encontrado = num
-            elif len(num) == 11 and valida_cpf(num):
+            if len(num) == 11 and valida_cpf(num):
                 cpf_encontrado = num
-        escolhido = sus_encontrado or cpf_encontrado
-        if escolhido and escolhido != ultimo:
-            ultimo = escolhido
-            resultado.append(escolhido)
+        if cpf_encontrado and cpf_encontrado != ultimo:
+            ultimo = cpf_encontrado
+            resultado.append(cpf_encontrado)
     return resultado
 
 
@@ -174,13 +173,17 @@ def carregar_pacientes_cadcns() -> list[dict]:
 
 
 def buscar_pacientes_memoria(termo: str, base_pacientes: list[dict], limite: int = 50) -> list[dict]:
-    """Busca por nome/SUS/CPF na lista já carregada na memória (instantâneo)."""
+    """Busca por nome/CPF na lista já carregada na memória (instantâneo).
+
+    SUS deixou de ser chave de identificação do paciente desde a atualização
+    do BPA; a busca passa a ser por nome ou CPF.
+    """
     if not termo:
         return base_pacientes[:limite]
     termo = termo.upper().strip()
     resultados = []
     for p in base_pacientes:
-        if termo in p["nome"] or termo in p["sus"] or termo in p["cpf"]:
+        if termo in p["nome"] or termo in p["cpf"]:
             resultados.append(p)
             if len(resultados) == limite:
                 break

@@ -45,7 +45,7 @@ aba_triagem, aba_digitacao, aba_geracao = st.tabs(["🧹 Triagem", "✍️ Digit
 # TRIAGEM
 # ═════════════════════════════════════════════════════════════════════════
 with aba_triagem:
-    st.subheader("Organizar CPF/SUS por enfermeiro")
+    st.subheader("Organizar CPFs por enfermeiro")
 
     col1, col2 = st.columns([1, 2])
     with col1:
@@ -58,7 +58,7 @@ with aba_triagem:
         )
 
     texto_sujo = st.text_area(
-        "📄 Cole aqui os dados sujos (CPF/SUS, um por linha)",
+        "📄 Cole aqui os dados sujos (CPF, um por linha)",
         height=280,
         key="triagem_texto_sujo",
     )
@@ -78,7 +78,7 @@ with aba_triagem:
         else:
             documentos = bpa.extrair_documentos_validos(texto_sujo)
             if not documentos:
-                st.error("Nenhum CNS/CPF válido encontrado no texto colado.")
+                st.error("Nenhum CPF válido encontrado no texto colado.")
                 st.session_state.triagem_resultado = ""
             else:
                 profissionais_lista = enfermeiros_str.split(",")
@@ -146,26 +146,24 @@ with aba_digitacao:
         st.info(f"📌 Lote ativo: **{st.session_state.dig_arquivo}**")
 
         base_pacientes = carregar_base_pacientes()
-        termo = st.text_input("🔍 Pesquisar paciente por nome, CPF ou SUS (mín. 3 letras)", key="dig_busca")
+        termo = st.text_input("🔍 Pesquisar paciente por nome ou CPF (mín. 3 letras)", key="dig_busca")
 
         if termo and len(termo.strip()) >= 3:
             resultados = bpa.buscar_pacientes_memoria(termo.strip(), base_pacientes)
             if not resultados:
                 st.warning("Nenhum paciente encontrado.")
             for p in resultados:
-                sus_fmt = p["sus"]
                 cpf_fmt = p["cpf"]
                 col_info, col_btn = st.columns([4, 1])
                 with col_info:
-                    st.markdown(f"**{p['nome']}**  \nDN: {p['dtnasc'] or '—'} · SUS: {sus_fmt or '—'} · CPF: {cpf_fmt or '—'}")
+                    st.markdown(f"**{p['nome']}**  \nDN: {p['dtnasc'] or '—'} · CPF: {cpf_fmt or '—'} · SUS: {p['sus'] or '—'}")
                 with col_btn:
-                    if st.button("Gravar", key=f"grava_{p['sus']}_{p['cpf']}"):
-                        documento = p["sus"] or p["cpf"]
-                        if not documento:
-                            st.error("Paciente sem documento válido!")
-                        else:
-                            bpa.adicionar_documento_lote(st.session_state.dig_arquivo, documento)
-                            st.success(f"Gravado: {p['nome']}")
+                    if not cpf_fmt:
+                        st.button("Sem CPF", key=f"grava_{p['sus']}_{p['cpf']}", disabled=True)
+                        st.caption("Cadastre o CPF na CADCNS")
+                    elif st.button("Gravar", key=f"grava_{p['sus']}_{p['cpf']}"):
+                        bpa.adicionar_documento_lote(st.session_state.dig_arquivo, cpf_fmt)
+                        st.success(f"Gravado: {p['nome']} (CPF {cpf_fmt})")
                 st.divider()
 
 
