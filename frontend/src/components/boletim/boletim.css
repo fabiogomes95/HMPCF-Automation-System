@@ -75,7 +75,7 @@
 
 /* ─── Linha 1: Data / Hora / Registro — Data e Hora têm formato fixo, sobra vai pro Registro ─── */
 .campo-data {
-  flex: 0 0 270px !important;
+  flex: 0 0 320px !important;
   min-width: 0;
 }
 
@@ -83,6 +83,7 @@
   flex: 0 0 110px !important;
   min-width: 0;
   border-right: none !important;
+  justify-content: center;
 }
 
 .campo-registro {

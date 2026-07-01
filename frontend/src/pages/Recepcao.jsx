@@ -395,12 +395,13 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
           registro: atdInfo.registro,
           procedencia,
         });
-        // Salva endereço para o botão Família — só atualiza se o paciente tem endereço
-        if (dados.logpcn || dados.numpcn || dados.bairro_pcnte) {
+        // Salva endereço e telefone para o botão Família — só atualiza se o paciente tem algum dado
+        if (dados.logpcn || dados.numpcn || dados.bairro_pcnte || dados.telefone) {
           localStorage.setItem("ultimo_endereco", JSON.stringify({
             logpcn:       dados.logpcn       || "",
             numpcn:       dados.numpcn       || "",
             bairro_pcnte: dados.bairro_pcnte || "",
+            telefone:     dados.telefone     || "",
           }));
         }
         setMsg("✓ Registrado!");
@@ -419,12 +420,13 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     try {
       const salvo = localStorage.getItem("ultimo_endereco");
       if (!salvo) return;
-      const { logpcn, numpcn, bairro_pcnte } = JSON.parse(salvo);
+      const { logpcn, numpcn, bairro_pcnte, telefone } = JSON.parse(salvo);
       setForm(prev => ({
         ...prev,
         logpcn,
         numpcn,
         bairro_pcnte,
+        telefone: telefone || prev.telefone,
       }));
     } catch {
       // localStorage corrompido — ignora
