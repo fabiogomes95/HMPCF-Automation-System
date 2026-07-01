@@ -159,14 +159,98 @@ def api_recarregar():
     })
 
 
+# ── API — Enfermeiros (divide o CPF já digitado pros médicos entre enfermeiros) ─
+@app.route("/api/enfermeiros/dividir", methods=["POST"])
+def api_enfermeiros_dividir():
+    d           = request.get_json(force=True) or {}
+    data        = (d.get("data") or "").strip()
+    enfermeiros = d.get("enfermeiros") or []
+
+    if len(data) < 10:
+        return jsonify({"ok": False, "erro": "Informe a data (DD/MM/AAAA)."})
+    if not enfermeiros:
+        return jsonify({"ok": False, "erro": "Selecione ao menos um enfermeiro."})
+
+    arquivo = bpa.nome_arquivo_lote(data)
+    caminho = bpa.caminho_lote(arquivo)
+    try:
+        grupos = bpa.ler_arquivo_lote(caminho)
+    except bpa.LoteError as e:
+        return jsonify({"ok": False, "erro": str(e)})
+
+    try:
+        con = bpa.conectar()
+    except Exception as e:
+        return jsonify({"ok": False, "erro": f"Firebird indisponível: {e}"})
+
+    try:
+        # Descarta qualquer divisão de enfermeiros já feita antes nesse dia
+        # (refazer não deve duplicar) e junta só os CPFs vindos de médico.
+        grupos_medico: list[dict] = []
+        documentos: list[str] = []
+        for g in grupos:
+            cns_raw   = (g.get("cns") or "").strip()
+            categoria = "medico"
+            if cns_raw:
+                cat, auto = bpa.detectar_categoria(con, cns_raw)
+                if auto and cat == "enfermeiro":
+                    categoria = "enfermeiro"
+            if categoria == "enfermeiro":
+                continue
+            grupos_medico.append(g)
+            documentos.extend(g["documentos"])
+
+        if not documentos:
+            return jsonify({"ok": False, "erro": "Nenhum CPF de médico digitado nesse dia ainda."})
+
+        distribuicao = bpa.dividir_por_profissionais(documentos, enfermeiros)
+
+        novos_grupos = []
+        resumo       = []
+        for enf in enfermeiros:
+            docs_enf = distribuicao.get(enf["cns"], [])
+            if not docs_enf:
+                continue
+            novos_grupos.append({
+                "medico_raw": enf["nome"], "cns": enf["cns"], "data": data, "documentos": docs_enf,
+            })
+            resumo.append({"nome": enf["nome"], "cns": enf["cns"], "qtd": len(docs_enf)})
+
+        bpa.regravar_lote(arquivo, grupos_medico + novos_grupos)
+
+        return jsonify({
+            "ok": True, "arquivo": arquivo, "total": len(documentos), "distribuicao": resumo,
+        })
+    finally:
+        con.close()
+
+
+# ── API — Lotes disponíveis (para escolher o dia da geração) ──────────────────
+@app.route("/api/lotes")
+def api_lotes():
+    return jsonify([
+        {
+            "nome": l["nome"],
+            "tamanho": l["tamanho"],
+            "modificado_em": l["modificado_em"].strftime("%d/%m/%Y %H:%M"),
+        }
+        for l in bpa.listar_lotes()
+    ])
+
+
 # ── API — Geração BPA-I ───────────────────────────────────────────────────────
+_ROTULO_ARQUIVO = {"medico": "MEDICOS", "enfermeiro": "ENFERMEIROS"}
+
+
 @app.route("/api/gerar", methods=["POST"])
 def api_gerar():
-    d       = request.get_json(force=True) or {}
-    arquivo = (d.get("arquivo") or "").strip()
+    d        = request.get_json(force=True) or {}
+    arquivo  = (d.get("arquivo") or "").strip()
+    # categoria: "medico" | "enfermeiro" | ausente/"" = gera os dois que existirem no lote
+    categoria_filtro = (d.get("categoria") or "").strip() or None
 
     if not arquivo:
-        return jsonify({"ok": False, "erro": "Nenhum arquivo ativo. Confirme o profissional e a data primeiro."})
+        return jsonify({"ok": False, "erro": "Escolha o lote (dia) para gerar."})
 
     caminho = bpa.caminho_lote(arquivo)
     try:
@@ -186,9 +270,13 @@ def api_gerar():
         return jsonify({"ok": False, "erro": f"Firebird indisponível: {e}"})
 
     try:
-        todas_linhas:    list[str] = []
-        n_folhas_total   = 0
-        competencias:    list[str] = []
+        # Linhas separadas por categoria — cada uma vira o SEU PRÓPRIO arquivo,
+        # pra não depender de um único arquivo combinado (se um médico/enfermeiro
+        # tiver algum problema no BPA, o outro continua intacto e importável).
+        por_categoria: dict[str, dict] = {
+            "medico":     {"linhas": [], "n_folhas": 0, "competencias": []},
+            "enfermeiro": {"linhas": [], "n_folhas": 0, "competencias": []},
+        }
         nao_encontrados: list[str] = []
 
         for grupo in grupos:
@@ -230,36 +318,50 @@ def api_gerar():
             proc = bpa.PROCEDIMENTOS[categoria]["codigo"]
             cbo  = bpa.PROCEDIMENTOS[categoria]["cbo"]
             linhas, n_folhas = bpa.montar_linhas(pacientes, proc, cbo, cns_prof, data_aten, competencia)
-            todas_linhas.extend(linhas)
-            n_folhas_total += n_folhas
-            competencias.append(competencia)
+            alvo = por_categoria[categoria]
+            alvo["linhas"].extend(linhas)
+            alvo["n_folhas"] += n_folhas
+            alvo["competencias"].append(competencia)
 
-        if not todas_linhas:
-            detalhe = f" CPFs não encontrados: {', '.join(nao_encontrados)}" if nao_encontrados else ""
-            return jsonify({"ok": False, "erro": f"Nenhum paciente encontrado no Firebird.{detalhe}"})
-
-        competencia_final = max(set(competencias), key=competencias.count)
-        cabecalho = bpa.montar_cabecalho(competencia_final, len(todas_linhas), n_folhas_total, todas_linhas)
-
-        # Um arquivo por dia: BPA_01062026.txt
         dt_str = arquivo.replace(".txt", "").replace("-", "")  # "01-06-2026.txt" → "01062026"
-        nome_arquivo   = f"BPA_{dt_str}.txt"
-        pasta          = bpa.BPA_LOTES_DIR
+        pasta  = bpa.BPA_LOTES_DIR
         os.makedirs(pasta, exist_ok=True)
-        caminho_gerado = os.path.join(pasta, nome_arquivo)
 
-        with open(caminho_gerado, "w", encoding="latin-1", newline="") as f:
-            f.write(cabecalho + "\r\n")
-            for linha in todas_linhas:
-                f.write(linha + "\r\n")
+        arquivos_gerados: dict[str, dict] = {}
+        for categoria, dados in por_categoria.items():
+            if categoria_filtro and categoria != categoria_filtro:
+                continue
+            if not dados["linhas"]:
+                continue
+            competencia_final = max(set(dados["competencias"]), key=dados["competencias"].count)
+            cabecalho = bpa.montar_cabecalho(
+                competencia_final, len(dados["linhas"]), dados["n_folhas"], dados["linhas"]
+            )
+
+            nome_arquivo   = f"BPA_{_ROTULO_ARQUIVO[categoria]}_{dt_str}.txt"
+            caminho_gerado = os.path.join(pasta, nome_arquivo)
+            with open(caminho_gerado, "w", encoding="latin-1", newline="") as f:
+                f.write(cabecalho + "\r\n")
+                for linha in dados["linhas"]:
+                    f.write(linha + "\r\n")
+
+            arquivos_gerados[categoria] = {
+                "arquivo":     nome_arquivo,
+                "caminho":     caminho_gerado,
+                "registros":   len(dados["linhas"]),
+                "folhas":      dados["n_folhas"],
+                "competencia": f"{competencia_final[4:]}/{competencia_final[:4]}",
+            }
+
+        if not arquivos_gerados:
+            detalhe = f" CPFs não encontrados: {', '.join(nao_encontrados)}" if nao_encontrados else ""
+            rotulo  = _ROTULO_ARQUIVO.get(categoria_filtro, "").lower()
+            alvo    = f" de {rotulo}" if rotulo else ""
+            return jsonify({"ok": False, "erro": f"Nenhum paciente{alvo} encontrado no Firebird.{detalhe}"})
 
         return jsonify({
             "ok":              True,
-            "arquivo":         nome_arquivo,
-            "caminho":         caminho_gerado,
-            "registros":       len(todas_linhas),
-            "folhas":          n_folhas_total,
-            "competencia":     f"{competencia_final[4:]}/{competencia_final[:4]}",
+            "arquivos":        arquivos_gerados,   # {"medico": {...}, "enfermeiro": {...}}
             "nao_encontrados": nao_encontrados,
         })
 

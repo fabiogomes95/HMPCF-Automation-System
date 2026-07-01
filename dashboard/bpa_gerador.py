@@ -37,6 +37,7 @@ MUNICIPIO          = "240360"
 LOGRADOURO_COD     = "081"
 CEP_PADRAO         = "59575000"
 RACA_PADRAO        = "03"    # parda
+NACIONALIDADE      = "010"   # brasileira — sempre fixo, nao le da CADCNS
 CARATER            = "02"    # urgência
 CID                = "    "  # 4 espaços — não preenchido
 ORGAO_RESP         = "sms extremoz"
@@ -384,7 +385,9 @@ def _buscar_dados_pacientes(con, cns_list: list[str], cpf_list: list[str]) -> di
         # prd-etnia só é preenchido quando raça/cor = 05 (indígena); nos
         # demais casos o layout oficial exige o campo em branco (espaços).
         etnia  = str(row[6]).strip().zfill(4)    if row[6] and raca == "05" else "    "
-        nac    = str(row[7]).strip().zfill(3)    if row[7]  else "010"
+        # Nacionalidade sempre fixa em 010 (brasileira) — não confia no valor
+        # gravado na CADCNS, já apareceu registro com lixo nesse campo.
+        nac    = NACIONALIDADE
         lograd = str(row[8]).strip().zfill(3)    if row[8]  else LOGRADOURO_COD
         cep    = str(row[9]).strip().replace("-", "").zfill(8) if row[9] else CEP_PADRAO
         end_   = str(row[10]).strip()[:30].ljust(30) if row[10] else " " * 30
@@ -594,6 +597,40 @@ def criar_cabecalho_lote(nome_arquivo: str, medico: str, data: str, cns: str = "
     cns_part  = f" | CNS: {cns.strip()}" if cns and cns.strip() else ""
     with open(caminho, "a", encoding="utf-8") as f:
         f.write(f"PROFISSIONAL: {medico.upper()}{cns_part} | DATA: {data}\n")
+
+
+def dividir_por_profissionais(documentos: list[str], profissionais: list[dict]) -> dict[str, list[str]]:
+    """Distribui documentos em blocos de até 99 (limite de folha do BPA) entre os
+    profissionais informados, em rodízio — mesma lógica de `dividir_em_lotes`,
+    mas indexada por CNS real (Firebird) em vez de nome digitado à mão.
+
+    profissionais: [{"cns": ..., "nome": ...}, ...]
+    Retorna {cns: [documentos]}.
+    """
+    if not profissionais:
+        return {}
+    TAMANHO_LOTE = 99
+    por_cns: dict[str, list[str]] = {p["cns"]: [] for p in profissionais}
+    ordem = [p["cns"] for p in profissionais]
+    for i, idx in enumerate(range(0, len(documentos), TAMANHO_LOTE)):
+        chunk = documentos[idx:idx + TAMANHO_LOTE]
+        por_cns[ordem[i % len(ordem)]].extend(chunk)
+    return por_cns
+
+
+def regravar_lote(nome_arquivo: str, grupos: list[dict]) -> None:
+    """Reescreve o arquivo de lote do zero com os grupos informados (substitui
+    o conteúdo inteiro) — usado para trocar só os blocos de um profissional/
+    categoria (ex: refazer a divisão de enfermeiros) sem duplicar ao rodar de
+    novo. `grupos` no mesmo formato retornado por `ler_arquivo_lote`.
+    """
+    caminho = caminho_lote(nome_arquivo)
+    with open(caminho, "w", encoding="utf-8") as f:
+        for g in grupos:
+            cns_part = f" | CNS: {g['cns'].strip()}" if (g.get("cns") or "").strip() else ""
+            f.write(f"PROFISSIONAL: {g['medico_raw'].upper()}{cns_part} | DATA: {g['data']}\n")
+            for doc in g["documentos"]:
+                f.write(f"{doc}\n")
 
 
 def adicionar_documento_lote(nome_arquivo: str, documento: str) -> None:
