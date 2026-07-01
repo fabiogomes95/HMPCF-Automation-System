@@ -82,13 +82,19 @@ def assets(nome: str):
 # ── Página principal ──────────────────────────────────────────────────────────
 @app.route("/")
 def index():
+    competencias = _competencias_disponiveis()
+    if not competencias:
+        competencias = [{
+            "value": date.today().strftime("%Y%m"),
+            "label": _nome_mes(date.today().month, date.today().year),
+        }]
     return render_template(
         "index.html",
         total=len(_pacientes),
         erro_firebird=_erro_firebird,
         profissionais_json=json.dumps(_profissionais, ensure_ascii=False),
-        mes_atual=date.today().strftime("%Y%m"),
-        mes_label=_nome_mes(date.today().month, date.today().year),
+        competencias=competencias,
+        mes_atual=competencias[0]["value"],
     )
 
 
@@ -264,6 +270,29 @@ def api_gerar():
 
 
 # ── Helpers migração ──────────────────────────────────────────────────────────
+def _competencias_disponiveis() -> list[dict]:
+    """Meses (YYYYMM) que realmente têm atendimento no Postgres, mais recente primeiro."""
+    try:
+        pg = _pg_connect()
+    except Exception:
+        return []
+    try:
+        cur = pg.cursor()
+        cur.execute("""
+            SELECT DISTINCT to_char(data_atendimento, 'YYYYMM') AS ym
+            FROM recepcao_atendimentos
+            ORDER BY ym DESC
+        """)
+        return [
+            {"value": ym, "label": _nome_mes(int(ym[4:6]), int(ym[:4]))}
+            for (ym,) in cur.fetchall()
+        ]
+    except Exception:
+        return []
+    finally:
+        pg.close()
+
+
 def _pg_connect():
     conn = psycopg2.connect(
         host    =os.getenv("POSTGRES_HOST",     "localhost"),
@@ -297,16 +326,52 @@ def _dtnasc(valor) -> str | None:
     return v if len(v) == 8 else None
 
 
-def _paciente_existe_fb(cur, cns: str, cpf: str) -> bool:
-    if cns:
-        cur.execute("SELECT 1 FROM CADCNS WHERE CNS = ?", (cns,))
-        if cur.fetchone():
-            return True
-    if cpf:
-        cur.execute("SELECT 1 FROM CADCNS WHERE NUM_CPF = ?", (cpf,))
-        if cur.fetchone():
-            return True
-    return False
+def _cpf_valido(cpf: str) -> bool:
+    return bpa.valida_cpf(cpf)
+
+
+def _cns_valido(cns: str) -> bool:
+    return len(cns) == 15
+
+
+def _carregar_existentes_fb(cur) -> tuple[dict, set]:
+    """Carrega todos os CNS/CPF já cadastrados no Firebird de uma vez (1 consulta),
+    para checar existência em memória em vez de 1 SELECT por paciente (CADCNS não
+    tem índice em NUM_CPF — em memória evita a varredura completa da tabela repetida
+    milhares de vezes, sem precisar mexer no schema do banco).
+
+    Retorna (por_cns, cpf_set):
+      por_cns  — {CNS: (ID_CADCNS, NUM_CPF atual)}, para achar cadastros antigos
+                 (só CNS, sem CPF) e completar o CPF sem duplicar o registro.
+      cpf_set  — conjunto de CPFs já gravados em algum registro.
+    """
+    cur.execute("SELECT ID_CADCNS, CNS, NUM_CPF FROM CADCNS")
+    por_cns: dict = {}
+    cpf_set: set = set()
+    for id_cadcns, cns, cpf in cur.fetchall():
+        cns = (cns or "").strip()
+        cpf = (cpf or "").strip()
+        if cns:
+            por_cns[cns] = (id_cadcns, cpf)
+        if cpf:
+            cpf_set.add(cpf)
+    return por_cns, cpf_set
+
+
+def _status_paciente(por_cns: dict, cpf_set: set, cns: str, cpf: str):
+    """Decide o que fazer com um paciente do Postgres:
+      "duplicata" — CPF já gravado em algum registro, nada a fazer.
+      "atualizar" — já existe cadastro pelo CNS, mas sem CPF; (status, ID_CADCNS).
+      "novo"      — não existe cadastro nenhum; precisa inserir.
+    """
+    if cpf in cpf_set:
+        return ("duplicata", None)
+    if cns and cns in por_cns:
+        id_existente, cpf_atual = por_cns[cns]
+        if not cpf_atual:
+            return ("atualizar", id_existente)
+        return ("duplicata", None)
+    return ("novo", None)
 
 
 _COLUNAS = [
@@ -351,11 +416,29 @@ def api_migracao_preview():
         cur.execute(_query_pacientes_mes(mes))
         rows = cur.fetchall()
         total = len(rows)
+
+        validos      = [r for r in rows if _cpf_valido(_limpar(r[1]))]
+        cpf_invalido = total - len(validos)
+
         fb = bpa.conectar()
         fb_cur = fb.cursor()
-        ja_existem = sum(1 for r in rows if _paciente_existe_fb(fb_cur, _limpar(r[0]), _limpar(r[1])))
+        por_cns, cpf_set = _carregar_existentes_fb(fb_cur)
         fb.close()
-        return jsonify({"ok": True, "total": total, "novos": total - ja_existem, "ja_existem": ja_existem})
+
+        novos = atualizar = ja_existem = 0
+        for r in validos:
+            status, _ = _status_paciente(por_cns, cpf_set, _limpar(r[0]), _limpar(r[1]))
+            if status == "novo":
+                novos += 1
+            elif status == "atualizar":
+                atualizar += 1
+            else:
+                ja_existem += 1
+
+        return jsonify({
+            "ok": True, "total": total, "novos": novos, "atualizar": atualizar,
+            "ja_existem": ja_existem, "cpf_invalido": cpf_invalido,
+        })
     except Exception as e:
         return jsonify({"ok": False, "erro": str(e)})
     finally:
@@ -389,7 +472,10 @@ def api_migracao_stream():
         yield _sse({"tipo": "log", "msg": f"{total} paciente(s) com CPF no mês.", "total": total})
 
         if total == 0:
-            yield _sse({"tipo": "fim", "inseridos": 0, "duplicatas": 0, "erros": 0}); pg.close(); return
+            yield _sse({
+                "tipo": "fim", "inseridos": 0, "atualizados": 0, "duplicatas": 0,
+                "erros": 0, "cpf_invalidos": 0,
+            }); pg.close(); return
 
         try:
             fb = bpa.conectar()
@@ -402,7 +488,10 @@ def api_migracao_stream():
         fb_cur.execute("SELECT MAX(ID_CADCNS) FROM CADCNS")
         max_id = fb_cur.fetchone()[0] or 0
 
-        inseridos = duplicatas = erros = 0
+        por_cns, cpf_set = _carregar_existentes_fb(fb_cur)
+        yield _sse({"tipo": "log", "msg": f"{len(cpf_set)} CPF(s) já cadastrados carregados em memória."})
+
+        inseridos = atualizados = duplicatas = erros = cpf_invalidos = 0
         LOTE = 50
 
         for i, row in enumerate(rows, 1):
@@ -411,9 +500,30 @@ def api_migracao_stream():
             cns = _limpar(cns_r)
             cpf = _limpar(cpf_r)
 
-            if _paciente_existe_fb(fb_cur, cns, cpf):
+            if not _cpf_valido(cpf):
+                cpf_invalidos += 1
+                yield _sse({"tipo": "log", "msg": f"CPF ausente/inválido, paciente pulado: {nome_r} ({cpf_r!r})"})
+                continue
+
+            if cns and not _cns_valido(cns):
+                cns = ""  # CNS não é mais obrigatório — descarta se mal formatado, mas mantém o CPF
+
+            status, id_existente = _status_paciente(por_cns, cpf_set, cns, cpf)
+
+            if status == "duplicata":
                 duplicatas += 1
-            else:
+
+            elif status == "atualizar":
+                try:
+                    fb_cur.execute("UPDATE CADCNS SET NUM_CPF = ? WHERE ID_CADCNS = ?", [cpf, id_existente])
+                    atualizados += 1
+                    cpf_set.add(cpf)
+                    por_cns[cns] = (id_existente, cpf)
+                except Exception as e:
+                    erros += 1
+                    yield _sse({"tipo": "log", "msg": f"Erro ao atualizar CPF de {nome_r} (CNS {cns}): {e}"})
+
+            else:  # "novo"
                 max_id += 1
                 try:
                     fb_cur.execute(_SQL_INSERT, [
@@ -434,6 +544,12 @@ def api_migracao_stream():
                         _texto(tel_r, 9),
                     ])
                     inseridos += 1
+                    # Atualiza o cache em memória — sem isso, dois registros do mesmo
+                    # paciente no mesmo lote (ex: endereço mudou entre atendimentos)
+                    # seriam inseridos duas vezes no Firebird.
+                    if cns:
+                        por_cns[cns] = (max_id, cpf)
+                    cpf_set.add(cpf)
                 except Exception as e:
                     erros += 1
                     yield _sse({"tipo": "log", "msg": f"Erro CPF {cpf}: {e}"})
@@ -442,9 +558,9 @@ def api_migracao_stream():
                 fb.commit()
                 yield _sse({
                     "tipo": "progresso",
-                    "msg":  f"{i}/{total} — inseridos: {inseridos} | duplicatas: {duplicatas}",
+                    "msg":  f"{i}/{total} — inseridos: {inseridos} | atualizados: {atualizados} | duplicatas: {duplicatas}",
                     "i": i, "total": total,
-                    "inseridos": inseridos, "duplicatas": duplicatas,
+                    "inseridos": inseridos, "atualizados": atualizados, "duplicatas": duplicatas,
                 })
 
         try:
@@ -458,8 +574,10 @@ def api_migracao_stream():
 
         yield _sse({
             "tipo":       "fim",
-            "msg":        f"Concluído! Inseridos: {inseridos} | Duplicatas: {duplicatas} | Erros: {erros}",
-            "inseridos":  inseridos, "duplicatas": duplicatas, "erros": erros,
+            "msg":        f"Concluído! Inseridos: {inseridos} | Atualizados (CPF): {atualizados} | "
+                          f"Duplicatas: {duplicatas} | CPF inválido: {cpf_invalidos} | Erros: {erros}",
+            "inseridos":  inseridos, "atualizados": atualizados, "duplicatas": duplicatas, "erros": erros,
+            "cpf_invalidos": cpf_invalidos,
         })
 
     return Response(
