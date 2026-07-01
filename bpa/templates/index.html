@@ -56,6 +56,9 @@
       <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-digitacao">✍️ Digitação</button>
     </li>
     <li class="nav-item">
+      <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-enfermeiros">🧑‍⚕️ Enfermeiros</button>
+    </li>
+    <li class="nav-item">
       <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-migracao">🔄 Migração PG → Firebird</button>
     </li>
   </ul>
@@ -105,24 +108,73 @@
         <div id="lista_resultados" class="mt-2"></div>
       </div>
 
-      <!-- 3. Rodapé: contador + Gerar BPA-I -->
-      <div class="card-info shadow-sm d-flex align-items-center gap-3">
-        <div id="contador_pac" class="text-muted" style="flex:1; font-size:.9rem">
-          Nenhum paciente gravado ainda.
+      <!-- 3. Rodapé: escolher o dia + Gerar BPA-I -->
+      <div class="card-info shadow-sm">
+        <div class="row g-2 align-items-end">
+          <div class="col-sm-7">
+            <label class="form-label fw-bold mb-1">📁 Lote (dia) para gerar</label>
+            <select id="ger_lote" class="form-select" onchange="onGerLoteChange()">
+              <option value="">— selecione um lote —</option>
+            </select>
+          </div>
+          <div class="col-sm-5 d-flex align-items-end gap-2">
+            <div id="contador_pac" class="text-muted flex-fill" style="font-size:.85rem">
+              Nenhum paciente gravado ainda.
+            </div>
+            <button class="btn btn-success btn-lg fw-bold px-4" id="btn_gerar"
+                    onclick="gerarBPA()" disabled>
+              📦 Gerar BPA-I (Médicos)
+            </button>
+          </div>
         </div>
-        <button class="btn btn-success btn-lg fw-bold px-4" id="btn_gerar"
-                onclick="gerarBPA()" disabled>
-          📦 Gerar BPA-I
-        </button>
       </div>
 
-      <!-- 4. Resultado da geração -->
+      <!-- 4. Resultado da geração (um arquivo por categoria: médico e enfermeiro) -->
       <div id="ger_resultado" style="display:none" class="card-info shadow-sm">
         <div id="ger_msg" class="fw-bold mb-2"></div>
         <div id="ger_detalhe" class="text-muted small"></div>
       </div>
 
     </div><!-- /tab-digitacao -->
+
+    <!-- ══════════════════════ ABA ENFERMEIROS ══════════════════════════ -->
+    <div class="tab-pane fade" id="tab-enfermeiros">
+      <div class="card-info shadow-sm">
+        <h6 class="fw-bold mb-1">Dividir os CPFs digitados entre os enfermeiros</h6>
+        <p class="text-muted small mb-3">
+          Pega todos os CPFs já digitados para médicos naquele dia e divide em
+          blocos de até 99 (limite de folha do BPA), em rodízio entre os
+          enfermeiros selecionados — CBO <strong>223505</strong>. Refazer a
+          divisão substitui a anterior daquele dia, sem duplicar.
+        </p>
+        <div class="row g-2 align-items-end mb-3">
+          <div class="col-sm-4">
+            <label class="form-label fw-bold mb-1">📅 Data</label>
+            <input type="text" id="enf_data" class="form-control"
+                   placeholder="DD/MM/AAAA" oninput="mascaraData(this)" maxlength="10">
+          </div>
+        </div>
+        <label class="form-label fw-bold mb-1">🧑‍⚕️ Enfermeiros (Firebird, CBO 223505)</label>
+        <div id="enf_lista" class="border rounded p-2 mb-3" style="max-height:260px;overflow-y:auto"></div>
+        <button class="btn btn-primary fw-bold" onclick="dividirEnfermeiros()">🔀 Dividir CPFs entre selecionados</button>
+        <div id="enf_resultado" class="alert mb-2 mt-3" style="display:none"></div>
+      </div>
+
+      <div class="card-info shadow-sm">
+        <h6 class="fw-bold mb-1">Gerar o arquivo BPA-I dos enfermeiros</h6>
+        <p class="text-muted small mb-3">
+          Usa a mesma data acima. Gera só o arquivo dos enfermeiros — o dos
+          médicos fica separado, na aba Digitação.
+        </p>
+        <button class="btn btn-success btn-lg fw-bold px-4" onclick="gerarBPAEnfermeiros()">
+          📦 Gerar BPA-I (Enfermeiros)
+        </button>
+        <div id="enf_ger_resultado" style="display:none" class="mt-3">
+          <div id="enf_ger_msg" class="fw-bold mb-2"></div>
+          <div id="enf_ger_detalhe" class="text-muted small" style="white-space:pre-line"></div>
+        </div>
+      </div>
+    </div><!-- /tab-enfermeiros -->
 
     <!-- ══════════════════════ ABA MIGRAÇÃO ══════════════════════════ -->
     <div class="tab-pane fade" id="tab-migracao">
@@ -279,7 +331,7 @@ async function confirmarCabecalho() {
 
   document.getElementById("input_busca").disabled = false;
   document.getElementById("input_busca").focus();
-  _atualizarContador();
+  await carregarLotes(arquivoAtivo);
 }
 
 // ══════════════════════════════════════════════
@@ -346,15 +398,37 @@ async function gravarPaciente(el) {
 
 function _atualizarContador() {
   const el = document.getElementById("contador_pac");
-  const btn = document.getElementById("btn_gerar");
-  if (_totalGravados === 0) {
+  if (_totalGravados === 0 && !cabecalhoOk) {
     el.textContent = "Nenhum paciente gravado ainda.";
-    btn.disabled = true;
   } else {
     el.innerHTML = `<strong>${_totalGravados}</strong> paciente(s) gravado(s) em <strong>${arquivoAtivo}</strong>`;
-    btn.disabled = !cabecalhoOk;
   }
 }
+
+// ══════════════════════════════════════════════
+//  ESCOLHER O LOTE (DIA) PARA GERAR — independente da sessão de digitação
+// ══════════════════════════════════════════════
+async function carregarLotes(selecionar) {
+  const sel = document.getElementById("ger_lote");
+  const atual = selecionar || sel.value;
+  const lotes = await fetch("/api/lotes").then(r => r.json());
+  sel.innerHTML = '<option value="">— selecione um lote —</option>' +
+    lotes.map(l => `<option value="${l.nome}">${l.nome} (${(l.tamanho/1024).toFixed(1)} KB — ${l.modificado_em})</option>`).join("");
+  if (atual && lotes.some(l => l.nome === atual)) sel.value = atual;
+  onGerLoteChange();
+}
+
+function onGerLoteChange() {
+  const sel = document.getElementById("ger_lote").value;
+  document.getElementById("btn_gerar").disabled = !sel;
+  if (sel === arquivoAtivo) {
+    _atualizarContador();
+  } else {
+    document.getElementById("contador_pac").textContent =
+      sel ? `Lote selecionado: ${sel}` : "Nenhum paciente gravado ainda.";
+  }
+}
+carregarLotes();
 
 // Navegação teclado
 document.addEventListener("keydown", function(e) {
@@ -380,10 +454,13 @@ document.addEventListener("keydown", function(e) {
 //  GERAR BPA-I
 // ══════════════════════════════════════════════
 async function gerarBPA() {
-  const btn = document.getElementById("btn_gerar");
-  const res = document.getElementById("ger_resultado");
-  const msg = document.getElementById("ger_msg");
-  const det = document.getElementById("ger_detalhe");
+  const btn    = document.getElementById("btn_gerar");
+  const res    = document.getElementById("ger_resultado");
+  const msg    = document.getElementById("ger_msg");
+  const det    = document.getElementById("ger_detalhe");
+  const arquivo = document.getElementById("ger_lote").value;
+
+  if (!arquivo) return alert("Escolha o lote (dia) para gerar!");
 
   btn.disabled = true;
   btn.textContent = "⏳ Gerando...";
@@ -391,7 +468,7 @@ async function gerarBPA() {
 
   const r = await fetch("/api/gerar",{
     method:"POST", headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({arquivo: arquivoAtivo})
+    body:JSON.stringify({arquivo})
   }).then(r=>r.json());
 
   btn.disabled = false;
@@ -406,14 +483,23 @@ async function gerarBPA() {
     return;
   }
 
+  const ROTULOS = { medico: "👨‍⚕️ Médicos", enfermeiro: "🧑‍⚕️ Enfermeiros" };
+  const nomes = Object.keys(r.arquivos).map(cat => r.arquivos[cat].arquivo);
+
   res.className = "card-info shadow-sm border-success";
   msg.className = "fw-bold text-success mb-2";
-  msg.innerHTML = `✅ <strong>${r.arquivo}</strong>`;
-  let detalhe = `📁 ${r.caminho}\nRegistros: ${r.registros} | Folhas: ${r.folhas} | Competência: ${r.competencia}`;
+  msg.innerHTML = "✅ " + nomes.map(n => `<strong>${n}</strong>`).join(" &nbsp;+&nbsp; ");
+
+  let detalhe = "";
+  for (const cat of ["medico", "enfermeiro"]) {
+    const a = r.arquivos[cat];
+    if (!a) continue;
+    detalhe += `${ROTULOS[cat]}\n📁 ${a.caminho}\nRegistros: ${a.registros} | Folhas: ${a.folhas} | Competência: ${a.competencia}\n\n`;
+  }
   if (r.nao_encontrados && r.nao_encontrados.length)
-    detalhe += `\n⚠️ Não encontrados na CADCNS: ${r.nao_encontrados.join(", ")}`;
+    detalhe += `⚠️ Não encontrados na CADCNS: ${r.nao_encontrados.join(", ")}`;
   det.style.whiteSpace = "pre-line";
-  det.textContent = detalhe;
+  det.textContent = detalhe.trim();
 }
 
 // ══════════════════════════════════════════════
@@ -424,6 +510,89 @@ async function recarregar() {
   if (r.profs) { PROFISSIONAIS.length=0; PROFISSIONAIS.push(...r.profs); }
   document.getElementById("contador").textContent =
     r.erro ? `⚠️ ${r.erro}` : `${r.total} pacientes`;
+  renderEnfermeiros();
+  carregarLotes();
+}
+
+// ══════════════════════════════════════════════
+//  ENFERMEIROS
+// ══════════════════════════════════════════════
+function renderEnfermeiros() {
+  const div = document.getElementById("enf_lista");
+  const enfermeiros = PROFISSIONAIS.filter(p => p.categoria === "enfermeiro");
+  if (!enfermeiros.length) {
+    div.innerHTML = '<div class="text-muted small p-2">Nenhum enfermeiro com CBO 223505 cadastrado no Firebird.</div>';
+    return;
+  }
+  div.innerHTML = enfermeiros.map((p, i) => `
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" value="${i}" id="enf_chk_${i}">
+      <label class="form-check-label" for="enf_chk_${i}">${p.nome}</label>
+    </div>`).join("");
+  div.dataset.enfermeiros = JSON.stringify(enfermeiros);
+}
+renderEnfermeiros();
+
+async function dividirEnfermeiros() {
+  const data = document.getElementById("enf_data").value.trim();
+  if (data.length < 10) return alert("Digite a data completa (DD/MM/AAAA)!");
+
+  const div = document.getElementById("enf_lista");
+  const enfermeiros = JSON.parse(div.dataset.enfermeiros || "[]");
+  const selecionados = enfermeiros.filter((_, i) => document.getElementById(`enf_chk_${i}`)?.checked);
+  if (!selecionados.length) return alert("Selecione ao menos um enfermeiro!");
+
+  const resEl = document.getElementById("enf_resultado");
+  resEl.style.display = "none";
+
+  const r = await fetch("/api/enfermeiros/dividir", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ data, enfermeiros: selecionados.map(e => ({cns:e.cns, nome:e.nome})) })
+  }).then(r=>r.json());
+
+  resEl.style.display = "block";
+  if (!r.ok) {
+    resEl.className = "alert alert-danger mb-2 mt-3";
+    resEl.textContent = "❌ " + r.erro;
+    return;
+  }
+
+  const linhas = r.distribuicao.map(e => `${e.nome}: <strong>${e.qtd}</strong>`).join("<br>");
+  resEl.className = "alert alert-success mb-2 mt-3";
+  resEl.innerHTML = `<strong>✅ ${r.total} CPF(s) divididos em ${r.arquivo}</strong><br>${linhas}`;
+}
+
+async function gerarBPAEnfermeiros() {
+  const data = document.getElementById("enf_data").value.trim();
+  if (data.length < 10) return alert("Digite a data completa (DD/MM/AAAA)!");
+  const arquivo = data.replace(/\//g, "-") + ".txt";
+
+  const res = document.getElementById("enf_ger_resultado");
+  const msg = document.getElementById("enf_ger_msg");
+  const det = document.getElementById("enf_ger_detalhe");
+  res.style.display = "block";
+  msg.className = "fw-bold mb-2";
+  msg.textContent = "⏳ Gerando...";
+  det.textContent = "";
+
+  const r = await fetch("/api/gerar", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ arquivo, categoria: "enfermeiro" })
+  }).then(r=>r.json());
+
+  if (!r.ok) {
+    msg.className = "fw-bold text-danger mb-2";
+    msg.textContent = "❌ " + r.erro;
+    return;
+  }
+
+  const a = r.arquivos.enfermeiro;
+  msg.className = "fw-bold text-success mb-2";
+  msg.innerHTML = `✅ <strong>${a.arquivo}</strong>`;
+  let detalhe = `📁 ${a.caminho}\nRegistros: ${a.registros} | Folhas: ${a.folhas} | Competência: ${a.competencia}`;
+  if (r.nao_encontrados && r.nao_encontrados.length)
+    detalhe += `\n⚠️ Não encontrados na CADCNS: ${r.nao_encontrados.join(", ")}`;
+  det.textContent = detalhe;
 }
 
 // ══════════════════════════════════════════════
