@@ -137,28 +137,38 @@
           <div class="col-sm-4">
             <label class="form-label fw-bold mb-1">📅 Competência</label>
             <select id="mig_mes" class="form-select">
-              <option value="{{ mes_atual }}" selected>{{ mes_label }}</option>
+              {% for c in competencias %}
+              <option value="{{ c.value }}"{% if c.value == mes_atual %} selected{% endif %}>{{ c.label }}</option>
+              {% endfor %}
             </select>
           </div>
           <div class="col-sm-4">
-            <button class="btn btn-outline-secondary fw-bold w-100" onclick="migPreview()">🔍 Ver resumo</button>
+            <button class="btn btn-outline-secondary fw-bold w-100" id="btn_preview" onclick="migPreview()">🔍 Ver resumo</button>
           </div>
           <div class="col-sm-4">
             <button class="btn btn-success fw-bold w-100" id="btn_migrar" onclick="migExecutar()" disabled>▶ Migrar</button>
           </div>
         </div>
         <div id="mig_preview" class="row text-center g-2 mb-3" style="display:none">
-          <div class="col-4"><div class="border rounded p-2">
+          <div class="col"><div class="border rounded p-2">
             <div class="mig-stat text-primary" id="mig_total">—</div>
             <small class="text-muted">Total com CPF</small>
           </div></div>
-          <div class="col-4"><div class="border rounded p-2">
+          <div class="col"><div class="border rounded p-2">
             <div class="mig-stat text-success" id="mig_novos">—</div>
             <small class="text-muted">Novos</small>
           </div></div>
-          <div class="col-4"><div class="border rounded p-2">
+          <div class="col"><div class="border rounded p-2">
+            <div class="mig-stat text-warning" id="mig_atualizar">—</div>
+            <small class="text-muted">Só falta CPF</small>
+          </div></div>
+          <div class="col"><div class="border rounded p-2">
             <div class="mig-stat text-secondary" id="mig_existem">—</div>
-            <small class="text-muted">Já existem</small>
+            <small class="text-muted">Já com CPF</small>
+          </div></div>
+          <div class="col"><div class="border rounded p-2">
+            <div class="mig-stat text-danger" id="mig_cpf_invalido">—</div>
+            <small class="text-muted">CPF inválido</small>
           </div></div>
         </div>
         <div id="mig_barra_wrap" style="display:none" class="mb-2">
@@ -421,26 +431,46 @@ async function recarregar() {
 // ══════════════════════════════════════════════
 async function migPreview() {
   const mes = document.getElementById("mig_mes").value;
+  const btnPreview = document.getElementById("btn_preview");
+
   document.getElementById("btn_migrar").disabled = true;
   document.getElementById("mig_resultado").style.display="none";
   document.getElementById("mig_log").style.display="none";
   document.getElementById("mig_log").textContent="";
   document.getElementById("mig_preview").style.display="none";
 
-  const r = await fetch("/api/migracao/preview",{
-    method:"POST", headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({mes})
-  }).then(r=>r.json());
+  btnPreview.disabled = true;
+  const textoOriginal = btnPreview.textContent;
+  btnPreview.textContent = "⏳ Consultando... (pode levar alguns minutos em meses com muitos pacientes)";
+
+  let r;
+  try {
+    r = await fetch("/api/migracao/preview",{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({mes})
+    }).then(r=>r.json());
+  } catch (e) {
+    alert("Falha de conexão ao consultar o resumo: " + e);
+    return;
+  } finally {
+    btnPreview.disabled = false;
+    btnPreview.textContent = textoOriginal;
+  }
 
   if (!r.ok) { alert("Erro: "+r.erro); return; }
-  document.getElementById("mig_total").textContent   = r.total;
-  document.getElementById("mig_novos").textContent   = r.novos;
-  document.getElementById("mig_existem").textContent = r.ja_existem;
+  document.getElementById("mig_total").textContent        = r.total;
+  document.getElementById("mig_novos").textContent         = r.novos;
+  document.getElementById("mig_atualizar").textContent     = r.atualizar;
+  document.getElementById("mig_existem").textContent       = r.ja_existem;
+  document.getElementById("mig_cpf_invalido").textContent  = r.cpf_invalido;
   document.getElementById("mig_preview").style.display="flex";
 
   const btn = document.getElementById("btn_migrar");
-  btn.disabled    = r.novos===0;
-  btn.textContent = r.novos>0 ? `▶ Migrar ${r.novos} paciente(s)` : "▶ Nada a migrar";
+  const aFazer = r.novos + r.atualizar;
+  btn.disabled    = aFazer===0;
+  btn.textContent = aFazer>0
+    ? `▶ Migrar (${r.novos} novo(s) + ${r.atualizar} p/ atualizar CPF)`
+    : "▶ Nada a migrar";
 }
 
 function migExecutar() {
@@ -477,7 +507,7 @@ function migExecutar() {
       _log(d.msg); es.close();
       barra.style.width="100%"; barra.textContent="100%"; barra.classList.remove("progress-bar-animated");
       resEl.className=d.erros>0?"alert alert-warning mb-2":"alert alert-success mb-2";
-      resEl.innerHTML=`<strong>✅ Migração concluída</strong><br>Inseridos: <strong>${d.inseridos}</strong> &nbsp;|&nbsp; Duplicatas: <strong>${d.duplicatas}</strong> &nbsp;|&nbsp; Erros: <strong>${d.erros}</strong>`;
+      resEl.innerHTML=`<strong>✅ Migração concluída</strong><br>Inseridos: <strong>${d.inseridos}</strong> &nbsp;|&nbsp; CPF atualizado: <strong>${d.atualizados}</strong> &nbsp;|&nbsp; Duplicatas: <strong>${d.duplicatas}</strong> &nbsp;|&nbsp; CPF inválido: <strong>${d.cpf_invalidos}</strong> &nbsp;|&nbsp; Erros: <strong>${d.erros}</strong>`;
       resEl.style.display="block";
       recarregar();
     }
