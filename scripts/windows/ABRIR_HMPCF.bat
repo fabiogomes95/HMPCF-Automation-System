@@ -1,4 +1,8 @@
 @echo off
+REM Launcher leve (sem checar/subir Docker): so garante que o backend esta no
+REM ar e abre o navegador. Ver tambem INICIAR.bat (raiz, launcher completo) e
+REM iniciar_sistema.vbs (usado por atalho/boot silencioso). Nao remover sem
+REM confirmar no Agendador de Tarefas do Windows qual esta registrado.
 chcp 65001 >nul
 
 REM ── Verifica se o backend ja esta rodando ──────────────────────────────────

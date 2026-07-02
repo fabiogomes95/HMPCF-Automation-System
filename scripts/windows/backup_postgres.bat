@@ -12,4 +12,10 @@ set OUTFILE=%BACKUP_DIR%\hmpcf_%DATESTAMP%.sql
 echo Iniciando backup...
 "C:\Program Files\PostgreSQL\16\bin\pg_dump.exe" -U postgres -h localhost -d %DB% -f "%OUTFILE%"
 if %ERRORLEVEL% EQU 0 (echo [OK] Backup: %OUTFILE%) else (echo [ERRO] Falha no backup! & exit /b 1)
-powershell -NoProfile -Command "Get-ChildItem '%BACKUP_DIR%' -Filter *.sql | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } | Remove-Item -Force"
+
+echo Criptografando backup...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0encrypt_backup.ps1" -Path "%OUTFILE%"
+if %ERRORLEVEL% NEQ 0 (echo [ERRO] Falha ao criptografar o backup! & exit /b 1)
+
+REM Expurgo: 30 dias, agora sobre os arquivos .enc (o .sql em claro ja foi apagado)
+powershell -NoProfile -Command "Get-ChildItem '%BACKUP_DIR%' -Filter *.sql.enc | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } | Remove-Item -Force"

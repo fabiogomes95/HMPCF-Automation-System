@@ -5,6 +5,58 @@ estão no código e nos commits do git.
 
 ---
 
+## 2026-07-02 — Hardening de segurança, incidente de produção e reorganização de pastas
+
+### Segurança
+- Senha real do PostgreSQL (estava commitada em texto puro em 3 arquivos, repo
+  público) rotacionada e removida do código — scripts de deploy/backup agora
+  pedem a senha ou leem de `backend/.env`, nunca hardcoded.
+- Rede da `desktop-9c4s1co` corrigida de "Public" para "Private"; firewall da
+  porta 8001 restrito a Domain/Private.
+- `bpa/app.py`: parâmetro de mês validado (regex `AAAAMM`) antes de montar a
+  query SQL.
+- `docker-compose.yml`: senhas obrigatórias (sem default fraco), portas do
+  Postgres/pgAdmin/backend bindadas em `127.0.0.1`.
+- CPF/CNS mascarados nos logs de `scripts/importacao/PREPARAR_BPA_MENSAL.py`.
+- Backup do Postgres agora criptografado (AES-256) via
+  `scripts/windows/encrypt_backup.ps1` — senha em arquivo local não
+  versionado (`scripts/windows/.backup_passphrase`).
+
+### Incidente e causa raiz
+Rotação da senha do Postgres expôs um bug: a senha continha `@`, que quebrava
+o parsing da connection string (`postgresql+asyncpg://user:senha@host...`) —
+`host` era interpretado errado, derrubando toda query ao banco (busca de
+paciente com erro 500) por ~15 min até o diagnóstico. Corrigido
+permanentemente em `backend/app/core/config.py` (senha agora passa por
+`urllib.parse.quote_plus` antes de montar a URL — funciona com qualquer
+senha dali pra frente).
+
+Durante o diagnóstico, foi descoberto que **dois mecanismos de auto-restart
+do backend coexistiam**: a Tarefa Agendada `HMPCF-Backend`/`HMPCF-Watchdog`
+(de `registrar_servico.ps1`) e o Serviço Windows via NSSM
+`HMPCF-Backend-Svc` (de `instalar_servico.bat`) — os dois competiam pela
+porta 8001 a cada restart, causando erros `10048` (porta em uso). As duas
+Tarefas Agendadas foram **desativadas**; o Serviço NSSM `HMPCF-Backend-Svc`
+é agora o único responsável por manter o backend no ar.
+
+### Estrutura de pastas
+- `dashboard/bpa_gerador.py` movido para `bpa/bpa_gerador.py` (fonte única do
+  BPA-I não morava mais no Streamlit desde a remoção da página `4_BPA.py`,
+  só o arquivo tinha ficado pra trás). `bpa/requirements.txt` criado;
+  `passlib` (não usado por ninguém) removido de `dashboard/requirements.txt`.
+- `scripts/migrations/migrate_to_postgres.py` arquivado em
+  `scripts/migrations/archive/` (migração SQLite→Postgres já concluída).
+- `docs/ARQUITETURA.md` e `README.md` corrigidos: pasta `docker/` não existe
+  (nunca existiu de fato), produção não usa Docker.
+- `INICIAR.bat`, `scripts/windows/ABRIR_HMPCF.bat` e `iniciar_sistema.vbs`
+  (três launchers com lógica parecida) documentados com comentário cruzado
+  — não consolidados/removidos porque não foi possível confirmar
+  remotamente qual está registrado no Agendador de Tarefas (comando
+  `Get-ScheduledTask` trava por limitação de duplo-hop do WinRM nesta
+  topologia).
+
+---
+
 ## 2026-06-17 — Painel Gerencial (Streamlit): construção, correção de dados reais e importação mensal
 
 ### Contexto

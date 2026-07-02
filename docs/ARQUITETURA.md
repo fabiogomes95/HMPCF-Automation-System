@@ -11,7 +11,7 @@ versionadas via Alembic.
 ## Estrutura de Diretórios
 
 ```
-hmpcf-system/
+HMPCF-Automation-System/
 ├── backend/                    # Aplicação FastAPI
 │   ├── app/                    # Código-fonte do novo sistema
 │   │   ├── main.py             # Entrypoint FastAPI (lifespan, CORS, exception handlers)
@@ -32,19 +32,24 @@ hmpcf-system/
 │   │           └── endpoints/  # Um arquivo por recurso
 │   ├── alembic/                # Migrations versionadas
 │   │   └── versions/           # Histórico de migrations
+│   ├── tests/                  # 21 testes (pytest)
 │   ├── alembic.ini             # Configuração Alembic
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   └── .env                    # Variáveis de ambiente (não versionado)
 │
-├── docker/                     # Infraestrutura Docker
-│   └── docker-compose.yml      # PostgreSQL + pgAdmin + backend
-├── docs/architecture/          # Esta documentação
-├── migrations/                 # README sobre o processo de migrations
-├── scripts/                    # Scripts utilitários (ETL, etc.)
-├── legacy_reference/           # Documentação do sistema legado
-└── frontend/                   # Frontend React/Vite (intocado)
+├── frontend/                   # React + Vite — terminal de digitação da recepção
+├── dashboard/                  # Streamlit — painel gerencial (leitura, KPIs, buscas)
+├── bpa/                        # Flask — geração BPA-I e migração PG→Firebird
+├── docs/                       # Esta documentação, guias de instalação/deploy
+├── scripts/                    # deploy/, windows/, bpa/, importacao/, migrations/
+├── legado/                     # Sistema original — descontinuado, mantido como referência
+└── docker-compose.yml          # PostgreSQL + pgAdmin + backend (uso local/dev, não produção)
 ```
+
+> Não existe pasta `docker/` — a stack de desenvolvimento sobe direto do
+> `docker-compose.yml` na raiz. Produção roda nativamente no Windows, sem
+> Docker (ver `docs/DEPLOY_HOSPITAL.md`).
 
 ---
 
@@ -149,24 +154,24 @@ O SQLAlchemy mapeia diretamente sem aliases — atributo Python = nome da coluna
 
 ---
 
-## Docker
+## Docker (desenvolvimento local apenas)
 
-### Desenvolvimento local
 ```bash
-# Subir apenas PostgreSQL (já em execução via docker-compose.yml na raiz)
-docker compose up -d
+# Definir POSTGRES_PASSWORD e PGADMIN_PASSWORD antes (sem default fraco)
+cp .env.example .env
 
-# Subir stack completa (PG + pgAdmin + backend)
-cd docker
 docker compose up -d
 ```
 
 ### Serviços
 | Serviço | Porta | Credenciais |
 |---------|-------|-------------|
-| PostgreSQL | 5432 | postgres / hmpcf2024 |
-| pgAdmin | 5050 | admin@hmpcf.local / admin |
-| Backend | 8000 | — |
+| PostgreSQL | 127.0.0.1:5432 | definidas em `.env`, sem default |
+| pgAdmin | 127.0.0.1:5050 | definidas em `.env`, sem default |
+| Backend | 127.0.0.1:8000 | — |
+
+Produção **não usa Docker** — PostgreSQL nativo no Windows (ver
+`docs/DEPLOY_HOSPITAL.md`).
 
 ---
 
@@ -226,4 +231,4 @@ O único módulo ativo é `backend/app/` com FastAPI modular + SQLAlchemy async 
 | GET | `/api/v1/recepcao/pacientes/agrupado?q=...` | Pacientes únicos com total de entradas e última data |
 | GET | `/api/v1/recepcao/paciente/{id}` | Histórico completo de atendimentos de um paciente |
 
-> Ver detalhes completos das sessões em `docs/sessao_2026-05-24.md` e `docs/sessao_2026-05-25.md`.
+> Ver histórico completo de decisões em `docs/HISTORICO.md`.

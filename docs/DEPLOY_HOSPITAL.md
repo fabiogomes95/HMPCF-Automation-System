@@ -715,44 +715,47 @@ start http://localhost:8001
 
 ## 9. Backup Automático
 
-### 9.1 Configurar senha do pg_dump
+O backup roda via `scripts\windows\backup_postgres.bat`: gera o dump com
+`pg_dump` (senha lida direto de `backend\.env`, nada de `PGPASSWORD` manual),
+e em seguida **criptografa o dump com AES-256** via
+`scripts\windows\encrypt_backup.ps1` — o `.sql` em claro é apagado, só fica
+o `.sql.enc`.
 
-Para que o backup rode sem pedir senha, configure `PGPASSWORD` nas variáveis de ambiente do sistema:
+### 9.1 Configurar a senha de criptografia do backup
+
+Crie o arquivo (uma vez só, nunca versionado — já está no `.gitignore`):
 
 ```powershell
-# Como Administrador
-[System.Environment]::SetEnvironmentVariable(
-    "PGPASSWORD",
-    "hmpcf2024",
-    [System.EnvironmentVariableTarget]::Machine
-)
+"SUA_SENHA_FORTE_AQUI" | Out-File -Encoding utf8 -NoNewline `
+    C:\HMPCF-Automation-System\scripts\windows\.backup_passphrase
 ```
 
-> Substitua `hmpcf2024` pela senha real.
-
-Feche e reabra o PowerShell para a variável entrar em vigor.
+> **Anote essa senha em outro lugar também** (gerenciador de senhas, papel).
+> Sem ela, os backups antigos não podem ser restaurados — nem por quem tem
+> acesso total ao servidor.
 
 ---
 
 ### 9.2 Testar o backup manualmente
 
 ```powershell
-C:\HMPCF\scripts\backup_postgres.bat
+C:\HMPCF-Automation-System\scripts\windows\backup_postgres.bat
 ```
 
 Output esperado:
 
 ```
-Iniciando backup do banco hmpcf...
-[OK] Backup salvo em: C:\hmpcf-backups\hmpcf_2026-05-28.sql
-[OK] Backup concluido: C:\hmpcf-backups\hmpcf_2026-05-28.sql
+Iniciando backup...
+[OK] Backup: C:\HMPCF\backups\hmpcf_2026-07-02.sql
+Criptografando backup...
+[OK] Backup criptografado: C:\HMPCF\backups\hmpcf_2026-07-02.sql.enc
 ```
 
 Verificar:
 
 ```powershell
-ls C:\hmpcf-backups\
-# hmpcf_2026-05-28.sql  (~10-50 MB)
+ls C:\HMPCF\backups\
+# hmpcf_2026-07-02.sql.enc  (~10-50 MB) — so o .enc deve existir, sem .sql em claro
 ```
 
 ---
@@ -761,14 +764,14 @@ ls C:\hmpcf-backups\
 
 ```powershell
 # Executar como Administrador
-powershell -ExecutionPolicy Bypass -File C:\HMPCF\scripts\agendar_backup.ps1
+powershell -ExecutionPolicy Bypass -File C:\HMPCF-Automation-System\scripts\windows\agendar_backup.ps1
 ```
 
 Output:
 
 ```
 Backup diario agendado para 23:00
-Backups salvos em: C:\hmpcf-backups\
+Backups criptografados salvos em: C:\HMPCF\backups\ (.sql.enc)
 ```
 
 O backup roda todos os dias às 23:00 e mantém os últimos 30 dias.
@@ -784,7 +787,7 @@ Get-ScheduledTask -TaskName "HMPCF-Backup-Diario"
 # Executar manualmente para testar
 Start-ScheduledTask -TaskName "HMPCF-Backup-Diario"
 Start-Sleep 5
-ls C:\hmpcf-backups\
+ls C:\HMPCF\backups\
 ```
 
 ---
@@ -794,16 +797,23 @@ ls C:\hmpcf-backups\
 Se o banco for corrompido ou perdido:
 
 ```powershell
-# Recriar o banco vazio
+# 1. Descriptografar o backup mais recente
+$backupEnc = (ls C:\HMPCF\backups\*.sql.enc | Sort LastWriteTime | Select -Last 1).FullName
+powershell -File C:\HMPCF-Automation-System\scripts\windows\decrypt_backup.ps1 -Path $backupEnc
+$backup = $backupEnc -replace '\.enc$', ''
+
+# 2. Recriar o banco vazio
 psql -U postgres -c "DROP DATABASE IF EXISTS hmpcf;"
 psql -U postgres -c "CREATE DATABASE hmpcf ENCODING 'UTF8';"
 
-# Restaurar o backup mais recente
-$backup = (ls C:\hmpcf-backups\*.sql | Sort LastWriteTime | Select -Last 1).FullName
+# 3. Restaurar
 psql -U postgres -d hmpcf -f $backup
 
-# Verificar
+# 4. Verificar
 psql -U postgres -d hmpcf -c "SELECT COUNT(*) FROM pacientes;"
+
+# 5. Apagar o .sql em claro gerado no passo 1 (nao deixar dado sensivel solto)
+Remove-Item $backup -Force
 ```
 
 ---
@@ -927,21 +937,26 @@ Execute este checklist após a implantação e a cada atualização importante.
 
 ## Referência rápida — Comandos do dia a dia
 
+> O backend roda como **Serviço do Windows via NSSM**, nome real
+> `HMPCF-Backend-Svc` (não confundir com a Tarefa Agendada de mesmo nome
+> parecido, que fica desativada — ver `docs/HISTORICO.md` sobre a
+> consolidação em 02/07/2026).
+
 ```powershell
 # Ver status dos serviços
-Get-Service postgresql-x64-16, HMPCF-Backend
+Get-Service postgresql-x64-16, HMPCF-Backend-Svc, HMPCF-Dashboard-Svc
 
 # Reiniciar backend (após atualização)
-net stop HMPCF-Backend; net start HMPCF-Backend
+Restart-Service HMPCF-Backend-Svc
 
 # Atualizar o sistema
-cd C:\HMPCF
+cd C:\HMPCF-Automation-System
 git pull origin main
 cd frontend; npm run build; cd ..
-net stop HMPCF-Backend; net start HMPCF-Backend
+Restart-Service HMPCF-Backend-Svc
 
 # Fazer backup agora
-C:\HMPCF\scripts\backup_postgres.bat
+C:\HMPCF-Automation-System\scripts\windows\backup_postgres.bat
 
 # Ver logs do backend
 Get-Content C:\hmpcf-logs\backend.log -Tail 50

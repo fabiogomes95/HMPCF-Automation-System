@@ -25,7 +25,7 @@ Register-ScheduledTask `
     -Force | Out-Null
 
 Write-Host "Backup diario agendado para $HorarioStr"
-Write-Host "Backups salvos em: C:\hmpcf-backups\"
+Write-Host "Backups criptografados salvos em: C:\HMPCF\backups\ (.sql.enc)"
 Write-Host ""
 Write-Host "Para verificar: Get-ScheduledTask -TaskName '$TaskName'"
 Write-Host "Para rodar agora: Start-ScheduledTask -TaskName '$TaskName'"
