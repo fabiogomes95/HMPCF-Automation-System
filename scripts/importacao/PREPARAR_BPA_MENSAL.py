@@ -86,6 +86,11 @@ LIMPAR_NUM = re.compile(r'\D')
 def limpar_numero(valor):
     return LIMPAR_NUM.sub('', str(valor)) if valor else ''
 
+def mascarar_doc(valor):
+    """Mascara CNS/CPF em logs — mantem so os 4 ultimos digitos."""
+    s = str(valor) if valor else ''
+    return ('*' * max(0, len(s) - 4)) + s[-4:] if s else '(vazio)'
+
 def validar_texto(valor, max_len=9999):
     if valor is None:
         return ''
@@ -291,7 +296,7 @@ def etapa_migracao(pg_con, fb_con):
                 continue
         except Exception as e:
             fb_con.rollback()
-            print(f"  ERRO verificar duplicidade CNS={cns} CPF={cpf}: {e}")
+            print(f"  ERRO verificar duplicidade CNS={mascarar_doc(cns)} CPF={mascarar_doc(cpf)}: {e}")
             erros += 1
             continue
 
@@ -318,7 +323,7 @@ def etapa_migracao(pg_con, fb_con):
             inseridos += 1
         except Exception as e:
             fb_con.rollback()
-            print(f"  ERRO inserir CNS={cns} CPF={cpf}: {e}")
+            print(f"  ERRO inserir CNS={mascarar_doc(cns)} CPF={mascarar_doc(cpf)}: {e}")
             erros += 1
             continue
 

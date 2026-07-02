@@ -15,6 +15,7 @@ frontend-teste/
 # Segredos — nunca commitar
 .env
 **/.env
+scripts/windows/.backup_passphrase
 
 # Misc
 *.log

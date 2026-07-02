@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import sys
 from datetime import date, datetime
 from pathlib import Path
 
@@ -21,8 +20,6 @@ from flask import Flask, Response, jsonify, render_template, request, send_from_
 BASE      = Path(__file__).resolve().parent
 DASHBOARD = BASE.parent / "dashboard"
 BACKEND   = BASE.parent / "backend"
-
-sys.path.insert(0, str(DASHBOARD))
 
 # Ordem de prioridade (decrescente):
 #   1. bpa/.env        — ajustes locais da máquina (não versionado)
@@ -36,7 +33,7 @@ load_dotenv(BACKEND   / ".env", override=False)
 if not os.getenv("BPA_LOTES_DIR"):
     os.environ["BPA_LOTES_DIR"] = str(BASE / "bpa_lotes")
 
-import bpa_gerador as bpa
+import bpa_gerador as bpa  # agora vive em bpa/, mesmo diretorio deste arquivo
 
 # ── Flask ─────────────────────────────────────────────────────────────────────
 app = Flask(__name__)

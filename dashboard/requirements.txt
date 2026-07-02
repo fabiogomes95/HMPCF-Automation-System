@@ -1,9 +1,12 @@
 streamlit>=1.38.0
-flask>=3.0.0
 sqlalchemy>=2.0.36
 psycopg2-binary>=2.9.9
 pandas>=2.2.0
 plotly>=5.24.0
 python-dotenv>=1.0.1
+
+# flask e firebirdsql: nao usados pelo Streamlit em si, mas bpa/app.py roda
+# reaproveitando este mesmo venv (ver bpa/iniciar.bat) — ver bpa/requirements.txt
+# para a lista "correta" caso o bpa/ ganhe seu proprio venv no futuro.
+flask>=3.0.0
 firebirdsql>=1.4.6
-passlib>=1.7.4

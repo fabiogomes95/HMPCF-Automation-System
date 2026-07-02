@@ -1,4 +1,9 @@
 @echo off
+REM Launcher principal/manual: sobe Docker (Postgres) + backend + abre navegador.
+REM Ver tambem scripts/windows/ABRIR_HMPCF.bat (launcher leve, sem Docker) e
+REM scripts/windows/iniciar_sistema.vbs (usado por atalho/boot silencioso).
+REM Nao remover nenhum dos tres sem antes confirmar no Agendador de Tarefas
+REM do Windows (Task Scheduler) qual deles esta registrado para autostart.
 chcp 65001 >nul
 echo.
 echo ==========================================

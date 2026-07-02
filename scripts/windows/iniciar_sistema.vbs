@@ -1,3 +1,7 @@
+' Usado por atalho/boot silencioso (sem janela): confere se o backend responde
+' e so inicia se estiver fora do ar. Ver tambem INICIAR.bat (raiz) e
+' scripts/windows/ABRIR_HMPCF.bat. Nao remover sem confirmar no Agendador de
+' Tarefas do Windows qual script esta de fato registrado para autostart.
 Dim objHTTP, WshShell
 Set WshShell = CreateObject("WScript.Shell")
 Set objHTTP = CreateObject("WinHttp.WinHttpRequest.5.1")

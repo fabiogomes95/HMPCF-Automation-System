@@ -1,15 +1,15 @@
 """
 CLI fino para gerar o arquivo BPA-I a partir de um lote, sem precisar do
-dashboard Streamlit rodando — útil pra testes manuais rápidos.
+app Flask (bpa/app.py) rodando — útil pra testes manuais rápidos.
 
 A lógica de verdade (layout, checksum, busca de pacientes, etc.) mora em
-dashboard/bpa_gerador.py — fonte única, usada também pela página
-dashboard/pages/4_BPA.py (Triagem/Digitação/Geração). Este script só
-cuida da parte interativa de terminal (perguntar profissional/categoria
-quando ambíguo), que no dashboard é resolvida por uma tela de confirmação.
+bpa/bpa_gerador.py — fonte única, usada também pelo bpa/app.py (Flask).
+Este script só cuida da parte interativa de terminal (perguntar
+profissional/categoria quando ambíguo), que no Flask é resolvida por uma
+tela de confirmação.
 
 Esse processo é separado de propósito do backend/frontend da Recepção —
-só quem roda este script (ou abre o dashboard) tem acesso ao BPA.
+só quem roda este script (ou abre o app do BPA) tem acesso ao BPA.
 
 Uso:
     python gerar_bpa_i.py --lote "C:/caminho/28-05-2026.txt"
@@ -20,8 +20,8 @@ import os
 import sys
 from datetime import datetime
 
-_DASHBOARD_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "dashboard"))
-sys.path.insert(0, _DASHBOARD_DIR)
+_BPA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "bpa"))
+sys.path.insert(0, _BPA_DIR)
 
 import bpa_gerador as bpa  # noqa: E402
 
@@ -129,7 +129,7 @@ def processar_lote(con, caminho_arquivo):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Gerador BPA-I — CLI (lê backend/app/services/bpa_gerador.py)")
+    ap = argparse.ArgumentParser(description="Gerador BPA-I — CLI (le bpa/bpa_gerador.py)")
     ap.add_argument("--lote", required=True, metavar="ARQUIVO",
                      help="Arquivo de lote (PROFISSIONAL: nome | DATA: dd/mm/aaaa)")
     ap.add_argument("--saida", metavar="PASTA", default=None,
