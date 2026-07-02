@@ -1,5 +1,9 @@
 @echo off
-set PGPASSWORD=hmpcf2026
+for /f "tokens=1,* delims==" %%a in ('findstr /b "POSTGRES_PASSWORD=" "%~dp0..\..\backend\.env"') do set PGPASSWORD=%%b
+if "%PGPASSWORD%"=="" (
+    echo [ERRO] POSTGRES_PASSWORD nao encontrado em backend\.env
+    exit /b 1
+)
 set BACKUP_DIR=C:\HMPCF\backups
 set DB=hmpcf
 if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"

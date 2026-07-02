@@ -13,7 +13,10 @@
 # CONFIGURACAO -- edite aqui antes de rodar
 # =============================================================================
 
-$PG_PASSWORD   = "hmpcf2026"
+$PG_PASSWORD_SECURE = Read-Host -Prompt "Senha do PostgreSQL (nao sera exibida)" -AsSecureString
+$PG_PASSWORD   = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
+    [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($PG_PASSWORD_SECURE)
+)
 $PG_DB         = "hmpcf"
 $PG_PORT       = 5432
 $REPO_URL      = "https://github.com/fabiogomes95/HMPCF-Automation-System.git"

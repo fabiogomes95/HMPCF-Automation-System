@@ -10,10 +10,10 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-hmpcf}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hmpcf2024}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=pt_BR.UTF-8"
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -29,9 +29,9 @@ services:
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@hmpcf.local}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?defina PGADMIN_PASSWORD no .env}
     ports:
-      - "${PGADMIN_PORT:-5050}:80"
+      - "127.0.0.1:${PGADMIN_PORT:-5050}:80"
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,9 +52,9 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${POSTGRES_DB:-hmpcf}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hmpcf2024}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy

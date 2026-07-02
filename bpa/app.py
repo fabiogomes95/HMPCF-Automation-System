@@ -502,6 +502,8 @@ _SQL_INSERT = (
 
 
 def _query_pacientes_mes(mes_aaaamm: str) -> str:
+    if not re.fullmatch(r"\d{6}", mes_aaaamm or ""):
+        raise ValueError(f"Parametro 'mes' invalido: {mes_aaaamm!r} (esperado AAAAMM)")
     ano, mes = mes_aaaamm[:4], mes_aaaamm[4:6]
     inicio   = f"{ano}-{mes}-01"
     mes_i    = int(mes)

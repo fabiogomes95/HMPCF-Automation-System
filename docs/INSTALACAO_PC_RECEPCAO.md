@@ -111,17 +111,12 @@ Abra o arquivo no Bloco de Notas:
 notepad C:\HMPCF\DEPLOY_HMPCF_REMOTO.ps1
 ```
 
-Procure a **linha 16** (fica bem no topo do arquivo):
+Não precisa editar senha no arquivo — o script pede a senha do PostgreSQL
+interativamente (`Read-Host -AsSecureString`) quando você rodar, e ela nunca
+fica salva em texto puro no script nem no Git.
 
-```powershell
-$PG_PASSWORD   = "hmpcf2026"
-```
-
-Você pode trocar `hmpcf2026` pela senha que preferir, ou deixar como está.
-
-> **Anote essa senha!** Você vai precisar dela se precisar fazer manutenção no banco.
-
-Salve o arquivo com **Ctrl+S** e feche o Bloco de Notas.
+> **Anote a senha que você digitar!** Você vai precisar dela se precisar fazer
+> manutenção no banco depois.
 
 ---
 
@@ -226,12 +221,13 @@ Resultado esperado:
 Confirme que os pacientes e atendimentos foram importados corretamente:
 
 ```powershell
-$env:PGPASSWORD = "hmpcf2026"
+$env:PGPASSWORD = Read-Host -Prompt "Senha do PostgreSQL" -AsSecureString |
+    ConvertFrom-SecureString -AsPlainText
 & "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -h localhost -d hmpcf -c "SELECT COUNT(*) AS pacientes FROM pacientes;"
 & "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -h localhost -d hmpcf -c "SELECT COUNT(*) AS atendimentos FROM recepcao_atendimentos;"
 ```
 
-> Substitua `hmpcf2026` pela senha que você definiu no Passo 5, se tiver trocado.
+> Digite a senha que você definiu no Passo 5 quando for solicitado.
 
 Resultado esperado (os números podem variar):
 ```
