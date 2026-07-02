@@ -38,7 +38,7 @@
 }
 
 .header-text {
-  width: 60%;
+  width: 57%;
   text-align: center;
   font-size: 16px;
   line-height: 1.5;
@@ -46,14 +46,15 @@
 }
 
 .header-priority {
-  width: 25%;
-  font-size: 13px;
+  width: 28%;
+  font-size: 11.5px;
   padding-left: 5px;
 }
 
 .priority-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  column-gap: 4px;
   row-gap: 2px;
 }
 

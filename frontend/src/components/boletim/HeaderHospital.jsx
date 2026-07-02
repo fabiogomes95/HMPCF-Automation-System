@@ -28,6 +28,9 @@ export default function HeaderHospital() {
             <label>Idoso <input type="checkbox" /></label>
           </div>
           <div className="priority-item">
+            <label>Pequenas Cirurgias <input type="checkbox" /></label>
+          </div>
+          <div className="priority-item">
             <label>Outros <input type="checkbox" /></label>
           </div>
         </div>
