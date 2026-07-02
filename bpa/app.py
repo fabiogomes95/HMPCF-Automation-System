@@ -279,6 +279,9 @@ def api_gerar():
         }
         nao_encontrados: list[str] = []
 
+        dt_str        = arquivo.replace(".txt", "").replace("-", "")  # "04-06-2026.txt" → "04062026"
+        nomes_arquivo = {cat: f"BPA_{_ROTULO_ARQUIVO[cat]}_{dt_str}.txt" for cat in por_categoria}
+
         for grupo in grupos:
             # ── CNS do profissional ──────────────────────────────────────────
             cns_raw = grupo.get("cns", "").strip()
@@ -315,15 +318,26 @@ def api_gerar():
             if not pacientes:
                 continue
 
+            # ── Continuar folha/sequência de onde a produção desse profissional
+            # já está na competência (outros dias já gerados) — a folha do
+            # BPA-I acumula por profissional ao longo do mês, não recomeça a
+            # cada dia; completa a folha em aberto antes de abrir uma nova.
             proc = bpa.PROCEDIMENTOS[categoria]["codigo"]
             cbo  = bpa.PROCEDIMENTOS[categoria]["cbo"]
-            linhas, n_folhas = bpa.montar_linhas(pacientes, proc, cbo, cns_prof, data_aten, competencia)
+            producao_anterior = bpa.contar_producao_competencia(
+                cns_prof, competencia, categoria, excluir_arquivo=nomes_arquivo[categoria]
+            )
+            folha_inicial = producao_anterior // 99 + 1
+            seq_inicial   = producao_anterior % 99 + 1
+
+            linhas, folha_final = bpa.montar_linhas(
+                pacientes, proc, cbo, cns_prof, data_aten, competencia, folha_inicial, seq_inicial
+            )
             alvo = por_categoria[categoria]
             alvo["linhas"].extend(linhas)
-            alvo["n_folhas"] += n_folhas
+            alvo["n_folhas"] += folha_final - folha_inicial + 1
             alvo["competencias"].append(competencia)
 
-        dt_str = arquivo.replace(".txt", "").replace("-", "")  # "01-06-2026.txt" → "01062026"
         pasta  = bpa.BPA_LOTES_DIR
         os.makedirs(pasta, exist_ok=True)
 
@@ -338,7 +352,7 @@ def api_gerar():
                 competencia_final, len(dados["linhas"]), dados["n_folhas"], dados["linhas"]
             )
 
-            nome_arquivo   = f"BPA_{_ROTULO_ARQUIVO[categoria]}_{dt_str}.txt"
+            nome_arquivo   = nomes_arquivo[categoria]
             caminho_gerado = os.path.join(pasta, nome_arquivo)
             with open(caminho_gerado, "w", encoding="latin-1", newline="") as f:
                 f.write(cabecalho + "\r\n")
