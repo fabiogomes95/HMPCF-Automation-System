@@ -226,6 +226,12 @@ def ler_arquivo_lote(caminho_arquivo: str) -> list[dict]:
     os documentos são agrupados por (nome, data), preservando ordem e
     repetições (o mesmo paciente pode ter mais de um atendimento no dia).
 
+    Documentos IDÊNTICOS digitados em SEQUÊNCIA (duas linhas seguidas com o
+    mesmo CPF, sem nenhum outro paciente no meio) são tratados como
+    digitação dupla acidental e descartados — se o mesmo paciente voltar
+    de fato mais tarde no bloco, com outros pacientes entre as duas
+    ocorrências, ambas contam normalmente.
+
     Retorna: [{"medico_raw": str, "data": "DD/MM/AAAA", "documentos": [...]}]
     """
     if not os.path.exists(caminho_arquivo):
@@ -261,8 +267,9 @@ def ler_arquivo_lote(caminho_arquivo: str) -> list[dict]:
             grupo_atual = grupos[chave]
         elif grupo_atual is not None:
             doc = linha.replace(".", "").replace("-", "").replace(" ", "")
-            if doc:
-                grupo_atual["documentos"].append(doc)
+            docs = grupo_atual["documentos"]
+            if doc and (not docs or docs[-1] != doc):
+                docs.append(doc)
 
     if not ordem:
         raise LoteError(
@@ -502,10 +509,81 @@ def _linha_detalhe(pac, proc, cbo, cns_prof, data_aten, competencia, folha, seq)
     )                                              # Total: 350 chars
 
 
-def montar_linhas(pacientes, proc, cbo, cns_prof, data_aten, competencia) -> tuple[list[str], int]:
+_ROTULO_ARQUIVO_CATEGORIA = {"medico": "MEDICOS", "enfermeiro": "ENFERMEIROS"}
+
+
+def contar_producao_competencia(
+    cns_prof: str, competencia: str, categoria: str, excluir_arquivo: str | None = None,
+) -> int:
+    """Soma quantos atendimentos esse profissional já tem em arquivos BPA-I já
+    gerados PARA A MESMA COMPETÊNCIA (outros dias do mês), lendo os próprios
+    arquivos BPA_MEDICOS_*/BPA_ENFERMEIROS_* já escritos em BPA_LOTES_DIR.
+
+    A folha/sequência do BPA-I acumula por profissional ao longo do mês —
+    um dia novo não recomeça do zero, continua de onde a produção do
+    profissional parou nos dias anteriores já gerados (evita, por exemplo,
+    reiniciar a folha em 001 quando o profissional já tem folha 001 cheia
+    com 99 pacientes de um dia anterior no mesmo mês).
+
+    Varre BPA_LOTES_DIR **recursivamente** (inclui subpastas, ex.
+    `backup - junho/`) — arquivos de produção já gerada/importada às vezes
+    são movidos pra uma subpasta de arquivo morto, mas continuam contando
+    pra competência.
+
+    `excluir_arquivo` — nome (sem caminho) do arquivo que está sendo
+    (re)gerado agora, pra não contar a própria versão anterior dele e
+    duplicar a contagem.
+    """
+    pasta   = garantir_pasta_lotes()
+    rotulo  = _ROTULO_ARQUIVO_CATEGORIA[categoria]
+    prefixo = f"BPA_{rotulo}_"
+    total   = 0
+
+    if not os.path.isdir(pasta):
+        return 0
+
+    for raiz, _subpastas, arquivos in os.walk(pasta):
+        for nome in arquivos:
+            if nome == excluir_arquivo:
+                continue
+            if not nome.upper().startswith(prefixo) or not nome.lower().endswith(".txt"):
+                continue
+            data_str = nome[len(prefixo):-4]  # "DDMMAAAA"
+            if len(data_str) != 8 or not data_str.isdigit():
+                continue
+            comp_arquivo = data_str[4:8] + data_str[2:4]  # AAAAMM
+            if comp_arquivo != competencia:
+                continue
+
+            caminho = os.path.join(raiz, nome)
+            try:
+                with open(caminho, encoding="latin-1", newline="") as f:
+                    conteudo = f.read()
+            except OSError:
+                continue
+            for linha in conteudo.split("\r\n"):
+                if len(linha) == 350 and linha[15:30] == cns_prof:
+                    total += 1
+
+    return total
+
+
+def montar_linhas(
+    pacientes, proc, cbo, cns_prof, data_aten, competencia,
+    folha_inicial: int = 1, seq_inicial: int = 1,
+) -> tuple[list[str], int]:
+    """Monta as linhas de detalhe a partir de (folha_inicial, seq_inicial) —
+    a folha/sequência é relativa ao PRÓPRIO profissional na competência
+    (prd-flh/prd-seq contam a produção daquele cns_prof no mês, não do
+    arquivo do dia isolado), então quem chama decide de onde continuar:
+    1/1 se é a primeira vez que esse profissional aparece na competência,
+    ou o ponto onde a produção de dias anteriores parou (ver
+    `contar_producao_competencia`) — completando a folha em aberto antes
+    de abrir uma nova.
+    """
     linhas = []
-    folha  = 1
-    seq    = 1
+    folha  = folha_inicial
+    seq    = seq_inicial
     for pac in pacientes:
         if seq > 99:
             seq = 1
