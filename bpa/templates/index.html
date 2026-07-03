@@ -61,6 +61,9 @@
     <li class="nav-item">
       <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-migracao">🔄 Migração PG → Firebird</button>
     </li>
+    <li class="nav-item">
+      <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-conferencia" onclick="if(!_conferenciaCarregada){_conferenciaCarregada=true;conferir();}">🔎 Conferência</button>
+    </li>
   </ul>
 
   <div class="tab-content">
@@ -232,6 +235,39 @@
         <div id="mig_log"></div>
       </div>
     </div><!-- /tab-migracao -->
+
+    <!-- ══════════════════════ ABA CONFERÊNCIA ══════════════════════════ -->
+    <div class="tab-pane fade" id="tab-conferencia">
+      <div class="card-info shadow-sm">
+        <h6 class="fw-bold mb-1">Digitado (arquivo do dia) x lote de produção no Firebird</h6>
+        <p class="text-muted small mb-3">
+          Para cada dia com arquivo de lote no período, compara os CPFs digitados
+          (já sem contar digitação dupla acidental — mesma regra do "Gerar BPA-I")
+          com o que está gravado em <code>S_PRD</code> no Firebird, por profissional.
+          Roda automaticamente toda sexta-feira; aqui dá pra conferir a qualquer hora.
+        </p>
+        <div class="row g-2 align-items-end mb-3">
+          <div class="col-sm-3">
+            <label class="form-label fw-bold mb-1">📅 De</label>
+            <input type="text" id="conf_data_ini" class="form-control"
+                   placeholder="DD/MM/AAAA" oninput="mascaraData(this)" maxlength="10">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label fw-bold mb-1">📅 Até</label>
+            <input type="text" id="conf_data_fim" class="form-control"
+                   placeholder="DD/MM/AAAA" oninput="mascaraData(this)" maxlength="10">
+          </div>
+          <div class="col-sm-3">
+            <button class="btn btn-primary fw-bold w-100" id="btn_conferir" onclick="conferir()">🔍 Conferir</button>
+          </div>
+          <div class="col-sm-3 text-muted small">
+            Em branco = últimos 7 dias corridos.
+          </div>
+        </div>
+        <div id="conf_resumo" class="alert mb-3" style="display:none"></div>
+        <div id="conf_dias"></div>
+      </div>
+    </div><!-- /tab-conferencia -->
 
   </div><!-- /tab-content -->
 </div>
@@ -694,6 +730,87 @@ function migExecutar() {
     }
   };
   es.onerror = function() { es.close(); _log("Conexão encerrada."); };
+}
+
+// ══════════════════════════════════════════════
+//  CONFERÊNCIA (digitado x banco Firebird)
+// ══════════════════════════════════════════════
+let _conferenciaCarregada = false;
+
+function _fmtCpf(cpf) {
+  return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+}
+
+async function conferir() {
+  const ini = document.getElementById("conf_data_ini").value.trim();
+  const fim = document.getElementById("conf_data_fim").value.trim();
+  const btn = document.getElementById("btn_conferir");
+  const resumo = document.getElementById("conf_resumo");
+  const diasEl = document.getElementById("conf_dias");
+
+  if ((ini && ini.length < 10) || (fim && fim.length < 10)) {
+    return alert("Preencha a data completa (DD/MM/AAAA) ou deixe os dois campos em branco.");
+  }
+
+  btn.disabled = true;
+  btn.textContent = "⏳ Conferindo...";
+  resumo.style.display = "none";
+  diasEl.innerHTML = "";
+
+  let qs = "";
+  if (ini && fim) qs = `?data_ini=${encodeURIComponent(ini)}&data_fim=${encodeURIComponent(fim)}`;
+
+  let r;
+  try {
+    r = await fetch(`/api/conferencia${qs}`).then(r => r.json());
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "🔍 Conferir";
+    return alert("Falha de conexão: " + e);
+  }
+  btn.disabled = false;
+  btn.textContent = "🔍 Conferir";
+
+  if (!r.sucesso) {
+    resumo.className = "alert alert-danger mb-3";
+    resumo.textContent = "❌ " + r.erro;
+    resumo.style.display = "block";
+    return;
+  }
+
+  resumo.style.display = "block";
+  if (!r.dias.length) {
+    resumo.className = "alert alert-secondary mb-3";
+    resumo.textContent = `Nenhum arquivo de lote digitado encontrado entre ${r.data_ini} e ${r.data_fim}.`;
+    return;
+  }
+
+  resumo.className = r.ok ? "alert alert-success mb-3" : "alert alert-warning mb-3";
+  resumo.innerHTML = (r.ok ? "✅ Tudo bate" : "⚠️ Há divergência(s)") +
+    ` — ${r.data_ini} a ${r.data_fim} — digitado: <strong>${r.total_digitado}</strong> · banco: <strong>${r.total_banco}</strong>`;
+
+  diasEl.innerHTML = r.dias.map(d => {
+    const badge = d.ok
+      ? `<span class="badge bg-success">OK</span>`
+      : `<span class="badge bg-warning text-dark">DIVERGENTE</span>`;
+    const profsDivergentes = d.profissionais.filter(p => !p.ok);
+    let detalhe = "";
+    if (profsDivergentes.length) {
+      detalhe = profsDivergentes.map(p => {
+        const falt = p.faltando_no_banco.length
+          ? `<div>❌ faltando no banco (${p.faltando_no_banco.length}): ${p.faltando_no_banco.map(_fmtCpf).join(", ")}</div>` : "";
+        const sobr = p.sobrando_no_banco.length
+          ? `<div>➕ no banco sem correspondência no arquivo (${p.sobrando_no_banco.length}): ${p.sobrando_no_banco.map(_fmtCpf).join(", ")}</div>` : "";
+        return `<div class="mt-2"><strong>${p.nome}</strong> (CNS ${p.cns}) — digitado: ${p.digitado} · banco: ${p.banco}${falt}${sobr}</div>`;
+      }).join("");
+    }
+    return `<div class="card-info shadow-sm">
+      <div class="d-flex justify-content-between align-items-center">
+        <div><strong>${d.data}</strong> <span class="text-muted small">(${d.arquivo})</span></div>
+        <div>${badge} <span class="text-muted small ms-2">digitado: ${d.total_digitado} · banco: ${d.total_banco}</span></div>
+      </div>
+      ${detalhe ? `<div class="small mt-1" style="font-family:monospace">${detalhe}</div>` : ""}
+    </div>`;
+  }).join("");
 }
 </script>
 </body>
