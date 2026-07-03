@@ -49,6 +49,7 @@
         </div>
         
         <div id="status_msg" class="text-center fw-bold text-success mb-2"></div>
+        <div id="ultimo_paciente" class="alert alert-success fw-bold text-center mb-3" style="display:none;"></div>
 
         <div id="lista_resultados" class="search-results">
             <div class="text-center text-muted p-5">Aguardando pesquisa no banco BPA...</div>
@@ -92,11 +93,18 @@
         document.getElementById('input_busca').focus();
     }
 
+    let buscaAtual = null;
+
     async function pesquisarPaciente() {
         let termo = document.getElementById('input_busca').value;
-        if(termo.length < 3) return;
+        if(termo.length < 3) { buscaAtual = null; return; }
 
-        let resultados = await eel.buscar_pacientes_fb(termo)();
+        let chamada = eel.buscar_pacientes_fb(termo)();
+        buscaAtual = chamada;
+        let resultados = await chamada;
+        if (buscaAtual !== chamada) return; // resultado de busca antiga, ignora
+        buscaAtual = null;
+
         let div = document.getElementById('lista_resultados');
         div.innerHTML = "";
 
@@ -140,6 +148,11 @@
         let ok = await eel.adicionar_paciente_txt(arquivoAutoGerado, documento)();
         if(ok) {
             document.getElementById('status_msg').innerText = `✅ GRAVADO: ${nome}`;
+
+            let ultimo = document.getElementById('ultimo_paciente');
+            ultimo.innerText = `👤 Último paciente gravado: ${nome}`;
+            ultimo.style.display = "block";
+
             document.getElementById('input_busca').value = "";
             document.getElementById('lista_resultados').innerHTML = "";
             document.getElementById('input_busca').focus();
@@ -152,12 +165,15 @@
     // 💡 ATALHOS DE TECLADO: A MÁGICA DO TAB E ENTER
     // ==========================================================
     
-    document.getElementById("input_busca").addEventListener("keydown", function(e) {
+    document.getElementById("input_busca").addEventListener("keydown", async function(e) {
         if (e.key === "Tab" || e.key === "ArrowDown") {
-            e.preventDefault(); 
+            e.preventDefault();
+            if (buscaAtual) {
+                await buscaAtual; // espera a pesquisa em andamento antes de focar
+            }
             let primeiroPaciente = document.querySelector(".result-item");
             if (primeiroPaciente) {
-                primeiroPaciente.focus(); 
+                primeiroPaciente.focus();
             }
         }
     });
