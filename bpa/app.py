@@ -34,6 +34,7 @@ if not os.getenv("BPA_LOTES_DIR"):
     os.environ["BPA_LOTES_DIR"] = str(BASE / "bpa_lotes")
 
 import bpa_gerador as bpa  # agora vive em bpa/, mesmo diretorio deste arquivo
+import conferencia
 
 # ── Flask ─────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -233,6 +234,28 @@ def api_lotes():
         }
         for l in bpa.listar_lotes()
     ])
+
+
+# ── API — Conferência (digitado x lote de produção no Firebird) ───────────────
+@app.route("/api/conferencia")
+def api_conferencia():
+    data_ini_str = request.args.get("data_ini", "").strip()
+    data_fim_str = request.args.get("data_fim", "").strip()
+    try:
+        if data_ini_str and data_fim_str:
+            data_ini = datetime.strptime(data_ini_str, "%d/%m/%Y").date()
+            data_fim = datetime.strptime(data_fim_str, "%d/%m/%Y").date()
+        else:
+            data_ini, data_fim = conferencia.periodo_padrao()
+    except ValueError:
+        return jsonify({"sucesso": False, "erro": "Datas inválidas (use DD/MM/AAAA)."})
+
+    try:
+        resultado = conferencia.conferir_periodo(data_ini, data_fim)
+    except Exception as e:
+        return jsonify({"sucesso": False, "erro": f"Firebird indisponível: {e}"})
+
+    return jsonify({"sucesso": True, **resultado})
 
 
 # ── API — Geração BPA-I ───────────────────────────────────────────────────────
