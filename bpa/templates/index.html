@@ -337,11 +337,19 @@ async function confirmarCabecalho() {
 // ══════════════════════════════════════════════
 //  BUSCA E GRAVAÇÃO DE PACIENTES
 // ══════════════════════════════════════════════
+let _buscaPromise = null;
+
 function pesquisar() {
   clearTimeout(_debounce);
   const q = document.getElementById("input_busca").value.trim();
-  if (q.length < 2) { document.getElementById("lista_resultados").innerHTML=""; return; }
-  _debounce = setTimeout(()=>_execBusca(q), 120);
+  if (q.length < 2) {
+    document.getElementById("lista_resultados").innerHTML="";
+    _buscaPromise = null;
+    return;
+  }
+  _buscaPromise = new Promise(resolve => {
+    _debounce = setTimeout(() => { _execBusca(q).then(resolve); }, 120);
+  });
 }
 
 async function _execBusca(q) {
@@ -390,7 +398,6 @@ async function gravarPaciente(el) {
     msg.className="mt-2 fw-bold text-danger";
     msg.textContent=`❌ ${r.erro}`;
   }
-  setTimeout(()=>{ msg.textContent=""; },3000);
   document.getElementById("input_busca").value="";
   document.getElementById("lista_resultados").innerHTML="";
   document.getElementById("input_busca").focus();
@@ -431,14 +438,19 @@ function onGerLoteChange() {
 carregarLotes();
 
 // Navegação teclado
-document.addEventListener("keydown", function(e) {
+document.addEventListener("keydown", async function(e) {
   const busca = document.getElementById("input_busca");
   const ativo = document.activeElement;
-  const items = Array.from(document.querySelectorAll(".result-item"));
   if (ativo===busca) {
-    if (e.key==="Tab"||e.key==="ArrowDown") { e.preventDefault(); if(items[0]) items[0].focus(); }
+    if (e.key==="Tab"||e.key==="ArrowDown") {
+      e.preventDefault();
+      if (_buscaPromise) await _buscaPromise; // espera debounce + busca no backend antes de focar
+      const primeiro = document.querySelector(".result-item");
+      if (primeiro) primeiro.focus();
+    }
     return;
   }
+  const items = Array.from(document.querySelectorAll(".result-item"));
   if (items.includes(ativo)) {
     const idx=items.indexOf(ativo);
     if (e.key==="ArrowDown"||e.key==="Tab") {
