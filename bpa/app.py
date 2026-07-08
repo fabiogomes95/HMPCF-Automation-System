@@ -258,6 +258,163 @@ def api_conferencia():
     return jsonify({"sucesso": True, **resultado})
 
 
+# ── API — Paciente sem CPF: completa o CPF e (opcional) já lança na produção ──
+@app.route("/api/pacientes/completar", methods=["POST"])
+def api_pacientes_completar():
+    d             = request.get_json(force=True) or {}
+    cns           = _limpar(d.get("cns") or "")
+    cpf           = _limpar(d.get("cpf") or "")
+    data          = (d.get("data") or "").strip()
+    profissionais = d.get("profissionais") or []
+
+    if len(cns) != 15:
+        return jsonify({"ok": False, "erro": "CNS inválido."})
+    if not bpa.valida_cpf(cpf):
+        return jsonify({"ok": False, "erro": "CPF inválido."})
+    if profissionais and len(data) < 10:
+        return jsonify({"ok": False, "erro": "Informe a data (DD/MM/AAAA) para lançar na produção."})
+
+    try:
+        con = bpa.conectar()
+    except Exception as e:
+        return jsonify({"ok": False, "erro": f"Firebird indisponível: {e}"})
+
+    try:
+        cur = con.cursor()
+        cur.execute("SELECT NOME, NUM_CPF FROM CADCNS WHERE CNS = ?", (cns,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({"ok": False, "erro": "Paciente não encontrado na CADCNS."})
+        nome, cpf_atual = row
+        cpf_atual = (cpf_atual or "").strip()
+        if cpf_atual and cpf_atual != cpf:
+            return jsonify({"ok": False, "erro": f"Paciente já tem outro CPF cadastrado ({cpf_atual})."})
+
+        if cpf_atual != cpf:
+            cur.execute("UPDATE CADCNS SET NUM_CPF = ? WHERE CNS = ?", (cpf, cns))
+
+        inseridos = []
+        if profissionais:
+            data_aten = datetime.strptime(data, "%d/%m/%Y").strftime("%Y%m%d")
+            pacientes, _nao_encontrados, _invalidos = bpa.buscar_pacientes(con, [cns])
+            if not pacientes:
+                con.commit()
+                return jsonify({
+                    "ok": False,
+                    "erro": "CPF gravado, mas não consegui recarregar os dados do paciente pra lançar na produção.",
+                })
+            pac = pacientes[0]
+
+            for prof in profissionais:
+                cns_prof  = _limpar(prof.get("cns") or "")
+                nome_prof = (prof.get("nome") or "").strip()
+                if not cns_prof:
+                    continue
+                categoria, auto = bpa.detectar_categoria(con, cns_prof)
+                if not auto or not categoria:
+                    inseridos.append({"profissional": nome_prof, "erro": "categoria não detectada automaticamente"})
+                    continue
+                registros = bpa.calcular_atendimentos_producao(con, cns_prof, categoria, data_aten, [pac])
+                inseridos.append({
+                    "profissional": nome_prof, "categoria": categoria,
+                    "folha": registros[0]["folha"], "seq": registros[0]["seq"],
+                })
+
+        con.commit()
+        _carregar_pacientes()
+        return jsonify({"ok": True, "paciente": nome.strip(), "cpf": cpf, "inseridos": inseridos})
+    except Exception as e:
+        con.rollback()
+        return jsonify({"ok": False, "erro": str(e)})
+    finally:
+        con.close()
+
+
+# ── API — Reenviar faltantes da conferência direto pra produção (S_PRD) ───────
+@app.route("/api/conferencia/reenviar", methods=["POST"])
+def api_conferencia_reenviar():
+    d            = request.get_json(force=True) or {}
+    data_ini_str = (d.get("data_ini") or "").strip()
+    data_fim_str = (d.get("data_fim") or "").strip()
+    commit       = bool(d.get("commit"))
+
+    try:
+        if data_ini_str and data_fim_str:
+            data_ini = datetime.strptime(data_ini_str, "%d/%m/%Y").date()
+            data_fim = datetime.strptime(data_fim_str, "%d/%m/%Y").date()
+        else:
+            data_ini, data_fim = conferencia.periodo_padrao()
+    except ValueError:
+        return jsonify({"ok": False, "erro": "Datas inválidas (use DD/MM/AAAA)."})
+
+    try:
+        resultado = conferencia.conferir_periodo(data_ini, data_fim)
+    except Exception as e:
+        return jsonify({"ok": False, "erro": f"Firebird indisponível: {e}"})
+
+    try:
+        con = bpa.conectar()
+    except Exception as e:
+        return jsonify({"ok": False, "erro": f"Firebird indisponível: {e}"})
+
+    dias_out = []
+    total    = 0
+    try:
+        for dia in resultado["dias"]:
+            if dia["ok"]:
+                continue
+            data_aten = datetime.strptime(dia["data"], "%d/%m/%Y").strftime("%Y%m%d")
+            profs_out = []
+            for p in dia["profissionais"]:
+                faltando = p["faltando_no_banco"]
+                if not faltando:
+                    continue
+                cns_prof = p["cns"]
+                if not cns_prof:
+                    profs_out.append({"nome": p["nome"], "erro": "CNS do profissional não resolvido"})
+                    continue
+                categoria, auto = bpa.detectar_categoria(con, cns_prof)
+                if not auto or not categoria:
+                    profs_out.append({"nome": p["nome"], "cns": cns_prof, "erro": "categoria não detectada automaticamente"})
+                    continue
+                pacientes, nao_encontrados, _invalidos = bpa.buscar_pacientes(con, faltando)
+                if not pacientes:
+                    profs_out.append({
+                        "nome": p["nome"], "cns": cns_prof,
+                        "erro": "nenhum paciente encontrado na CADCNS",
+                        "nao_encontrados": nao_encontrados,
+                    })
+                    continue
+
+                registros = bpa.calcular_atendimentos_producao(
+                    con, cns_prof, categoria, data_aten, pacientes, gravar=commit
+                )
+                total += len(registros)
+                profs_out.append({
+                    "nome": p["nome"], "cns": cns_prof, "categoria": categoria,
+                    "qtd": len(registros),
+                    "folha_ini": registros[0]["folha"], "seq_ini": registros[0]["seq"],
+                    "folha_fim": registros[-1]["folha"], "seq_fim": registros[-1]["seq"],
+                    "nao_encontrados": nao_encontrados,
+                })
+            if profs_out:
+                dias_out.append({"data": dia["data"], "profissionais": profs_out})
+
+        if commit:
+            con.commit()
+
+        return jsonify({
+            "ok": True, "commit": commit, "total": total,
+            "data_ini": resultado["data_ini"], "data_fim": resultado["data_fim"],
+            "dias": dias_out,
+        })
+    except Exception as e:
+        con.rollback()
+        return jsonify({"ok": False, "erro": str(e)})
+    finally:
+        con.close()
+
+
 # ── API — Geração BPA-I ───────────────────────────────────────────────────────
 _ROTULO_ARQUIVO = {"medico": "MEDICOS", "enfermeiro": "ENFERMEIROS"}
 
@@ -344,8 +501,8 @@ def api_gerar():
             # cada dia; completa a folha em aberto antes de abrir uma nova.
             proc = bpa.PROCEDIMENTOS[categoria]["codigo"]
             cbo  = bpa.PROCEDIMENTOS[categoria]["cbo"]
-            producao_anterior = bpa.contar_producao_competencia(
-                cns_prof, competencia, categoria, excluir_arquivo=nomes_arquivo[categoria]
+            producao_anterior = bpa.contar_producao_real(
+                con, cns_prof, competencia, excluir_data=data_aten
             )
             folha_inicial = producao_anterior // 99 + 1
             seq_inicial   = producao_anterior % 99 + 1

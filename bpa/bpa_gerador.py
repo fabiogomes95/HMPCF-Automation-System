@@ -509,63 +509,112 @@ def _linha_detalhe(pac, proc, cbo, cns_prof, data_aten, competencia, folha, seq)
     )                                              # Total: 350 chars
 
 
-_ROTULO_ARQUIVO_CATEGORIA = {"medico": "MEDICOS", "enfermeiro": "ENFERMEIROS"}
-
-
-def contar_producao_competencia(
-    cns_prof: str, competencia: str, categoria: str, excluir_arquivo: str | None = None,
-) -> int:
-    """Soma quantos atendimentos esse profissional já tem em arquivos BPA-I já
-    gerados PARA A MESMA COMPETÊNCIA (outros dias do mês), lendo os próprios
-    arquivos BPA_MEDICOS_*/BPA_ENFERMEIROS_* já escritos em BPA_LOTES_DIR.
+def contar_producao_real(con, cns_prof: str, competencia: str, excluir_data: str | None = None) -> int:
+    """Conta quantos atendimentos esse profissional JÁ TEM REALMENTE IMPORTADOS
+    no Firebird (S_PRD) para a competência — consulta a produção de verdade
+    em vez de inferir pelos arquivos BPA_MEDICOS_*/BPA_ENFERMEIROS_* já
+    escritos em BPA_LOTES_DIR.
 
     A folha/sequência do BPA-I acumula por profissional ao longo do mês —
     um dia novo não recomeça do zero, continua de onde a produção do
-    profissional parou nos dias anteriores já gerados (evita, por exemplo,
-    reiniciar a folha em 001 quando o profissional já tem folha 001 cheia
-    com 99 pacientes de um dia anterior no mesmo mês).
+    profissional realmente parou. Usar a contagem de arquivos em vez da
+    contagem real causava colisão de folha/sequência quando os dias eram
+    gerados fora de ordem cronológica (ex: dia 10 gerado antes do dia 08):
+    o dia gerado por último "herdava" um intervalo já usado por outro dia
+    que só tinha sido gerado depois, dia esse cuja importação no BPA
+    Magnético então era rejeitada por folha/sequência duplicada — produção
+    inteira sumindo sem erro visível na Digitação.
 
-    Varre BPA_LOTES_DIR **recursivamente** (inclui subpastas, ex.
-    `backup - junho/`) — arquivos de produção já gerada/importada às vezes
-    são movidos pra uma subpasta de arquivo morto, mas continuam contando
-    pra competência.
-
-    `excluir_arquivo` — nome (sem caminho) do arquivo que está sendo
-    (re)gerado agora, pra não contar a própria versão anterior dele e
-    duplicar a contagem.
+    `excluir_data` — PRD_DTATEN (AAAAMMDD) do próprio dia sendo (re)gerado
+    agora, pra não contar a produção que esse dia já tem importada e
+    duplicar a contagem ao regerar o mesmo dia.
     """
-    pasta   = garantir_pasta_lotes()
-    rotulo  = _ROTULO_ARQUIVO_CATEGORIA[categoria]
-    prefixo = f"BPA_{rotulo}_"
-    total   = 0
+    cur = con.cursor()
+    if excluir_data:
+        cur.execute(
+            "SELECT COUNT(*) FROM S_PRD WHERE PRD_CNSMED = ? AND PRD_CMP = ? AND PRD_DTATEN <> ?",
+            (cns_prof, competencia, excluir_data),
+        )
+    else:
+        cur.execute(
+            "SELECT COUNT(*) FROM S_PRD WHERE PRD_CNSMED = ? AND PRD_CMP = ?",
+            (cns_prof, competencia),
+        )
+    return cur.fetchone()[0]
 
-    if not os.path.isdir(pasta):
-        return 0
 
-    for raiz, _subpastas, arquivos in os.walk(pasta):
-        for nome in arquivos:
-            if nome == excluir_arquivo:
-                continue
-            if not nome.upper().startswith(prefixo) or not nome.lower().endswith(".txt"):
-                continue
-            data_str = nome[len(prefixo):-4]  # "DDMMAAAA"
-            if len(data_str) != 8 or not data_str.isdigit():
-                continue
-            comp_arquivo = data_str[4:8] + data_str[2:4]  # AAAAMM
-            if comp_arquivo != competencia:
-                continue
+# ── Lançamento direto em produção (S_PRD) — corrige pendências sem depender
+#    de reimportar arquivo no BPA Magnético ──────────────────────────────────
+_COLS_S_PRD = [
+    "PRD_UID", "PRD_CMP", "PRD_CNSMED", "PRD_CBO", "PRD_FLH", "PRD_SEQ", "PRD_PA",
+    "PRD_CNSPAC", "PRD_NMPAC", "PRD_DTNASC", "PRD_SEXO", "PRD_IBGE", "PRD_DTATEN",
+    "PRD_CID", "PRD_IDADE", "PRD_QT_P", "PRD_CATEN", "PRD_NAUT", "PRD_ORG", "PRD_MVM",
+    "PRD_FLPA", "PRD_FLCBO", "PRD_FLCA", "PRD_FLIDA", "PRD_FLQT", "PRD_FLER",
+    "PRD_FLMUN", "PRD_FLCID", "PRD_RACA", "PRD_SERVICO", "PRD_CLASSIFICACAO",
+    "PRD_EQUIPE", "PRD_ETNIA", "PRD_NAC", "PRD_ADVQT", "PRD_CNPJ", "PRD_EQP_AREA",
+    "PRD_EQP_SEQ", "PRD_LOGRAD_PCNTE", "PRD_CEP_PCNTE", "PRD_END_PCNTE",
+    "PRD_COMPL_PCNTE", "PRD_NUM_PCNTE", "PRD_BAIRRO_PCNTE", "PRD_DDTEL_PCNTE",
+    "PRD_TEL_PCNTE", "PRD_EMAIL_PCNTE", "PRD_INE", "CHK_SUM", "PRD_CPF_PCNTE",
+    "PRD_SITUACAO_RUA",
+]
+_SQL_INSERT_S_PRD = (
+    f"INSERT INTO S_PRD ({', '.join(_COLS_S_PRD)}) VALUES ({', '.join(['?'] * len(_COLS_S_PRD))})"
+)
 
-            caminho = os.path.join(raiz, nome)
-            try:
-                with open(caminho, encoding="latin-1", newline="") as f:
-                    conteudo = f.read()
-            except OSError:
-                continue
-            for linha in conteudo.split("\r\n"):
-                if len(linha) == 350 and linha[15:30] == cns_prof:
-                    total += 1
 
-    return total
+def montar_row_prd(pac, proc, cbo, cns_prof, data_aten, competencia, folha, seq) -> list:
+    """Monta uma linha de S_PRD nos mesmos moldes de uma linha já importada
+    pelo BPA Magnético (campos/flags conferidos byte a byte contra um
+    registro real em produção) — usado para lançar atendimento direto no
+    banco sem passar pela importação do arquivo BPA-I."""
+    ref   = date(int(data_aten[:4]), int(data_aten[4:6]), int(data_aten[6:8]))
+    idade = _calcular_idade(pac["nasc"], ref)
+    etnia = pac["etnia"].strip() if pac["raca"] == "05" else ""
+    return [
+        CNES, competencia, cns_prof.zfill(15), cbo, str(folha).zfill(3), str(seq).zfill(2),
+        proc.zfill(10), pac["cns"], pac["nome"], pac["nasc"], pac["sexo"][0], pac["ibge"],
+        data_aten, "", str(idade).zfill(3), 1.0, CARATER, "", "BPI", competencia,
+        "0", "0", "0", "0", "0", "0", "0", "0",
+        pac["raca"], "   ", "   ", None, etnia, pac["nac"], "0", "", "", "",
+        pac["lograd"], pac["cep"], pac["end"], pac["compl"], pac["num"], pac["bairro"],
+        pac["ddd"], pac["tel"], pac["email"], "", None,
+        pac["cpf"].zfill(11) if pac["cpf"] else "", "",
+    ]
+
+
+def calcular_atendimentos_producao(
+    con, cns_prof: str, categoria: str, data_aten: str, pacientes: list[dict], gravar: bool = True,
+) -> list[dict]:
+    """Calcula (e, se `gravar=True`, grava) o folha/sequência de cada paciente
+    em `pacientes` como atendimento desse profissional/dia, continuando de
+    onde a produção REAL desse profissional na competência já está (ver
+    `contar_producao_real`) — não colide com o que já foi importado antes,
+    não precisa reimportar arquivo no BPA Magnético.
+
+    Retorna [{"folha": int, "seq": int}, ...] na mesma ordem de `pacientes`.
+    Quem chama é responsável por dar `con.commit()` (ou rollback em caso de
+    erro) depois de chamar esta função — não comita sozinha, pra permitir
+    agrupar vários profissionais/dias numa única transação.
+    """
+    competencia = data_aten[:6]
+    proc = PROCEDIMENTOS[categoria]["codigo"]
+    cbo  = PROCEDIMENTOS[categoria]["cbo"]
+    producao_anterior = contar_producao_real(con, cns_prof, competencia, excluir_data=data_aten)
+    folha = producao_anterior // 99 + 1
+    seq   = producao_anterior % 99 + 1
+
+    cur = con.cursor()
+    resultados = []
+    for pac in pacientes:
+        if seq > 99:
+            seq = 1
+            folha += 1
+        if gravar:
+            row = montar_row_prd(pac, proc, cbo, cns_prof, data_aten, competencia, folha, seq)
+            cur.execute(_SQL_INSERT_S_PRD, row)
+        resultados.append({"folha": folha, "seq": seq})
+        seq += 1
+    return resultados
 
 
 def montar_linhas(
@@ -578,7 +627,7 @@ def montar_linhas(
     arquivo do dia isolado), então quem chama decide de onde continuar:
     1/1 se é a primeira vez que esse profissional aparece na competência,
     ou o ponto onde a produção de dias anteriores parou (ver
-    `contar_producao_competencia`) — completando a folha em aberto antes
+    `contar_producao_real`) — completando a folha em aberto antes
     de abrir uma nova.
     """
     linhas = []

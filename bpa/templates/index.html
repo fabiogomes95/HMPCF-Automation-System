@@ -64,6 +64,12 @@
     <li class="nav-item">
       <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-conferencia" onclick="if(!_conferenciaCarregada){_conferenciaCarregada=true;conferir();}">🔎 Conferência</button>
     </li>
+    <li class="nav-item">
+      <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-semcpf">🆔 Sem CPF</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-reenviar">🛠️ Reenviar Faltantes</button>
+    </li>
   </ul>
 
   <div class="tab-content">
@@ -268,6 +274,102 @@
         <div id="conf_dias"></div>
       </div>
     </div><!-- /tab-conferencia -->
+
+    <!-- ══════════════════════ ABA SEM CPF ══════════════════════════ -->
+    <div class="tab-pane fade" id="tab-semcpf">
+      <div class="card-info shadow-sm">
+        <h6 class="fw-bold mb-1">Completar CPF e lançar direto na produção</h6>
+        <p class="text-muted small mb-3">
+          Para paciente que tem SUS mas ainda não tem CPF cadastrado (por isso
+          não dá pra digitar ele no lote normalmente). Completa o CPF na
+          CADCNS e, se você informar data + profissional(is), já grava o(s)
+          atendimento(s) direto em <code>S_PRD</code> — sem precisar gerar
+          arquivo nem importar no BPA Magnético.
+        </p>
+
+        <label class="form-label fw-bold mb-1">🔍 Buscar paciente (nome ou SUS)</label>
+        <input type="text" id="scpf_busca" class="form-control mb-2"
+               placeholder="Digite nome ou número do SUS..." oninput="scpfPesquisar()" autocomplete="off">
+        <div id="scpf_resultados" class="mb-3"></div>
+
+        <div id="scpf_form" style="display:none">
+          <div class="border rounded p-3 mb-3" style="background:#f8fafc">
+            <div class="fw-bold text-primary mb-1" id="scpf_paciente_nome"></div>
+            <div class="text-muted small mb-2">SUS: <span id="scpf_paciente_sus" class="doc-tag"></span></div>
+            <input type="hidden" id="scpf_cns">
+
+            <label class="form-label fw-bold mb-1">CPF do paciente</label>
+            <input type="text" id="scpf_cpf" class="form-control mb-3" maxlength="14"
+                   placeholder="000.000.000-00" oninput="scpfMascaraCpf(this)">
+
+            <label class="form-label fw-bold mb-1">
+              Lançar atendimento na produção agora? <span class="text-muted fw-normal">(opcional)</span>
+            </label>
+            <div class="row g-2 align-items-end mb-2">
+              <div class="col-sm-4">
+                <label class="form-label small mb-1">📅 Data</label>
+                <input type="text" id="scpf_data" class="form-control" placeholder="DD/MM/AAAA"
+                       oninput="mascaraData(this)" maxlength="10">
+              </div>
+              <div class="col-sm-8" style="position:relative">
+                <label class="form-label small mb-1">👨‍⚕️ Adicionar profissional</label>
+                <input type="text" id="scpf_prof_busca" class="form-control"
+                       placeholder="🔍 Nome do profissional..." oninput="scpfBuscarProf()" autocomplete="off">
+                <div id="scpf_prof_dropdown"
+                     style="display:none;position:absolute;left:0;right:0;top:100%;
+                            background:#fff;border:1px solid #d0dbe8;border-radius:0 0 8px 8px;
+                            z-index:300;max-height:220px;overflow-y:auto;
+                            box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
+              </div>
+            </div>
+            <div id="scpf_prof_chips" class="mb-2 d-flex flex-wrap gap-2"></div>
+
+            <button class="btn btn-primary fw-bold" onclick="scpfSubmeter()">✅ Gravar</button>
+            <button class="btn btn-outline-secondary" onclick="scpfCancelar()">Cancelar</button>
+          </div>
+        </div>
+
+        <div id="scpf_resultado" class="alert mb-2" style="display:none"></div>
+      </div>
+    </div><!-- /tab-semcpf -->
+
+    <!-- ══════════════════════ ABA REENVIAR FALTANTES ══════════════════════════ -->
+    <div class="tab-pane fade" id="tab-reenviar">
+      <div class="card-info shadow-sm">
+        <h6 class="fw-bold mb-1">Reenviar pra produção o que está digitado mas sumiu do banco</h6>
+        <p class="text-muted small mb-3">
+          Usa o mesmo período da Conferência. Pra cada dia/profissional
+          divergente, pega os pacientes <strong>faltando no banco</strong> e
+          grava direto em <code>S_PRD</code> — não altera nem duplica o que já
+          está em produção. Primeiro busca as pendências (nada é gravado
+          ainda); depois, revise e confirme a inserção.
+        </p>
+        <div class="row g-2 align-items-end mb-3">
+          <div class="col-sm-3">
+            <label class="form-label fw-bold mb-1">📅 De</label>
+            <input type="text" id="rnv_data_ini" class="form-control"
+                   placeholder="DD/MM/AAAA" oninput="mascaraData(this)" maxlength="10">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label fw-bold mb-1">📅 Até</label>
+            <input type="text" id="rnv_data_fim" class="form-control"
+                   placeholder="DD/MM/AAAA" oninput="mascaraData(this)" maxlength="10">
+          </div>
+          <div class="col-sm-3">
+            <button class="btn btn-primary fw-bold w-100" id="btn_rnv_buscar" onclick="rnvBuscarPendencias()">🔍 Buscar pendências</button>
+          </div>
+          <div class="col-sm-3 text-muted small">
+            Em branco = últimos 7 dias corridos.
+          </div>
+        </div>
+        <div id="rnv_resumo" class="alert mb-3" style="display:none"></div>
+        <div id="rnv_dias"></div>
+        <button class="btn btn-danger fw-bold mt-2" id="btn_rnv_confirmar" onclick="rnvConfirmar()" style="display:none">
+          ⚠️ Confirmar inserção em produção
+        </button>
+        <div id="rnv_resultado" class="alert mb-2 mt-3" style="display:none"></div>
+      </div>
+    </div><!-- /tab-reenviar -->
 
   </div><!-- /tab-content -->
 </div>
@@ -811,6 +913,264 @@ async function conferir() {
       ${detalhe ? `<div class="small mt-1" style="font-family:monospace">${detalhe}</div>` : ""}
     </div>`;
   }).join("");
+}
+
+// ══════════════════════════════════════════════
+//  SEM CPF — completa CPF e lança direto na produção
+// ══════════════════════════════════════════════
+let _scpfDebounce   = null;
+let _scpfPaciente   = null;   // {sus, nome, dtnasc, cpf}
+let _scpfProfFiltrado = [];
+let _scpfProfEscolhidos = [];  // [{cns, nome, categoria, cbo}]
+
+function scpfPesquisar() {
+  clearTimeout(_scpfDebounce);
+  const q = document.getElementById("scpf_busca").value.trim();
+  if (q.length < 2) { document.getElementById("scpf_resultados").innerHTML = ""; return; }
+  _scpfDebounce = setTimeout(async () => {
+    const lista = await fetch(`/api/buscar?q=${encodeURIComponent(q)}`).then(r => r.json());
+    scpfRenderResultados(lista.filter(p => !p.cpf));
+  }, 150);
+}
+
+function scpfRenderResultados(lista) {
+  const div = document.getElementById("scpf_resultados");
+  if (!lista.length) { div.innerHTML = `<div class="text-muted small py-2">Nenhum paciente sem CPF encontrado com esse termo.</div>`; return; }
+  div.innerHTML = lista.map((p, i) => {
+    const susFmt = p.sus ? p.sus.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, "$1 $2 $3 $4") : "—";
+    return `<div class="result-item" onclick="scpfEscolherPaciente(${i})">
+              <div>
+                <span class="fw-bold text-primary">${p.nome}</span><br>
+                <small class="text-muted">DN: ${p.dtnasc||"—"} &nbsp;|&nbsp; SUS: <span class="doc-tag">${susFmt}</span></small>
+              </div>
+              <span class="badge bg-danger">Sem CPF</span>
+            </div>`;
+  }).join("");
+  div.dataset.lista = JSON.stringify(lista);
+}
+
+function scpfEscolherPaciente(i) {
+  const lista = JSON.parse(document.getElementById("scpf_resultados").dataset.lista || "[]");
+  _scpfPaciente = lista[i];
+  _scpfProfEscolhidos = [];
+  document.getElementById("scpf_paciente_nome").textContent = _scpfPaciente.nome;
+  document.getElementById("scpf_paciente_sus").textContent  = _scpfPaciente.sus;
+  document.getElementById("scpf_cns").value = _scpfPaciente.sus;
+  document.getElementById("scpf_cpf").value = "";
+  document.getElementById("scpf_data").value = "";
+  document.getElementById("scpf_prof_busca").value = "";
+  scpfRenderChips();
+  document.getElementById("scpf_form").style.display = "block";
+  document.getElementById("scpf_resultado").style.display = "none";
+  document.getElementById("scpf_busca").value = "";
+  document.getElementById("scpf_resultados").innerHTML = "";
+}
+
+function scpfCancelar() {
+  _scpfPaciente = null;
+  _scpfProfEscolhidos = [];
+  document.getElementById("scpf_form").style.display = "none";
+}
+
+function scpfMascaraCpf(el) {
+  let v = el.value.replace(/\D/g, "").substring(0, 11);
+  if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+  else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+  else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+  el.value = v;
+}
+
+function scpfBuscarProf() {
+  const q  = document.getElementById("scpf_prof_busca").value.trim().toUpperCase();
+  const dd = document.getElementById("scpf_prof_dropdown");
+  if (q.length < 1) { dd.style.display = "none"; return; }
+  const jaEscolhidos = _scpfProfEscolhidos.map(p => p.cns);
+  _scpfProfFiltrado = PROFISSIONAIS
+    .filter(p => p.nome.toUpperCase().includes(q) && !jaEscolhidos.includes(p.cns))
+    .slice(0, 20);
+  if (!_scpfProfFiltrado.length) {
+    dd.innerHTML = '<div class="p-2 text-muted small">Nenhum profissional encontrado.</div>';
+    dd.style.display = "block"; return;
+  }
+  dd.innerHTML = _scpfProfFiltrado.map((p, i) => {
+    const catLabel = p.categoria === "medico" ? "Médico" : p.categoria === "enfermeiro" ? "Enfermeiro" : "Sem CBO";
+    const catBg    = p.categoria === "medico" ? "#0d6efd" : p.categoria === "enfermeiro" ? "#198754" : "#6c757d";
+    return `<div class="prof-op" onclick="scpfEscolherProf(${i})">
+              <strong>${p.nome}</strong>
+              <span style="background:${catBg};color:#fff;font-size:.72rem;padding:1px 5px;border-radius:3px;margin-left:5px">${catLabel}</span>
+            </div>`;
+  }).join("");
+  dd.style.display = "block";
+}
+
+function scpfEscolherProf(i) {
+  _scpfProfEscolhidos.push(_scpfProfFiltrado[i]);
+  document.getElementById("scpf_prof_busca").value = "";
+  document.getElementById("scpf_prof_dropdown").style.display = "none";
+  scpfRenderChips();
+}
+
+function scpfRemoverProf(i) {
+  _scpfProfEscolhidos.splice(i, 1);
+  scpfRenderChips();
+}
+
+function scpfRenderChips() {
+  const div = document.getElementById("scpf_prof_chips");
+  div.innerHTML = _scpfProfEscolhidos.map((p, i) => {
+    const catLabel = p.categoria === "medico" ? "Médico" : p.categoria === "enfermeiro" ? "Enfermeiro" : "—";
+    return `<span class="badge bg-secondary" style="font-size:.8rem;padding:6px 10px">
+              ${p.nome} · ${catLabel}
+              <span style="cursor:pointer;margin-left:6px" onclick="scpfRemoverProf(${i})">✕</span>
+            </span>`;
+  }).join("");
+}
+
+document.addEventListener("click", function(e) {
+  const dd  = document.getElementById("scpf_prof_dropdown");
+  const inp = document.getElementById("scpf_prof_busca");
+  if (dd && !dd.contains(e.target) && !inp.contains(e.target)) dd.style.display = "none";
+});
+
+async function scpfSubmeter() {
+  const cns  = document.getElementById("scpf_cns").value;
+  const cpf  = document.getElementById("scpf_cpf").value.replace(/\D/g, "");
+  const data = document.getElementById("scpf_data").value.trim();
+  const resEl = document.getElementById("scpf_resultado");
+
+  if (cpf.length !== 11) return alert("Digite o CPF completo (11 dígitos)!");
+  if (_scpfProfEscolhidos.length && data.length < 10) return alert("Informe a data completa (DD/MM/AAAA) pra lançar na produção!");
+
+  let confirmMsg = `Completar o CPF de ${_scpfPaciente.nome}.`;
+  if (_scpfProfEscolhidos.length) {
+    confirmMsg += `\n\nTambém lançar 1 atendimento em ${data} direto na produção (S_PRD) para:\n` +
+      _scpfProfEscolhidos.map(p => `  • ${p.nome}`).join("\n") +
+      `\n\nIsso grava direto no banco de produção do BPA. Confirma?`;
+  }
+  if (!confirm(confirmMsg)) return;
+
+  const r = await fetch("/api/pacientes/completar", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      cns, cpf, data,
+      profissionais: _scpfProfEscolhidos.map(p => ({cns: p.cns, nome: p.nome})),
+    })
+  }).then(r => r.json());
+
+  resEl.style.display = "block";
+  if (!r.ok) {
+    resEl.className = "alert alert-danger mb-2";
+    resEl.textContent = "❌ " + r.erro;
+    return;
+  }
+
+  let msg = `✅ CPF de <strong>${r.paciente}</strong> gravado (${cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,"$1.$2.$3-$4")}).`;
+  if (r.inseridos.length) {
+    msg += "<br>" + r.inseridos.map(i =>
+      i.erro ? `⚠️ ${i.profissional}: ${i.erro}`
+             : `📌 ${i.profissional} (${i.categoria==="medico"?"médico":"enfermeiro"}): folha ${i.folha}/seq ${i.seq}`
+    ).join("<br>");
+  }
+  resEl.className = "alert alert-success mb-2";
+  resEl.innerHTML = msg;
+  scpfCancelar();
+  recarregar();
+}
+
+// ══════════════════════════════════════════════
+//  REENVIAR FALTANTES — pega o que sumiu do S_PRD e grava direto
+// ══════════════════════════════════════════════
+let _rnvUltimoPeriodo = null;
+
+function _rnvRenderDias(dias, commit) {
+  return dias.map(d => {
+    const linhas = d.profissionais.map(p => {
+      if (p.erro) return `<div class="mt-1 text-danger">⚠️ ${p.nome}${p.cns?` (CNS ${p.cns})`:""}: ${p.erro}</div>`;
+      const acao = commit ? "inseridos" : "seriam inseridos";
+      return `<div class="mt-1"><strong>${p.nome}</strong> (CNS ${p.cns}, ${p.categoria==="medico"?"médico":"enfermeiro"}) — ` +
+        `<strong>${p.qtd}</strong> registro(s) ${acao}: folha ${p.folha_ini}/seq${p.seq_ini} até folha ${p.folha_fim}/seq${p.seq_fim}` +
+        (p.nao_encontrados && p.nao_encontrados.length ? `<br><span class="text-warning">⚠️ não encontrados na CADCNS: ${p.nao_encontrados.join(", ")}</span>` : "") +
+        `</div>`;
+    }).join("");
+    return `<div class="card-info shadow-sm">
+      <strong>${d.data}</strong>
+      <div class="small mt-1" style="font-family:monospace">${linhas}</div>
+    </div>`;
+  }).join("");
+}
+
+async function rnvBuscarPendencias() {
+  const ini = document.getElementById("rnv_data_ini").value.trim();
+  const fim = document.getElementById("rnv_data_fim").value.trim();
+  const btn = document.getElementById("btn_rnv_buscar");
+  const resumo = document.getElementById("rnv_resumo");
+  const diasEl = document.getElementById("rnv_dias");
+  const btnConfirmar = document.getElementById("btn_rnv_confirmar");
+
+  if ((ini && ini.length < 10) || (fim && fim.length < 10)) {
+    return alert("Preencha a data completa (DD/MM/AAAA) ou deixe os dois campos em branco.");
+  }
+
+  btn.disabled = true; btn.textContent = "⏳ Buscando...";
+  resumo.style.display = "none"; diasEl.innerHTML = "";
+  btnConfirmar.style.display = "none";
+  document.getElementById("rnv_resultado").style.display = "none";
+
+  const r = await fetch("/api/conferencia/reenviar", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({data_ini: ini, data_fim: fim, commit: false})
+  }).then(r => r.json());
+
+  btn.disabled = false; btn.textContent = "🔍 Buscar pendências";
+
+  if (!r.ok) {
+    resumo.className = "alert alert-danger mb-3";
+    resumo.textContent = "❌ " + r.erro;
+    resumo.style.display = "block";
+    return;
+  }
+
+  _rnvUltimoPeriodo = {data_ini: r.data_ini, data_fim: r.data_fim};
+  resumo.style.display = "block";
+
+  if (!r.dias.length) {
+    resumo.className = "alert alert-success mb-3";
+    resumo.textContent = `Nenhuma pendência entre ${r.data_ini} e ${r.data_fim} — tudo que está digitado já está na produção.`;
+    return;
+  }
+
+  resumo.className = "alert alert-warning mb-3";
+  resumo.innerHTML = `⚠️ <strong>${r.total}</strong> atendimento(s) digitado(s) mas faltando na produção entre ${r.data_ini} e ${r.data_fim}.`;
+  diasEl.innerHTML = _rnvRenderDias(r.dias, false);
+  btnConfirmar.style.display = r.total > 0 ? "inline-block" : "none";
+}
+
+async function rnvConfirmar() {
+  if (!_rnvUltimoPeriodo) return;
+  if (!confirm("Isso vai gravar DIRETO na produção (S_PRD) do Firebird, sem passar pelo BPA Magnético. Confirma?")) return;
+
+  const btn = document.getElementById("btn_rnv_confirmar");
+  const resEl = document.getElementById("rnv_resultado");
+  btn.disabled = true; btn.textContent = "⏳ Gravando...";
+
+  const r = await fetch("/api/conferencia/reenviar", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({..._rnvUltimoPeriodo, commit: true})
+  }).then(r => r.json());
+
+  btn.disabled = false; btn.textContent = "⚠️ Confirmar inserção em produção";
+  resEl.style.display = "block";
+
+  if (!r.ok) {
+    resEl.className = "alert alert-danger mb-2 mt-3";
+    resEl.textContent = "❌ " + r.erro;
+    return;
+  }
+
+  resEl.className = "alert alert-success mb-2 mt-3";
+  resEl.innerHTML = `✅ <strong>${r.total}</strong> registro(s) gravado(s) em produção.`;
+  document.getElementById("rnv_dias").innerHTML = _rnvRenderDias(r.dias, true);
+  btn.style.display = "none";
 }
 </script>
 </body>
