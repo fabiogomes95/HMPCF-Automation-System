@@ -92,7 +92,12 @@ def conferir_dia(dt: date, nome_arquivo: str, con, profs_raw: list[tuple[str, st
         profissionais.append({
             "nome": g["medico_raw"], "cns": cns,
             "digitado": len(digitado), "banco": len(no_banco),
-            "ok": not faltando and not sobrando,
+            # "sobrando" (a mais no banco, sem correspondência no arquivo) não é
+            # divergência — acontece quando um atendimento é lançado direto em
+            # produção (ex: aba "Sem CPF"/"Reenviar Faltantes") sem passar pelo
+            # arquivo digitado do dia. Só falta real (digitado e não achado no
+            # banco) conta como problema.
+            "ok": not faltando,
             "faltando_no_banco": faltando,
             "sobrando_no_banco": sobrando,
         })
@@ -102,7 +107,7 @@ def conferir_dia(dt: date, nome_arquivo: str, con, profs_raw: list[tuple[str, st
         "arquivo": nome_arquivo,
         "total_digitado": total_digitado,
         "total_banco": total_banco,
-        "ok": total_digitado == total_banco and all(p["ok"] for p in profissionais),
+        "ok": all(p["ok"] for p in profissionais),
         "profissionais": profissionais,
     }
 
