@@ -13,6 +13,7 @@ do frontend/. Usa as próprias credenciais em dashboard/.env.
 from __future__ import annotations
 
 import os
+import re
 from datetime import date, datetime
 from pathlib import Path
 
@@ -192,6 +193,36 @@ def carregar_pacientes_cadcns() -> list[dict]:
         return pacientes
     finally:
         con.close()
+
+
+def buscar_paciente_cadcns_live(con, termo: str, limite: int = 30) -> list[dict]:
+    """Busca ao vivo na CADCNS (não usa o cache em RAM) por nome, CPF ou SUS —
+    usado pela busca de prontuário, que precisa confirmar que o paciente
+    ESTÁ REALMENTE cadastrado no Firebird agora antes de cruzar com o CPF
+    digitado nos arquivos de lote (ver `buscar_documentos_nos_lotes`)."""
+    termo = (termo or "").strip()
+    doc = "".join(c for c in termo if c.isdigit())
+    cur = con.cursor()
+    if len(doc) == 11:
+        cur.execute("SELECT FIRST ? CNS, NOME, DTNASC, NUM_CPF FROM CADCNS WHERE NUM_CPF = ?", (limite, doc))
+    elif len(doc) == 15:
+        cur.execute("SELECT FIRST ? CNS, NOME, DTNASC, NUM_CPF FROM CADCNS WHERE CNS = ?", (limite, doc))
+    else:
+        cur.execute(
+            "SELECT FIRST ? CNS, NOME, DTNASC, NUM_CPF FROM CADCNS WHERE UPPER(NOME) LIKE ?",
+            (limite, f"%{termo.upper()}%"),
+        )
+
+    resultado = []
+    for cns, nome, dtnasc, cpf in cur.fetchall():
+        dn_raw = str(dtnasc or "").strip()
+        resultado.append({
+            "sus": str(cns or "").strip(),
+            "nome": str(nome or "").strip().upper(),
+            "dtnasc": f"{dn_raw[6:8]}/{dn_raw[4:6]}/{dn_raw[0:4]}" if len(dn_raw) == 8 else "",
+            "cpf": str(cpf or "").strip(),
+        })
+    return resultado
 
 
 def buscar_pacientes_memoria(termo: str, base_pacientes: list[dict], limite: int = 50) -> list[dict]:
@@ -785,3 +816,51 @@ def adicionar_documento_lote(nome_arquivo: str, documento: str) -> None:
         if pacientes_no_lote >= 99 and ultimo_cabecalho:
             f.write(f"\n{ultimo_cabecalho}\n")
         f.write(f"{doc_limpo}\n")
+
+
+# ── Busca de prontuário nos lotes diários (localizar dia/profissional) ──────
+_RE_ARQUIVO_LOTE_DIA = re.compile(r"^\d{2}-\d{2}-\d{4}\.txt$")
+
+
+def listar_arquivos_lote_dia() -> list[str]:
+    """Lista só os arquivos de lote diário (DD-MM-AAAA.txt) em BPA_LOTES_DIR,
+    do mais recente pro mais antigo — ignora os arquivos de exportação
+    BPA_MEDICOS_*/BPA_ENFERMEIROS_* (essa é a saída pro BPA Magnético, não a
+    digitação em si)."""
+    pasta = garantir_pasta_lotes()
+    nomes = [n for n in os.listdir(pasta) if _RE_ARQUIVO_LOTE_DIA.match(n)]
+    return sorted(nomes, key=lambda n: datetime.strptime(n[:-4], "%d-%m-%Y"), reverse=True)
+
+
+def buscar_documentos_nos_lotes(documentos: set[str]) -> dict[str, list[dict]]:
+    """Varre todos os arquivos de lote diário procurando por algum dos CPFs em
+    `documentos` e retorna em quais dias/profissionais cada um foi digitado —
+    usado pra localizar prontuário no arquivo sem abrir cada dia na mão.
+
+    Faz uma única passada por todos os arquivos (independente de quantos
+    documentos estão sendo procurados), então é seguro chamar mesmo com
+    vários candidatos de uma busca por nome ambígua.
+
+    Retorna {cpf: [{"arquivo", "data", "medico_raw", "cns", "qtd"}, ...]},
+    cada lista ordenada do lote mais recente pro mais antigo.
+    """
+    resultado: dict[str, list[dict]] = {d: [] for d in documentos}
+    if not documentos:
+        return resultado
+
+    for nome_arquivo in listar_arquivos_lote_dia():
+        try:
+            grupos = ler_arquivo_lote(caminho_lote(nome_arquivo))
+        except LoteError:
+            continue
+        for g in grupos:
+            contagem: dict[str, int] = {}
+            for d in g["documentos"]:
+                if d in documentos:
+                    contagem[d] = contagem.get(d, 0) + 1
+            for doc, qtd in contagem.items():
+                resultado[doc].append({
+                    "arquivo": nome_arquivo, "data": g["data"],
+                    "medico_raw": g["medico_raw"], "cns": g["cns"], "qtd": qtd,
+                })
+    return resultado
