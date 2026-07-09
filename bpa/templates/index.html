@@ -1243,7 +1243,7 @@ function prontRenderResultados(pacientes) {
         : `<span class="badge bg-secondary">Não digitado em nenhum lote</span>`;
     const linhas = p.ocorrencias.map(o => `
       <div class="pront-oc">
-        <span>📅 ${o.data}</span>
+        <span>📅 ${o.data}${o.subpasta ? ` <span class="text-muted">(${o.subpasta}/${o.arquivo})</span>` : ""}</span>
         <span class="fw-bold text-primary">${o.medico_raw}</span>
         <span class="text-muted">${o.qtd > 1 ? `${o.qtd}x` : ""}</span>
       </div>`).join("");

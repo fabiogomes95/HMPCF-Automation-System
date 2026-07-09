@@ -822,37 +822,45 @@ def adicionar_documento_lote(nome_arquivo: str, documento: str) -> None:
 _RE_ARQUIVO_LOTE_DIA = re.compile(r"^\d{2}-\d{2}-\d{4}\.txt$")
 
 
-def listar_arquivos_lote_dia() -> list[str]:
-    """Lista só os arquivos de lote diário (DD-MM-AAAA.txt) em BPA_LOTES_DIR,
-    do mais recente pro mais antigo — ignora os arquivos de exportação
+def listar_arquivos_lote_dia() -> list[Path]:
+    """Lista os arquivos de lote diário (DD-MM-AAAA.txt) na raiz de
+    BPA_LOTES_DIR e em qualquer subpasta dela — a raiz sempre tem a produção
+    do mês corrente sendo digitado; subpastas guardam arquivo morto de meses
+    já fechados (ex: 'junho/', 'julho/', renomeadas/movidas manualmente ao
+    virar o mês). Ignora os arquivos de exportação
     BPA_MEDICOS_*/BPA_ENFERMEIROS_* (essa é a saída pro BPA Magnético, não a
-    digitação em si)."""
-    pasta = garantir_pasta_lotes()
-    nomes = [n for n in os.listdir(pasta) if _RE_ARQUIVO_LOTE_DIA.match(n)]
-    return sorted(nomes, key=lambda n: datetime.strptime(n[:-4], "%d-%m-%Y"), reverse=True)
+    digitação em si). Ordenado do mais recente pro mais antigo.
+    """
+    pasta = Path(garantir_pasta_lotes())
+    achados = [c for c in pasta.rglob("*.txt") if _RE_ARQUIVO_LOTE_DIA.match(c.name)]
+    return sorted(achados, key=lambda c: datetime.strptime(c.stem, "%d-%m-%Y"), reverse=True)
 
 
 def buscar_documentos_nos_lotes(documentos: set[str]) -> dict[str, list[dict]]:
-    """Varre todos os arquivos de lote diário procurando por algum dos CPFs em
-    `documentos` e retorna em quais dias/profissionais cada um foi digitado —
-    usado pra localizar prontuário no arquivo sem abrir cada dia na mão.
+    """Varre todos os arquivos de lote diário (raiz + subpastas de arquivo
+    morto) procurando por algum dos CPFs em `documentos` e retorna em quais
+    dias/profissionais cada um foi digitado — usado pra localizar prontuário
+    no arquivo sem abrir cada dia na mão.
 
     Faz uma única passada por todos os arquivos (independente de quantos
     documentos estão sendo procurados), então é seguro chamar mesmo com
     vários candidatos de uma busca por nome ambígua.
 
-    Retorna {cpf: [{"arquivo", "data", "medico_raw", "cns", "qtd"}, ...]},
-    cada lista ordenada do lote mais recente pro mais antigo.
+    Retorna {cpf: [{"arquivo", "subpasta", "data", "medico_raw", "cns", "qtd"}, ...]},
+    cada lista ordenada do lote mais recente pro mais antigo. `subpasta` vem
+    vazia ("") quando o arquivo está na raiz (mês corrente).
     """
     resultado: dict[str, list[dict]] = {d: [] for d in documentos}
     if not documentos:
         return resultado
 
-    for nome_arquivo in listar_arquivos_lote_dia():
+    pasta_raiz = Path(garantir_pasta_lotes())
+    for caminho in listar_arquivos_lote_dia():
         try:
-            grupos = ler_arquivo_lote(caminho_lote(nome_arquivo))
+            grupos = ler_arquivo_lote(str(caminho))
         except LoteError:
             continue
+        subpasta = "" if caminho.parent == pasta_raiz else caminho.parent.name
         for g in grupos:
             contagem: dict[str, int] = {}
             for d in g["documentos"]:
@@ -860,7 +868,7 @@ def buscar_documentos_nos_lotes(documentos: set[str]) -> dict[str, list[dict]]:
                     contagem[d] = contagem.get(d, 0) + 1
             for doc, qtd in contagem.items():
                 resultado[doc].append({
-                    "arquivo": nome_arquivo, "data": g["data"],
+                    "arquivo": caminho.name, "subpasta": subpasta, "data": g["data"],
                     "medico_raw": g["medico_raw"], "cns": g["cns"], "qtd": qtd,
                 })
     return resultado
