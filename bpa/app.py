@@ -173,12 +173,24 @@ def api_prontuario_buscar():
     finally:
         con.close()
 
-    cpfs = {c["cpf"] for c in candidatos if c.get("cpf")}
-    ocorrencias_por_cpf = bpa.buscar_documentos_nos_lotes(cpfs)
-    pacientes = [
-        {**c, "ocorrencias": ocorrencias_por_cpf.get(c["cpf"], [])}
-        for c in candidatos
-    ]
+    # Lotes antigos (ex: MAIO/) foram digitados por SUS, não por CPF — a
+    # triagem só passou a exigir CPF depois (ver extrair_documentos_validos).
+    # Pra achar ocorrência em qualquer época, busca pelos dois documentos do
+    # paciente e depois junta o resultado de cada um.
+    todos_documentos: set[str] = set()
+    docs_por_candidato: list[set[str]] = []
+    for c in candidatos:
+        docs = {d for d in (c.get("cpf"), c.get("sus")) if d}
+        docs_por_candidato.append(docs)
+        todos_documentos |= docs
+
+    ocorrencias_por_doc = bpa.buscar_documentos_nos_lotes(todos_documentos)
+
+    pacientes = []
+    for c, docs in zip(candidatos, docs_por_candidato):
+        ocorrencias = [oc for d in docs for oc in ocorrencias_por_doc.get(d, [])]
+        ocorrencias.sort(key=lambda o: datetime.strptime(o["data"], "%d/%m/%Y"), reverse=True)
+        pacientes.append({**c, "ocorrencias": ocorrencias})
     return jsonify({"ok": True, "pacientes": pacientes})
 
 
