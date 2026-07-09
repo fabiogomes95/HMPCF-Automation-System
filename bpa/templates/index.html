@@ -32,6 +32,9 @@
   #status_msg { min-height:28px; font-weight:600; font-size:.95rem; }
   #contador { font-size:.78rem; color:rgba(255,255,255,.8); }
   .badge-cbo { background:#0dcaf0; color:#000; font-size:.72rem; padding:1px 5px; border-radius:3px; }
+  .pront-item { background:#fff; border-left:5px solid #2c5282; padding:10px 14px; margin-bottom:8px; border-radius:6px; }
+  .pront-oc { display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px solid #f0f4f8; font-size:.85rem; }
+  .pront-oc:last-child { border-bottom:none; }
 </style>
 </head>
 <body>
@@ -69,6 +72,9 @@
     </li>
     <li class="nav-item">
       <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-reenviar">🛠️ Reenviar Faltantes</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-prontuario">🔍 Buscar Prontuário</button>
     </li>
   </ul>
 
@@ -370,6 +376,23 @@
         <div id="rnv_resultado" class="alert mb-2 mt-3" style="display:none"></div>
       </div>
     </div><!-- /tab-reenviar -->
+
+    <!-- ══════════════════════ ABA BUSCAR PRONTUÁRIO ══════════════════════════ -->
+    <div class="tab-pane fade" id="tab-prontuario">
+      <div class="card-info shadow-sm">
+        <h6 class="fw-bold mb-1">Buscar paciente nos lotes já digitados</h6>
+        <p class="text-muted small mb-3">
+          Pesquisa por nome, CPF ou SUS. Confirma o cadastro ao vivo no
+          Firebird (CADCNS) e cruza o CPF encontrado com os arquivos de lote
+          diário em <code>C:\BPA\bpa_lotes</code>, mostrando em qual(is)
+          dia(s) e com qual profissional o paciente foi digitado — útil pra
+          localizar o prontuário no arquivo físico sem abrir cada dia na mão.
+        </p>
+        <input type="text" id="pront_busca" class="form-control mb-3"
+               placeholder="Nome, CPF ou SUS..." oninput="prontPesquisar()" autocomplete="off">
+        <div id="pront_resultados"></div>
+      </div>
+    </div><!-- /tab-prontuario -->
 
   </div><!-- /tab-content -->
 </div>
@@ -1171,6 +1194,74 @@ async function rnvConfirmar() {
   resEl.innerHTML = `✅ <strong>${r.total}</strong> registro(s) gravado(s) em produção.`;
   document.getElementById("rnv_dias").innerHTML = _rnvRenderDias(r.dias, true);
   btn.style.display = "none";
+}
+
+// ══════════════════════════════════════════════
+//  BUSCAR PRONTUÁRIO (nome/CPF/SUS x lotes digitados)
+// ══════════════════════════════════════════════
+let _prontDebounce = null;
+
+function prontPesquisar() {
+  clearTimeout(_prontDebounce);
+  const q = document.getElementById("pront_busca").value.trim();
+  const div = document.getElementById("pront_resultados");
+  if (q.length < 3) { div.innerHTML = ""; return; }
+  _prontDebounce = setTimeout(() => _prontExecBusca(q), 250);
+}
+
+async function _prontExecBusca(q) {
+  const div = document.getElementById("pront_resultados");
+  div.innerHTML = `<div class="text-muted text-center py-3">🔎 Buscando...</div>`;
+  let r;
+  try {
+    r = await fetch(`/api/prontuario/buscar?q=${encodeURIComponent(q)}`).then(r => r.json());
+  } catch (e) {
+    div.innerHTML = `<div class="alert alert-danger">❌ Falha na busca: ${e}</div>`;
+    return;
+  }
+  if (!r.ok) {
+    div.innerHTML = `<div class="alert alert-danger">❌ ${r.erro || "Erro na busca."}</div>`;
+    return;
+  }
+  prontRenderResultados(r.pacientes);
+}
+
+function prontRenderResultados(pacientes) {
+  const div = document.getElementById("pront_resultados");
+  if (!pacientes.length) {
+    div.innerHTML = `<div class="text-muted text-center py-3">Nenhum paciente encontrado na CADCNS.</div>`;
+    return;
+  }
+  div.innerHTML = pacientes.map(p => {
+    const susFmt = p.sus ? p.sus.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, "$1 $2 $3 $4") : "—";
+    const cpfFmt = p.cpf ? p.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") : "—";
+    const qtdTotal = p.ocorrencias.reduce((s, o) => s + o.qtd, 0);
+    const badge = !p.cpf
+      ? `<span class="badge bg-danger">Sem CPF cadastrado</span>`
+      : qtdTotal
+        ? `<span class="badge bg-success">${qtdTotal} lançamento(s)</span>`
+        : `<span class="badge bg-secondary">Não digitado em nenhum lote</span>`;
+    const linhas = p.ocorrencias.map(o => `
+      <div class="pront-oc">
+        <span>📅 ${o.data}</span>
+        <span class="fw-bold text-primary">${o.medico_raw}</span>
+        <span class="text-muted">${o.qtd > 1 ? `${o.qtd}x` : ""}</span>
+      </div>`).join("");
+    return `
+      <div class="pront-item">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <span class="fw-bold text-primary">${p.nome}</span><br>
+            <small class="text-muted">
+              DN: ${p.dtnasc || "—"} &nbsp;|&nbsp;
+              SUS: <span class="doc-tag">${susFmt}</span> &nbsp;|&nbsp;
+              CPF: <span class="doc-tag">${cpfFmt}</span>
+            </small>
+          </div>${badge}
+        </div>
+        ${linhas ? `<div class="mt-2">${linhas}</div>` : ""}
+      </div>`;
+  }).join("");
 }
 </script>
 </body>

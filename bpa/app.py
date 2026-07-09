@@ -157,6 +157,31 @@ def api_recarregar():
     })
 
 
+# ── API — Buscar Prontuário (localizar dia/profissional nos lotes já digitados) ─
+@app.route("/api/prontuario/buscar")
+def api_prontuario_buscar():
+    q = request.args.get("q", "").strip()
+    if len(q) < 3:
+        return jsonify({"ok": True, "pacientes": []})
+
+    try:
+        con = bpa.conectar()
+    except Exception as e:
+        return jsonify({"ok": False, "erro": f"Firebird indisponível: {e}"})
+    try:
+        candidatos = bpa.buscar_paciente_cadcns_live(con, q)
+    finally:
+        con.close()
+
+    cpfs = {c["cpf"] for c in candidatos if c.get("cpf")}
+    ocorrencias_por_cpf = bpa.buscar_documentos_nos_lotes(cpfs)
+    pacientes = [
+        {**c, "ocorrencias": ocorrencias_por_cpf.get(c["cpf"], [])}
+        for c in candidatos
+    ]
+    return jsonify({"ok": True, "pacientes": pacientes})
+
+
 # ── API — Enfermeiros (divide o CPF já digitado pros médicos entre enfermeiros) ─
 @app.route("/api/enfermeiros/dividir", methods=["POST"])
 def api_enfermeiros_dividir():
