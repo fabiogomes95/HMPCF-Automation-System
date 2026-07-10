@@ -149,10 +149,10 @@ no `index.html`. Só-leitura (nenhuma correção é aplicada automaticamente).
 
 E então:
 
-5. **Corrigir a causa raiz em `calcular_atendimentos_producao`** (ver
-   Incidente 10/07/2026 acima) — parar de excluir `PRD_DTATEN` da contagem
-   de produção anterior, já que todo uso atual da função é para
-   *adicionar*, nunca *substituir* um dia. Depois, reavaliar se ainda faz
-   sentido remover `/api/conferencia/reenviar`/revisar
-   `/api/pacientes/completar`, ou se a correção da causa raiz já torna as
-   duas rotas seguras de manter. **Em andamento.**
+5. ~~Corrigir a causa raiz em `calcular_atendimentos_producao`~~ — **feito
+   em 10/07/2026**: parou de excluir `PRD_DTATEN` da contagem de produção
+   anterior (commit `a1a5685`). Testado com `gravar=False` contra produção
+   real: agora continua corretamente do total real em vez de recalcular do
+   zero. **Decisão do usuário:** manter `/api/pacientes/completar` e
+   `/api/conferencia/reenviar` ativas — a causa raiz que motivava
+   aposentá-las não existe mais.
