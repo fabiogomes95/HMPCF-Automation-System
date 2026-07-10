@@ -72,6 +72,64 @@ atendimento legítimo, ex: turno diferente, ou erro de digitação em duplicado
 por dois profissionais). Ver lista completa (com paciente) na saída de
 `python bpa/fechamento_mes.py 202606` ou na aba "🏁 Fechamento de Mês".
 
+## Incidente — S_PRD zerado e reconstruído (10/07/2026)
+
+Toda a tabela `S_PRD` (não só 06/2026 — a competência inteira que existia)
+foi apagada intencionalmente pelo usuário no meio da revisão do Achado 3.
+Não havia outra competência em produção além de 06/2026, e a decisão foi
+reconstruir do zero em vez de restaurar backup (`C:\BPA\backups\BPAMAG_antes_fix_colisao_20260709_184507.fbk`,
+disponível mas traria de volta a colisão do Achado 2, já corrigida).
+
+**Reconstrução** (`bpa/auditoria_mensal/reconstruir_producao_202606.py`):
+lê os 10 arquivos brutos de digitação (`DD-MM-2026.txt`) em `C:\BPA\bpa_lotes`
+em ordem cronológica e grava direto em `S_PRD` via
+`bpa_gerador.calcular_atendimentos_producao`, reaproveitando o
+deduplicador já existente em `ler_arquivo_lote` (descarta CPF repetido em
+*sequência* dentro do bloco — digitação dupla por engano; mantém CPF
+repetido em posições diferentes — paciente atendido de novo de verdade,
+confirmado como regra correta pelo usuário). 4.786 atendimentos gravados,
+0 colisão, 0 "não encontrado".
+
+**Gap remanescente:** os atendimentos lançados originalmente via
+`/api/pacientes/completar`/`/api/conferencia/reenviar` (nunca passam pela
+digitação) ficaram de fora dessa reconstrução por definição — 8 registros
+(`bpa/auditoria_mensal/reinserir_achado1_pos_reconstrucao.py`, achados
+comparando arquivo exportado × banco pós-reconstrução, direção inversa do
+Achado 1).
+
+**Dois erros cometidos durante a correção desse gap, ambos identificados
+pela própria checagem de "Fechamento de Mês" rodada a cada etapa e
+corrigidos na hora:**
+
+1. Inserir os 8 registros via `calcular_atendimentos_producao` recriou o
+   bug do Achado 2 — a função exclui o dia inteiro (`PRD_DTATEN`) da
+   contagem de produção já existente, pensado para o caso de *regerar* um
+   dia (`/api/gerar`), mas usado aqui pra *acrescentar* um registro a um
+   dia que já tinha produção da reconstrução principal — recalculou do
+   zero e colidiu. Corrigido de novo com `fix_colisoes.py --aplicar`
+   (6 slots, 8 linhas realocadas).
+2. Um dos 8 (paciente com nome preservado localmente) já tinha sido
+   coberto pela reconstrução principal — o `CNS` que identificava o
+   registro no arquivo exportado antigo não existe mais na `CADCNS` (só
+   ficou o CPF), então a comparação por `CNS` não reconheceu que já
+   estava lá e inseriu de novo, duplicando 1 atendimento médico + 1
+   enfermeiro. Achado comparando o total final (4.794) contra o total
+   original pré-incidente (4.792) e confirmado cruzando por CPF contra o
+   arquivo bruto de digitação. As 2 linhas duplicadas foram apagadas.
+
+**Estado final, validado via `python bpa/fechamento_mes.py 202606`:**
+4.792 linhas (igual ao total antes do incidente), export OK, colisão OK,
+checksum OK. Duplicidade: 64 grupos — mesmo número de antes do incidente
+(Achado 3, pré-existente, não afetado pela reconstrução).
+
+**Causa raiz identificada (ainda não corrigida no código):**
+`calcular_atendimentos_producao` sempre exclui `PRD_DTATEN` da contagem de
+produção anterior — correto só quando a intenção é *substituir* a
+produção do dia; incorreto quando a intenção é *adicionar* (todo uso atual
+da função via `/api/pacientes/completar`/`/api/conferencia/reenviar` é
+sempre para adicionar, nunca substituir). É a mesma causa raiz do Achado 2
+original. Ver pendência 5 abaixo.
+
 ## Pendências (fechamento de mês)
 
 ~~Criar uma rota/aba única no Flask ("Fechamento de Mês") que roda
@@ -91,7 +149,10 @@ no `index.html`. Só-leitura (nenhuma correção é aplicada automaticamente).
 
 E então:
 
-5. **Remover/aposentar `/api/conferencia/reenviar`** (`app.py`) — é a causa
-   raiz da colisão. Revisar também `/api/pacientes/completar` (mesma
-   `calcular_atendimentos_producao` por trás) — decidir se vira parte do
-   fechamento de mês em vez de correção pontual no meio do mês.
+5. **Corrigir a causa raiz em `calcular_atendimentos_producao`** (ver
+   Incidente 10/07/2026 acima) — parar de excluir `PRD_DTATEN` da contagem
+   de produção anterior, já que todo uso atual da função é para
+   *adicionar*, nunca *substituir* um dia. Depois, reavaliar se ainda faz
+   sentido remover `/api/conferencia/reenviar`/revisar
+   `/api/pacientes/completar`, ou se a correção da causa raiz já torna as
+   duas rotas seguras de manter. **Em andamento.**
