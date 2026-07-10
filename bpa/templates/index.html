@@ -120,7 +120,7 @@
       <!-- 2. Busca de paciente -->
       <div class="card-info shadow-sm">
         <input type="text" id="input_busca" class="form-control form-control-lg"
-               placeholder="🔍 Pesquisar por nome, CPF ou SUS..."
+               placeholder="🔍 Pesquisar por nome ou CPF..."
                oninput="pesquisar()" autocomplete="off" disabled>
         <div id="status_msg" class="mt-2 text-success"></div>
         <div id="lista_resultados" class="mt-2"></div>
@@ -549,7 +549,6 @@ function renderResultados(lista) {
   const div = document.getElementById("lista_resultados");
   if (!lista.length) { div.innerHTML=`<div class="text-muted text-center py-3">Nenhum paciente encontrado.</div>`; return; }
   div.innerHTML = lista.map(p => {
-    const susFmt = p.sus?p.sus.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/,"$1 $2 $3 $4"):"—";
     const cpfFmt = p.cpf?p.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,"$1.$2.$3-$4"):"—";
     const semCpf = !p.cpf;
     const cls    = semCpf?"result-item sem-cpf":"result-item";
@@ -561,7 +560,6 @@ function renderResultados(lista) {
                 <span class="fw-bold text-primary">${p.nome}</span><br>
                 <small class="text-muted">
                   DN: ${p.dtnasc||"—"} &nbsp;|&nbsp;
-                  SUS: <span class="doc-tag">${susFmt}</span> &nbsp;|&nbsp;
                   CPF: <span class="doc-tag">${cpfFmt}</span>
                 </small>
               </div>${badge}
