@@ -76,6 +76,9 @@
     <li class="nav-item">
       <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-prontuario">🔍 Buscar Prontuário</button>
     </li>
+    <li class="nav-item">
+      <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-fechamento">🏁 Fechamento de Mês</button>
+    </li>
   </ul>
 
   <div class="tab-content">
@@ -393,6 +396,30 @@
         <div id="pront_resultados"></div>
       </div>
     </div><!-- /tab-prontuario -->
+
+    <!-- ══════════════════════ ABA FECHAMENTO DE MÊS ══════════════════════════ -->
+    <div class="tab-pane fade" id="tab-fechamento">
+      <div class="card-info shadow-sm">
+        <h6 class="fw-bold mb-1">4 checagens automáticas antes de fechar a competência</h6>
+        <p class="text-muted small mb-3">
+          Roda, só-leitura (nada é gravado): (1) <code>S_PRD</code> x arquivo já
+          exportado, (2) colisão de folha/sequência, (3) duplicidade
+          paciente+procedimento+data (só reporta — exige revisão humana) e
+          (4) checksum/contagem de linha do header de cada arquivo exportado.
+        </p>
+        <div class="row g-2 align-items-end mb-3">
+          <div class="col-sm-4">
+            <label class="form-label fw-bold mb-1">📅 Competência</label>
+            <input type="month" id="fch_competencia" class="form-control">
+          </div>
+          <div class="col-sm-4">
+            <button class="btn btn-primary fw-bold w-100" id="btn_fechamento" onclick="fechamentoRodar()">🔍 Rodar checagens</button>
+          </div>
+        </div>
+        <div id="fch_resumo" class="alert mb-3" style="display:none"></div>
+        <div id="fch_resultado"></div>
+      </div>
+    </div><!-- /tab-fechamento -->
 
   </div><!-- /tab-content -->
 </div>
@@ -1262,6 +1289,113 @@ function prontRenderResultados(pacientes) {
         ${linhas ? `<div class="mt-2">${linhas}</div>` : ""}
       </div>`;
   }).join("");
+}
+
+// ══════════════════════════════════════════════
+//  FECHAMENTO DE MÊS (4 checagens, só-leitura)
+// ══════════════════════════════════════════════
+(function initCompetenciaFechamento() {
+  const hoje = new Date();
+  const aaaa = hoje.getFullYear();
+  const mm   = String(hoje.getMonth() + 1).padStart(2, "0");
+  document.getElementById("fch_competencia").value = `${aaaa}-${mm}`;
+})();
+
+function _fchBadge(ok) {
+  return ok ? `<span class="badge bg-success">OK</span>` : `<span class="badge bg-warning text-dark">PENDÊNCIA</span>`;
+}
+
+async function fechamentoRodar() {
+  const mes = document.getElementById("fch_competencia").value;
+  const btn = document.getElementById("btn_fechamento");
+  const resumo = document.getElementById("fch_resumo");
+  const out = document.getElementById("fch_resultado");
+
+  if (!mes) return alert("Escolha a competência.");
+  const competencia = mes.replace("-", "");
+
+  btn.disabled = true;
+  btn.textContent = "⏳ Rodando...";
+  resumo.style.display = "none";
+  out.innerHTML = "";
+
+  let r;
+  try {
+    r = await fetch(`/api/fechamento?competencia=${competencia}`).then(r => r.json());
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "🔍 Rodar checagens";
+    return alert("Falha de conexão: " + e);
+  }
+  btn.disabled = false;
+  btn.textContent = "🔍 Rodar checagens";
+
+  if (!r.sucesso) {
+    resumo.className = "alert alert-danger mb-3";
+    resumo.textContent = "❌ " + r.erro;
+    resumo.style.display = "block";
+    return;
+  }
+
+  resumo.style.display = "block";
+  resumo.className = r.ok ? "alert alert-success mb-3" : "alert alert-warning mb-3";
+  resumo.innerHTML = r.ok
+    ? `✅ Tudo certo pra competência ${mes}`
+    : `⚠️ Há pendência(s) na competência ${mes} — ver detalhe abaixo`;
+
+  const blocos = [];
+
+  // 1. Export
+  const exp = r.export;
+  blocos.push(`<div class="card-info shadow-sm">
+    <div class="d-flex justify-content-between align-items-center">
+      <strong>1. S_PRD x arquivo exportado</strong>${_fchBadge(exp.ok)}
+    </div>
+    ${exp.ok ? "" : `<div class="small mt-2" style="font-family:monospace">` +
+      exp.pendentes.map(p => `❌ ${p.data} (${p.arquivo}) — ${p.categoria} — ${p.paciente}`).join("<br>") +
+      `</div><div class="text-muted small mt-2">Corrigir com <code>auditoria_mensal/patch_lotes.py</code> (generalizar os ALVOS antes).</div>`}
+  </div>`);
+
+  // 2. Colisões
+  const col = r.colisoes;
+  blocos.push(`<div class="card-info shadow-sm">
+    <div class="d-flex justify-content-between align-items-center">
+      <strong>2. Colisão de folha/sequência</strong>${_fchBadge(col.ok)}
+    </div>
+    ${col.ok ? "" : `<div class="small mt-2" style="font-family:monospace">` +
+      col.slots.slice(0, 30).map(s => `❌ cnsmed=${s.cnsmed} folha=${s.folha} seq=${s.seq} (${s.qtd}x)`).join("<br>") +
+      (col.slots.length > 30 ? `<br>… e mais ${col.slots.length - 30} slot(s)` : "") +
+      `</div><div class="text-muted small mt-2">${col.total_registros_extra} registro(s) a realocar — corrigir com <code>auditoria_mensal/fix_colisoes.py --aplicar</code> (backup do banco antes).</div>`}
+  </div>`);
+
+  // 3. Duplicidade
+  const dup = r.duplicidade;
+  blocos.push(`<div class="card-info shadow-sm">
+    <div class="d-flex justify-content-between align-items-center">
+      <strong>3. Duplicidade paciente+procedimento+data</strong>${_fchBadge(dup.ok)}
+    </div>
+    ${dup.ok ? "" : `<div class="small mt-2" style="font-family:monospace">` +
+      dup.duplicados.map(d => `⚠️ ${d.paciente} — proc ${d.pa} — ${d.data} (${d.qtd}x)`).join("<br>") +
+      `</div><div class="text-muted small mt-2">Só reporta — revise manualmente antes de excluir (pode ser atendimento legítimo repetido).</div>`}
+  </div>`);
+
+  // 4. Checksum
+  const chk = r.checksum;
+  blocos.push(`<div class="card-info shadow-sm">
+    <div class="d-flex justify-content-between align-items-center">
+      <strong>4. Checksum/contagem de linha do header</strong>${_fchBadge(chk.ok)}
+    </div>
+    ${chk.ok ? "" : `<div class="small mt-2" style="font-family:monospace">` +
+      chk.divergentes.map(d => {
+        const partes = [];
+        if (d.linhas) partes.push(`linhas: header=${d.linhas.header} real=${d.linhas.real}`);
+        if (d.folhas) partes.push(`folhas: header=${d.folhas.header} real=${d.folhas.real}`);
+        if (d.checksum) partes.push(`checksum: header=${d.checksum.header} real=${d.checksum.real}`);
+        return `❌ ${d.arquivo} — ${partes.join(" · ")}`;
+      }).join("<br>") +
+      `</div>`}
+  </div>`);
+
+  out.innerHTML = blocos.join("");
 }
 </script>
 </body>

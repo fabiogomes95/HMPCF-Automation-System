@@ -35,6 +35,7 @@ if not os.getenv("BPA_LOTES_DIR"):
 
 import bpa_gerador as bpa  # agora vive em bpa/, mesmo diretorio deste arquivo
 import conferencia
+import fechamento_mes
 
 # ── Flask ─────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -450,6 +451,19 @@ def api_conferencia_reenviar():
         return jsonify({"ok": False, "erro": str(e)})
     finally:
         con.close()
+
+
+# ── API — Fechamento de Mês (4 checagens automáticas, só-leitura) ─────────────
+@app.route("/api/fechamento")
+def api_fechamento():
+    competencia = request.args.get("competencia", "").strip()
+    if not re.fullmatch(r"\d{6}", competencia):
+        return jsonify({"sucesso": False, "erro": "Competência inválida (esperado AAAAMM)."})
+    try:
+        resultado = fechamento_mes.rodar(competencia)
+        return jsonify({"sucesso": True, **resultado})
+    except Exception as e:
+        return jsonify({"sucesso": False, "erro": f"Firebird indisponível: {e}"})
 
 
 # ── API — Geração BPA-I ───────────────────────────────────────────────────────
