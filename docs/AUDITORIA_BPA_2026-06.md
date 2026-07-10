@@ -57,19 +57,37 @@ divisão por 1111, + 1111. Validada contra os 20 arquivos já exportados da
 competência (100% de acerto) — é a mesma fórmula já implementada em
 `bpa_gerador._calcular_checksum()`, então o gerador atual está correto.
 
+## Achado 3 — duplicidade paciente+procedimento+data (identificado 10/07/2026, pendente de revisão humana)
+
+A checagem 3 do "Fechamento de Mês" (ver abaixo) rodada contra 06/2026
+acusou **64 grupos** de paciente+procedimento+data com mais de uma linha em
+`S_PRD`. Amostra investigada (`PRD_CNSPAC`+`PRD_PA`+`PRD_DTATEN` fixos):
+as duas linhas têm `PRD_CNSMED` diferentes — dois profissionais diferentes
+(mesmo CBO) atenderam o mesmo paciente, com o mesmo código de procedimento,
+no mesmo dia. Não é "mesma linha duplicada pelo mesmo profissional" (isso
+teria pulado nesta checagem do mesmo jeito, só que com o mesmo `PRD_CNSMED`).
+
+**Status:** não corrigido — exige revisão humana caso a caso (pode ser
+atendimento legítimo, ex: turno diferente, ou erro de digitação em duplicado
+por dois profissionais). Ver lista completa (com paciente) na saída de
+`python bpa/fechamento_mes.py 202606` ou na aba "🏁 Fechamento de Mês".
+
 ## Pendências (fechamento de mês)
 
-Criar uma rota/aba única no Flask ("Fechamento de Mês") que, ao final da
-digitação de cada competência, roda automaticamente:
+~~Criar uma rota/aba única no Flask ("Fechamento de Mês") que roda
+automaticamente as 4 checagens abaixo~~ — **feito em 10/07/2026**:
+`bpa/fechamento_mes.py` + rota `/api/fechamento` + aba "🏁 Fechamento de Mês"
+no `index.html`. Só-leitura (nenhuma correção é aplicada automaticamente).
 
-1. Comparação `S_PRD` × arquivos exportados (Achado 1) — reaproveitar a
-   lógica de `bpa/auditoria_mensal/patch_lotes.py`.
-2. Checagem de colisão de `(PRD_CNSMED, PRD_MVM, PRD_FLH, PRD_SEQ)` —
-   reaproveitar `bpa/auditoria_mensal/fix_colisoes.py`.
-3. Checagem de duplicidade paciente+procedimento+data — só reportar, exige
-   revisão humana antes de qualquer exclusão.
-4. Conferência do checksum/contagem de linha do header de cada arquivo já
-   exportado.
+1. ~~Comparação `S_PRD` × arquivos exportados~~ (Achado 1) — reaproveita a
+   lógica de `bpa/auditoria_mensal/patch_lotes.py`. **OK, feito.**
+2. ~~Checagem de colisão de `(PRD_CNSMED, PRD_MVM, PRD_FLH, PRD_SEQ)`~~ —
+   reaproveita `bpa/auditoria_mensal/fix_colisoes.py`. **OK, feito.**
+3. ~~Checagem de duplicidade paciente+procedimento+data~~ — só reporta, exige
+   revisão humana antes de qualquer exclusão. **OK, feito** (ver Achado 3
+   acima — já rodou e achou 64 casos pendentes de revisão).
+4. ~~Conferência do checksum/contagem de linha do header~~ de cada arquivo já
+   exportado. **OK, feito.**
 
 E então:
 
