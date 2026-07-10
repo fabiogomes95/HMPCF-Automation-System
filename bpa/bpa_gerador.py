@@ -225,18 +225,24 @@ def buscar_paciente_cadcns_live(con, termo: str, limite: int = 30) -> list[dict]
     return resultado
 
 
-def buscar_pacientes_memoria(termo: str, base_pacientes: list[dict], limite: int = 50) -> list[dict]:
-    """Busca por nome, SUS ou CPF na lista já carregada na memória (instantâneo).
+def buscar_pacientes_memoria(
+    termo: str, base_pacientes: list[dict], limite: int = 50, incluir_sus: bool = True,
+) -> list[dict]:
+    """Busca por nome, SUS (opcional) ou CPF na lista já carregada na memória
+    (instantâneo). O documento gravado no lote deve ser sempre o CPF
+    (responsabilidade do chamador).
 
-    A busca aceita SUS para localizar o paciente, mas o documento gravado no
-    lote deve ser sempre o CPF (responsabilidade do chamador).
+    `incluir_sus=False` — usado pela aba Digitação a partir de 10/07/2026
+    (SUS deixado de lado, decisão do usuário): busca só por nome/CPF. A aba
+    "Sem CPF" continua usando `incluir_sus=True` (precisa achar paciente
+    que só tem SUS pra completar o CPF).
     """
     if not termo:
         return base_pacientes[:limite]
     termo = termo.upper().strip()
     resultados = []
     for p in base_pacientes:
-        if termo in p["nome"] or termo in p["sus"] or termo in p["cpf"]:
+        if termo in p["nome"] or termo in p["cpf"] or (incluir_sus and termo in p["sus"]):
             resultados.append(p)
             if len(resultados) == limite:
                 break
