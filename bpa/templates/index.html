@@ -541,7 +541,7 @@ function pesquisar() {
 }
 
 async function _execBusca(q) {
-  const lista = await fetch(`/api/buscar?q=${encodeURIComponent(q)}`).then(r=>r.json());
+  const lista = await fetch(`/api/buscar?q=${encodeURIComponent(q)}&incluir_sus=0`).then(r=>r.json());
   renderResultados(lista);
 }
 

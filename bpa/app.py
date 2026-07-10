@@ -107,9 +107,10 @@ def _nome_mes(m: int, a: int) -> str:
 @app.route("/api/buscar")
 def api_buscar():
     q = request.args.get("q", "").strip()
+    incluir_sus = request.args.get("incluir_sus", "1") != "0"
     if len(q) < 2:
         return jsonify([])
-    return jsonify(bpa.buscar_pacientes_memoria(q, _pacientes, limite=40))
+    return jsonify(bpa.buscar_pacientes_memoria(q, _pacientes, limite=40, incluir_sus=incluir_sus))
 
 
 @app.route("/api/cabecalho", methods=["POST"])
@@ -872,8 +873,15 @@ def api_migracao_stream():
             else:  # "novo"
                 max_id += 1
                 try:
+                    # SUS deixado de lado a partir de 10/07/2026 (decisao do
+                    # usuario) -- cadastro novo migra CPF e todos os outros
+                    # dados normalmente, mas nunca grava o CNS vindo do
+                    # Postgres. O CNS acima (`cns`) continua sendo usado so
+                    # pra achar cadastro EXISTENTE no Firebird e completar o
+                    # CPF nele (branch "atualizar"), nunca para popular um
+                    # cadastro novo.
                     fb_cur.execute(_SQL_INSERT, [
-                        max_id, cns, cpf,
+                        max_id, "", cpf,
                         _texto(nome_r, 30) or "SEM NOME",
                         _dtnasc(dn_r),
                         _sexo(sexo_r),
@@ -892,9 +900,10 @@ def api_migracao_stream():
                     inseridos += 1
                     # Atualiza o cache em memória — sem isso, dois registros do mesmo
                     # paciente no mesmo lote (ex: endereço mudou entre atendimentos)
-                    # seriam inseridos duas vezes no Firebird.
-                    if cns:
-                        por_cns[cns] = (max_id, cpf)
+                    # seriam inseridos duas vezes no Firebird. Cadastro novo não
+                    # grava CNS (ver acima), então só o CPF entra no cache — não
+                    # dá pra indexar por_cns[cns] por um CNS que esse registro
+                    # não tem.
                     cpf_set.add(cpf)
                 except Exception as e:
                     erros += 1
