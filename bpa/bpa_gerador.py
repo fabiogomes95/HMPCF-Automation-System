@@ -622,6 +622,15 @@ def calcular_atendimentos_producao(
     `contar_producao_real`) — não colide com o que já foi importado antes,
     não precisa reimportar arquivo no BPA Magnético.
 
+    NÃO exclui `data_aten` da contagem anterior — diferente de `/api/gerar`
+    (que regera o dia inteiro do zero e por isso precisa excluir o próprio
+    dia pra não se contar em dobro), esta função sempre ACRESCENTA
+    atendimento(s) a um dia que pode já ter produção (do próprio dia sendo
+    complementado). Excluir o dia aqui foi a causa raiz da colisão de
+    folha/sequência achada na auditoria de 06/2026 (achado 2) e reproduzida
+    de novo em 10/07/2026 durante a reconstrução de emergência de S_PRD —
+    ver `docs/AUDITORIA_BPA_2026-06.md`.
+
     Retorna [{"folha": int, "seq": int}, ...] na mesma ordem de `pacientes`.
     Quem chama é responsável por dar `con.commit()` (ou rollback em caso de
     erro) depois de chamar esta função — não comita sozinha, pra permitir
@@ -630,7 +639,7 @@ def calcular_atendimentos_producao(
     competencia = data_aten[:6]
     proc = PROCEDIMENTOS[categoria]["codigo"]
     cbo  = PROCEDIMENTOS[categoria]["cbo"]
-    producao_anterior = contar_producao_real(con, cns_prof, competencia, excluir_data=data_aten)
+    producao_anterior = contar_producao_real(con, cns_prof, competencia)
     folha = producao_anterior // 99 + 1
     seq   = producao_anterior % 99 + 1
 
