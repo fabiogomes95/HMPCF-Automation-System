@@ -22,9 +22,13 @@ Na competência 06/2026, 6 atendimentos ficaram nessa situação (2 dias
 afetados). Lista completa com identificação de paciente está no `.md` local
 (não neste repositório).
 
-**Status:** identificado, não aplicado ainda — decisão foi esperar o
-fechamento da competência (ver pendências abaixo) em vez de aplicar um
-patch pontual no meio do mês.
+**Status:** corrigido em 10/07/2026 — aplicado `bpa/auditoria_mensal/patch_lotes.py
+--aplicar` (backup dos 4 arquivos afetados antes, em
+`C:\BPA\bpa_lotes\backup_antes_patch_20260710_161403\`). As 6 linhas foram
+inseridas em `BPA_MEDICOS_16062026.txt`, `BPA_ENFERMEIROS_16062026.txt`,
+`BPA_MEDICOS_21062026.txt` (3 linhas) e `BPA_ENFERMEIROS_21062026.txt`,
+cabeçalho recalculado em cada arquivo. Confirmado depois: dry-run do script
+não acusa mais pendência.
 
 ## Achado 2 — colisão de folha/sequência (corrigido)
 
