@@ -639,15 +639,20 @@ def _competencias_disponiveis() -> list[dict]:
 
 
 def _pg_connect():
-    conn = psycopg2.connect(
-        host    =os.getenv("POSTGRES_HOST",     "localhost"),
-        port    =int(os.getenv("POSTGRES_PORT", "5432")),
-        dbname  =os.getenv("POSTGRES_DB",       "hmpcf"),
-        user    =os.getenv("POSTGRES_USER",     "postgres"),
-        password=os.getenv("POSTGRES_PASSWORD", ""),
-        connect_timeout=5,
-        options ="-c client_encoding=LATIN1",
-    )
+    try:
+        conn = psycopg2.connect(
+            host    =os.getenv("POSTGRES_HOST",     "localhost"),
+            port    =int(os.getenv("POSTGRES_PORT", "5432")),
+            dbname  =os.getenv("POSTGRES_DB",       "hmpcf"),
+            user    =os.getenv("POSTGRES_USER",     "postgres"),
+            password=os.getenv("POSTGRES_PASSWORD", ""),
+            connect_timeout=5,
+            options ="-c client_encoding=LATIN1",
+        )
+    except UnicodeDecodeError as e:
+        # A mensagem de erro do libpq vem em Latin1 (acentos do servidor);
+        # psycopg2 tenta decodificar como UTF-8 e quebra, escondendo o erro real.
+        raise psycopg2.OperationalError(e.object.decode("latin1", errors="replace")) from None
     return conn
 
 
