@@ -122,6 +122,45 @@ Sem WinRM, peça o IP ao usuário (`ipconfig` no próprio servidor remoto).
 
 ---
 
+### ⚠️ Erro `'utf-8' codec can't decode byte 0xe7 ... invalid continuation byte`
+
+Outro bug real (2026-08-03): a aba Migração dava esse erro ao tentar conectar
+no Postgres. **Não é um problema de encoding em si** — é a mensagem real do
+libpq vindo em português (Latin1, com acento) e o psycopg2 tentando decodificar
+como UTF-8 antes de repassar a exceção, o que quebra e esconde o erro
+verdadeiro por trás de um `UnicodeDecodeError` ilegível.
+
+`_pg_connect()` em `bpa/app.py` já foi corrigida para capturar esse
+`UnicodeDecodeError` e decodificar a mensagem como Latin1 antes de propagar —
+então, se isso acontecer de novo (já com essa correção no código), o erro que
+aparece na tela já vai vir legível, tipo:
+
+```
+FATAL:  autenticação do tipo senha falhou para o usuário "postgres"
+```
+
+Se ainda assim o erro vier ilegível (código sem a correção, ou erro em outro
+lugar que não passa por `_pg_connect`), rode isto pra ver a mensagem real
+antes do psycopg2 quebrar o decode:
+
+```python
+import psycopg2
+try:
+    psycopg2.connect(host="...", port=5432, dbname="hmpcf", user="postgres",
+                      password="...", connect_timeout=5,
+                      options="-c client_encoding=LATIN1")
+except UnicodeDecodeError as e:
+    print(e.object.decode("latin1", errors="replace"))
+```
+
+No caso real, a mensagem decodificada foi "autenticação do tipo senha falhou
+para o usuário postgres" — ou seja, **senha errada** em `POSTGRES_PASSWORD`
+(`bpa/.env`), nada de rede/firewall. A correção foi simplesmente atualizar a
+senha no `.env` pra bater com a senha atual do usuário `postgres` no servidor
+(peça ao usuário, não adivinhe/reuse uma senha antiga).
+
+---
+
 ## 5. Testar as duas conexões antes de subir o app
 
 **Postgres** (não hardcode a senha no comando — leia do `.env` em runtime):
