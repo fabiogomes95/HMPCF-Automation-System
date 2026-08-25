@@ -106,7 +106,8 @@ before or while processing the request.
 
 **Se esse erro aparecer, é isso.** A correção é descobrir o IPv4 real do
 servidor e usar ele direto em `POSTGRES_HOST`. Da última vez era
-`192.168.1.13` (rede do hospital, 2026-07) — **confirme, pode ter mudado**.
+`192.168.1.29` (rede do hospital, 2026-08) — já mudou uma vez antes
+(era `192.168.1.13` em 2026-07) — **confirme, pode ter mudado de novo**.
 
 Se você tiver WinRM configurado com o servidor remoto (ver
 `docs/CONFIGURAR_WINRM_INSTRUCOES.txt`), dá pra confirmar assim:
@@ -159,6 +160,13 @@ para o usuário postgres" — ou seja, **senha errada** em `POSTGRES_PASSWORD`
 senha no `.env` pra bater com a senha atual do usuário `postgres` no servidor
 (peça ao usuário, não adivinhe/reuse uma senha antiga).
 
+**Atualização (2026-08-03):** a senha do usuário `postgres` no servidor
+mudou de novo — trocada para `hmpcf@2025` em `bpa/.env`. Já testado com
+`psycopg2.connect(...)` (script do passo 5) e confirmado `PostgreSQL 16.14`
+respondendo. Se a migração voltar a falhar com o mesmo erro de decode, é
+sinal de que a senha mudou outra vez — não é a mesma senha do `dashboard/.env`
+(Firebird), então não reusar uma nem outra por engano.
+
 ---
 
 ## 5. Testar as duas conexões antes de subir o app
@@ -186,13 +194,17 @@ print("OK:", conn.cursor().execute("SELECT version()") or "conectado")
 conn.close()
 ```
 
-**Firebird local** — de dentro de `dashboard/`, com o venv:
+**Firebird local** — o módulo `bpa_gerador.py` fica em `bpa/`, não em
+`dashboard/` (o venv é compartilhado, mas o código não):
 
 ```python
-import sys; sys.path.insert(0, r"C:\HMPCF-Automation-System\dashboard")
+import sys; sys.path.insert(0, r"C:\HMPCF-Automation-System\bpa")
 import bpa_gerador as bpa
 con = bpa.conectar()
-print("OK, CADCNS tem", con.cursor().execute("SELECT COUNT(*) FROM CADCNS") or "?", "registros")
+cur = con.cursor()
+cur.execute("SELECT COUNT(*) FROM CADCNS")
+print("OK, CADCNS tem", cur.fetchone()[0], "registros")
+con.close()
 ```
 
 Se o Firebird der erro de UDF (`Use of UDF library ... not allowed`), evite
