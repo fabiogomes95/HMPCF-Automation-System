@@ -499,11 +499,10 @@ def _calcular_idade(nasc_str: str, ref: date) -> int:
 
 
 def _linha_detalhe(pac, proc, cbo, cns_prof, data_aten, competencia, folha, seq) -> str:
-    """Layout BPA-I oficial (351 chars) — ver docstring do módulo."""
+    """Layout BPA-I oficial (350 chars) — ver docstring do módulo."""
     ref   = date(int(data_aten[:4]), int(data_aten[4:6]), int(data_aten[6:8]))
     idade = _calcular_idade(pac["nasc"], ref)
     cpf   = pac["cpf"].zfill(11) if pac["cpf"] else " " * 11
-    
     return (
         "03"                                       # 002 | prd-ident
         + CNES.zfill(7)                             # 007 | prd-cnes
@@ -543,9 +542,8 @@ def _linha_detalhe(pac, proc, cbo, cns_prof, data_aten, competencia, folha, seq)
         + pac["email"]                                 # 040 | prd_email_pcnte
         + " " * 10                                   # 010 | prd_ine
         + cpf                                        # 011 | prd_cpf_pcnte
-        + "n"                                        # 001 | prd_situacao_rua
-        + "n"                                        # 001 | prd_possui_cpf_cns
-    )
+        + " "                                        # 001 | prd_situacao_rua
+    )                                              # Total: 350 chars
 
 
 def contar_producao_real(con, cns_prof: str, competencia: str, excluir_data: str | None = None) -> int:
@@ -617,7 +615,7 @@ def montar_row_prd(pac, proc, cbo, cns_prof, data_aten, competencia, folha, seq)
         pac["raca"], "   ", "   ", None, etnia, pac["nac"], "0", "", "", "",
         pac["lograd"], pac["cep"], pac["end"], pac["compl"], pac["num"], pac["bairro"],
         pac["ddd"], pac["tel"], pac["email"], "", None,
-        pac["cpf"].zfill(11) if pac["cpf"] else "", "n",
+        pac["cpf"].zfill(11) if pac["cpf"] else "", "",
     ]
 
 
