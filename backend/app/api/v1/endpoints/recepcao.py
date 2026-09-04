@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Query
 
-from app.api.deps import DBSession
+from app.api.deps import CurrentUser, DBSession
 from app.schemas.common import PaginatedResponse
 from app.schemas.recepcao import (
     PacienteAgrupadoResponse,
@@ -27,6 +27,7 @@ def _svc(session: DBSession) -> RecepcaoService:
 )
 async def listar_atendimentos(
     session: DBSession,
+    usuario: CurrentUser,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     q: Optional[str] = Query(None, description="Busca por nome ou CPF do paciente"),
@@ -41,6 +42,7 @@ async def listar_atendimentos(
 )
 async def buscar_pacientes_agrupados(
     session: DBSession,
+    usuario: CurrentUser,
     q: str = Query(..., min_length=3, description="Busca por nome, CPF ou CNS"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -55,6 +57,7 @@ async def buscar_pacientes_agrupados(
 )
 async def atendimentos_recentes(
     session: DBSession,
+    usuario: CurrentUser,
     page_size: int = Query(10, ge=1, le=50),
 ) -> PaginatedResponse[RecepcaoListResponse]:
     return await _svc(session).listar_recentes(page=1, page_size=page_size)
@@ -68,6 +71,7 @@ async def atendimentos_recentes(
 async def atendimentos_do_paciente(
     paciente_id: int,
     session: DBSession,
+    usuario: CurrentUser,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ) -> PaginatedResponse[RecepcaoListResponse]:
@@ -84,6 +88,7 @@ async def atendimentos_do_paciente(
 async def obter_atendimento(
     atendimento_id: int,
     session: DBSession,
+    usuario: CurrentUser,
 ) -> RecepcaoResponse:
     return await _svc(session).obter(atendimento_id)
 
@@ -97,6 +102,7 @@ async def obter_atendimento(
 async def criar_atendimento(
     data: RecepcaoCreate,
     session: DBSession,
+    usuario: CurrentUser,
 ) -> RecepcaoResponse:
     return await _svc(session).criar(data)
 
@@ -110,6 +116,7 @@ async def atualizar_atendimento(
     atendimento_id: int,
     data: RecepcaoUpdate,
     session: DBSession,
+    usuario: CurrentUser,
 ) -> RecepcaoResponse:
     return await _svc(session).atualizar(atendimento_id, data)
 
@@ -122,5 +129,6 @@ async def atualizar_atendimento(
 async def remover_atendimento(
     atendimento_id: int,
     session: DBSession,
+    usuario: CurrentUser,
 ) -> None:
     await _svc(session).remover(atendimento_id)
