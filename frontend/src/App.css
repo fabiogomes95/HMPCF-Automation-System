@@ -40,6 +40,10 @@
   border-color: #1d4ed8;
 }
 
+.app-nav-sair {
+  margin-left: auto;
+}
+
 @media print {
   .app-nav { display: none !important; }
 }
