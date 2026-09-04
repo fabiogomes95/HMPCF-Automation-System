@@ -13,8 +13,10 @@ from app.core.config import settings
 from app.core.exceptions import (
     BusinessRuleError,
     ConflictError,
+    ForbiddenError,
     HMPCFError,
     NotFoundError,
+    UnauthorizedError,
     ValidationError,
 )
 from app.database.session import engine
@@ -53,6 +55,16 @@ app.include_router(v1_router, prefix="/api/v1")
 
 
 # ── Exception handlers ────────────────────────────────────────────────────────
+
+@app.exception_handler(UnauthorizedError)
+async def _unauthorized(request, exc: UnauthorizedError):
+    return JSONResponse(status_code=401, content={"error": exc.code, "message": exc.message})
+
+
+@app.exception_handler(ForbiddenError)
+async def _forbidden(request, exc: ForbiddenError):
+    return JSONResponse(status_code=403, content={"error": exc.code, "message": exc.message})
+
 
 @app.exception_handler(NotFoundError)
 async def _not_found(request, exc: NotFoundError):
