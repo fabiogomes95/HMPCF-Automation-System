@@ -1,7 +1,7 @@
 # Auditoria mensal — scripts de referência
 
 Scripts usados na auditoria da competência 06/2026 (ver
-`docs/AUDITORIA_BPA_2026-06.md`). Servem de base para a futura rota/aba de
+`docs/historico/AUDITORIA_BPA_2026-06.md`). Servem de base para a futura rota/aba de
 "Fechamento de Mês" no Flask — ainda não estão ligados ao `app.py`.
 
 - `fix_colisoes.py` — corrige `(PRD_CNSMED, PRD_MVM, PRD_FLH, PRD_SEQ)`
@@ -16,7 +16,7 @@ Scripts usados na auditoria da competência 06/2026 (ver
   a partir dos arquivos brutos de digitação (usado em 10/07/2026 depois de
   `S_PRD` ter sido zerado por completo). `ARQUIVOS` está hardcoded pros 10
   dias da competência 06/2026 — generalizar antes de reusar. Rode com
-  `--aplicar`; sem a flag é dry-run. Ver `docs/AUDITORIA_BPA_2026-06.md`
+  `--aplicar`; sem a flag é dry-run. Ver `docs/historico/AUDITORIA_BPA_2026-06.md`
   ("Incidente — S_PRD zerado e reconstruído").
 - `reinserir_achado1_pos_reconstrucao.py` — companheiro do script acima:
   depois de reconstruir a partir da digitação, acha e reinsere (com folha/
