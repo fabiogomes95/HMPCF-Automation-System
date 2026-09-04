@@ -3,7 +3,25 @@ import axios from "axios";
 const api = axios.create({
   baseURL: "/api/v1",
   timeout: 15000,
+  withCredentials: true, // envia/recebe o cookie de sessão (ver services/auth.js)
 });
+
+// App.jsx registra aqui o que fazer quando qualquer chamada volta 401
+// (sessão ausente/expirada) — evita cada tela ter que checar isso na mão.
+let _onUnauthorized = null;
+export function setOnUnauthorized(fn) {
+  _onUnauthorized = fn;
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && _onUnauthorized) {
+      _onUnauthorized();
+    }
+    return Promise.reject(error);
+  }
+);
 
 // DD/MM/YYYY + HH:MM → YYYY-MM-DDTHH:MM:00 (ISO para o backend)
 function toISODatetime(dataBR, hora) {
