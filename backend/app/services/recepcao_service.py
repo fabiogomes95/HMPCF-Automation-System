@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import NotFoundError
 from app.models.recepcao_atendimento import RecepcaoAtendimento
+from app.models.usuario import Usuario
 from app.repositories.paciente_repository import PacienteRepository
 from app.repositories.recepcao_repository import RecepcaoRepository
 from app.schemas.common import PaginatedResponse
@@ -15,6 +16,7 @@ from app.schemas.recepcao import (
     RecepcaoResponse,
     RecepcaoUpdate,
 )
+from app.services.auditoria_service import AuditoriaService
 
 
 class RecepcaoService:
@@ -23,10 +25,12 @@ class RecepcaoService:
     Sem automação clínica — apenas armazenamento e consulta.
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, usuario: Optional[Usuario] = None) -> None:
         self.session = session
         self._repo = RecepcaoRepository(session)
         self._paciente_repo = PacienteRepository(session)
+        self._usuario = usuario
+        self._auditoria = AuditoriaService(session)
 
     # ── Consultas ──────────────────────────────────────────────────────────────
 
@@ -145,6 +149,7 @@ class RecepcaoService:
 
         atendimento = RecepcaoAtendimento(**dump)
         atendimento = await self._repo.add_and_load(atendimento)
+        await self._auditoria.registrar(self._usuario, "criar", "atendimento", atendimento.id)
         return RecepcaoResponse.model_validate(atendimento)
 
     async def atualizar(
@@ -165,6 +170,10 @@ class RecepcaoService:
 
         # Recarrega com paciente após flush
         atendimento = await self._repo.get_by_id(atendimento_id)
+        await self._auditoria.registrar(
+            self._usuario, "atualizar", "atendimento", atendimento_id,
+            campos_alterados=list(update_data.keys()),
+        )
         return RecepcaoResponse.model_validate(atendimento)
 
     async def remover(self, atendimento_id: int) -> None:
@@ -172,3 +181,4 @@ class RecepcaoService:
         if atendimento is None:
             raise NotFoundError("Atendimento", atendimento_id)
         await self._repo.delete(atendimento)
+        await self._auditoria.registrar(self._usuario, "remover", "atendimento", atendimento_id)

@@ -5,9 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models.paciente import Paciente
+from app.models.usuario import Usuario
 from app.repositories.paciente_repository import PacienteRepository
 from app.schemas.common import PaginatedResponse
 from app.schemas.paciente import PacienteCreate, PacienteResponse, PacienteUpdate
+from app.services.auditoria_service import AuditoriaService
 
 
 class PacienteService:
@@ -17,9 +19,11 @@ class PacienteService:
     Nunca lança HTTPException — apenas exceções de domínio (HMPCFError).
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, usuario: Optional[Usuario] = None) -> None:
         self.session = session
         self._repo = PacienteRepository(session)
+        self._usuario = usuario
+        self._auditoria = AuditoriaService(session)
 
     # ── Leitura ────────────────────────────────────────────────────────────────
 
@@ -79,6 +83,7 @@ class PacienteService:
 
         paciente = Paciente(**data.model_dump())
         paciente = await self._repo.add(paciente)
+        await self._auditoria.registrar(self._usuario, "criar", "paciente", paciente.id)
         return PacienteResponse.model_validate(paciente)
 
     async def atualizar(self, paciente_id: int, data: PacienteUpdate) -> PacienteResponse:
@@ -87,11 +92,16 @@ class PacienteService:
         if paciente is None:
             raise NotFoundError("Paciente", paciente_id)
 
-        for field, value in data.model_dump(exclude_unset=True).items():
+        update_data = data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
             setattr(paciente, field, value)
 
         await self.session.flush()
         await self.session.refresh(paciente)
+        await self._auditoria.registrar(
+            self._usuario, "atualizar", "paciente", paciente_id,
+            campos_alterados=list(update_data.keys()),
+        )
         return PacienteResponse.model_validate(paciente)
 
     async def remover(self, paciente_id: int) -> None:
@@ -99,3 +109,4 @@ class PacienteService:
         if paciente is None:
             raise NotFoundError("Paciente", paciente_id)
         await self._repo.delete(paciente)
+        await self._auditoria.registrar(self._usuario, "remover", "paciente", paciente_id)
