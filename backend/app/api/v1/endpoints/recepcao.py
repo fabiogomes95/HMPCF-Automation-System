@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Query
 
 from app.api.deps import CurrentUser, DBSession
+from app.models.usuario import Usuario
 from app.schemas.common import PaginatedResponse
 from app.schemas.recepcao import (
     PacienteAgrupadoResponse,
@@ -16,8 +17,8 @@ from app.services.recepcao_service import RecepcaoService
 router = APIRouter()
 
 
-def _svc(session: DBSession) -> RecepcaoService:
-    return RecepcaoService(session)
+def _svc(session: DBSession, usuario: Usuario) -> RecepcaoService:
+    return RecepcaoService(session, usuario)
 
 
 @router.get(
@@ -32,7 +33,7 @@ async def listar_atendimentos(
     page_size: int = Query(20, ge=1, le=100),
     q: Optional[str] = Query(None, description="Busca por nome ou CPF do paciente"),
 ) -> PaginatedResponse[RecepcaoListResponse]:
-    return await _svc(session).listar(page=page, page_size=page_size, q=q)
+    return await _svc(session, usuario).listar(page=page, page_size=page_size, q=q)
 
 
 @router.get(
@@ -47,7 +48,7 @@ async def buscar_pacientes_agrupados(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ) -> PaginatedResponse[PacienteAgrupadoResponse]:
-    return await _svc(session).listar_agrupado(page=page, page_size=page_size, q=q)
+    return await _svc(session, usuario).listar_agrupado(page=page, page_size=page_size, q=q)
 
 
 @router.get(
@@ -60,7 +61,7 @@ async def atendimentos_recentes(
     usuario: CurrentUser,
     page_size: int = Query(10, ge=1, le=50),
 ) -> PaginatedResponse[RecepcaoListResponse]:
-    return await _svc(session).listar_recentes(page=1, page_size=page_size)
+    return await _svc(session, usuario).listar_recentes(page=1, page_size=page_size)
 
 
 @router.get(
@@ -75,7 +76,7 @@ async def atendimentos_do_paciente(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ) -> PaginatedResponse[RecepcaoListResponse]:
-    return await _svc(session).listar_por_paciente(
+    return await _svc(session, usuario).listar_por_paciente(
         paciente_id=paciente_id, page=page, page_size=page_size
     )
 
@@ -90,7 +91,7 @@ async def obter_atendimento(
     session: DBSession,
     usuario: CurrentUser,
 ) -> RecepcaoResponse:
-    return await _svc(session).obter(atendimento_id)
+    return await _svc(session, usuario).obter(atendimento_id)
 
 
 @router.post(
@@ -104,7 +105,7 @@ async def criar_atendimento(
     session: DBSession,
     usuario: CurrentUser,
 ) -> RecepcaoResponse:
-    return await _svc(session).criar(data)
+    return await _svc(session, usuario).criar(data)
 
 
 @router.put(
@@ -118,7 +119,7 @@ async def atualizar_atendimento(
     session: DBSession,
     usuario: CurrentUser,
 ) -> RecepcaoResponse:
-    return await _svc(session).atualizar(atendimento_id, data)
+    return await _svc(session, usuario).atualizar(atendimento_id, data)
 
 
 @router.delete(
@@ -131,4 +132,4 @@ async def remover_atendimento(
     session: DBSession,
     usuario: CurrentUser,
 ) -> None:
-    await _svc(session).remover(atendimento_id)
+    await _svc(session, usuario).remover(atendimento_id)
