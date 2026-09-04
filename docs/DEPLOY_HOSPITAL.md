@@ -3,7 +3,7 @@
 **Sistema:** HMPCF — Hospital Municipal Pres. Café Filho  
 **Ambiente:** Windows 10/11 — PC da Recepção — Uso 24h/dia — Rede LAN interna  
 **Stack:** FastAPI + PostgreSQL 16 + React/Vite (build estático)  
-**Sem Docker. Sem SQLite no novo sistema. Sem autenticação por enquanto.**
+**Sem Docker. Sem SQLite no novo sistema.**
 
 ---
 
@@ -510,17 +510,63 @@ INFO:     Uvicorn running on http://0.0.0.0:8001
 
 ---
 
-### 6.4 Testar o backend
+### 6.4 Criar as contas de acesso (uma vez só, por instalação)
+
+Desde 04/09/2026, `/api/v1/*` exige login — sem sessão válida,
+qualquer chamada volta `401`. As tabelas `usuarios`/`sessoes` são criadas
+por um script standalone (o projeto ainda não usa Alembic):
+
+```powershell
+cd C:\HMPCF\backend
+.venv\Scripts\python scripts\criar_tabelas_auth.py
+# OK: tabelas 'usuarios' e 'sessoes' garantidas (criadas agora ou já existentes).
+```
+
+Depois, criar as contas de papel (uma por área — não é login por pessoa
+nesta versão). A senha é digitada no prompt (nunca em argumento de linha
+de comando):
+
+```powershell
+.venv\Scripts\python scripts\gerenciar_usuarios.py criar --username recepcao    --role recepcao
+.venv\Scripts\python scripts\gerenciar_usuarios.py criar --username coordenacao --role coordenacao
+.venv\Scripts\python scripts\gerenciar_usuarios.py criar --username bpa         --role bpa
+```
+
+> `coordenacao` e `bpa` já ficam prontas no banco pra quando o login
+> chegar no dashboard/BPA (próxima etapa) — na recepção (`frontend/`),
+> por enquanto, só a conta `recepcao` é usada de fato.
+
+Pra trocar senha depois (sem precisar redeploy) ou conferir quais contas
+existem:
+
+```powershell
+.venv\Scripts\python scripts\gerenciar_usuarios.py resetar-senha --username recepcao
+.venv\Scripts\python scripts\gerenciar_usuarios.py listar
+```
+
+---
+
+### 6.5 Testar o backend
 
 Abra o navegador ou outro PowerShell:
 
 ```powershell
-# Health check
+# Health check (não exige login)
 Invoke-WebRequest http://localhost:8001/health | Select -Expand Content
 # {"status":"ok","app":"HMPCF","env":"production"}
 
-# Total de pacientes
-Invoke-WebRequest "http://localhost:8001/api/v1/pacientes?page_size=1" | Select -Expand Content
+# Sem login -> 401 (esperado)
+Invoke-WebRequest "http://localhost:8001/api/v1/pacientes?page_size=1"
+# 401 Unauthorized
+
+# Login guardando a sessão numa variável, depois reaproveitando o cookie
+$sessao = $null
+Invoke-WebRequest -Uri "http://localhost:8001/api/v1/auth/login" -Method Post `
+  -ContentType "application/json" -Body '{"username":"recepcao","password":"SUA_SENHA"}' `
+  -SessionVariable sessao | Select -Expand Content
+# {"username":"recepcao","role":"recepcao"}
+
+Invoke-WebRequest "http://localhost:8001/api/v1/pacientes?page_size=1" -WebSession $sessao | Select -Expand Content
 # {"items":[...],"total":29242,...}
 ```
 
@@ -900,16 +946,23 @@ Execute este checklist após a implantação e a cada atualização importante.
 - [ ] Nenhum erro crítico no `migration.log`
 - [ ] Backup manual executado com sucesso
 - [ ] Backup agendado configurado no Task Scheduler
+- [ ] `scripts\criar_tabelas_auth.py` rodado — tabelas `usuarios`/`sessoes` existem
+- [ ] Contas `recepcao`/`coordenacao`/`bpa` criadas (`scripts\gerenciar_usuarios.py listar`)
 
 ### 11.3 Backend
 
 - [ ] `http://localhost:8001/health` → `{"status":"ok",...}`
-- [ ] `http://localhost:8001/api/v1/pacientes?page_size=1` → lista pacientes
+- [ ] `http://localhost:8001/api/v1/pacientes?page_size=1` **sem** login → `401`
+- [ ] Login em `/api/v1/auth/login` com a conta `recepcao` → `200` + cookie de sessão
+- [ ] `http://localhost:8001/api/v1/pacientes?page_size=1` **com** o cookie → lista pacientes
 - [ ] Logs em `C:\hmpcf-logs\backend.log` sem erros críticos
 
 ### 11.4 Frontend
 
-- [ ] `http://localhost:8001/` abre a tela de Recepção
+- [ ] `http://localhost:8001/` abre a tela de **login** antes de qualquer coisa
+- [ ] Login com usuário/senha errados mostra mensagem de erro, não trava a tela
+- [ ] Login correto (conta `recepcao`) abre a tela de Recepção
+- [ ] Botão "Sair" desloga e volta pra tela de login
 - [ ] Busca por CPF de paciente existente preenche o formulário
 - [ ] Busca por CPF inexistente mostra "+ Novo paciente"
 - [ ] Sexo, nome, data de nascimento são obrigatórios (validação ativa)
