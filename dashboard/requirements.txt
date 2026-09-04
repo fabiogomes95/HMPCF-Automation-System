@@ -5,8 +5,10 @@ pandas>=2.2.0
 plotly>=5.24.0
 python-dotenv>=1.0.1
 
-# flask e firebirdsql: nao usados pelo Streamlit em si, mas bpa/app.py roda
-# reaproveitando este mesmo venv (ver bpa/iniciar.bat) — ver bpa/requirements.txt
-# para a lista "correta" caso o bpa/ ganhe seu proprio venv no futuro.
+# flask, firebirdsql e pytest: nao usados pelo Streamlit em si, mas bpa/app.py
+# e os testes de bpa/tests/ rodam reaproveitando este mesmo venv (ver
+# bpa/iniciar.bat) — ver bpa/requirements.txt para a lista "correta" caso o
+# bpa/ ganhe seu proprio venv no futuro.
 flask>=3.0.0
 firebirdsql>=1.4.6
+pytest>=8.3.0
