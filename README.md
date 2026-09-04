@@ -122,17 +122,7 @@ Sobe em `http://localhost:8503` (ajustável). Reaproveita `dashboard/venv` e
 `dashboard/bpa_gerador.py`; exige acesso ao PostgreSQL (leitura dos
 atendimentos) e à base Firebird local do BPA Magnético.
 
-### Docker (banco de dados local, desenvolvimento)
-
-```bash
-# Define as senhas obrigatorias antes de subir (nao ha default fraco)
-cp .env.example .env   # edite POSTGRES_PASSWORD e PGADMIN_PASSWORD
-
-docker compose up -d
-```
-
-Portas do compose ficam bindadas em `127.0.0.1` por padrão (não expostas na
-rede) — ajuste conforme necessário para o seu ambiente de desenvolvimento.
+### Portas
 
 | Serviço | Porta | Acesso |
 |---------|-------|--------|
@@ -140,8 +130,12 @@ rede) — ajuste conforme necessário para o seu ambiente de desenvolvimento.
 | Painel Gerencial | 8502 | http://localhost:8502 |
 | BPA/SUS | 8503 | http://localhost:8503 |
 | Frontend (dev) | 5173 | http://localhost:5173 |
-| PostgreSQL (Docker) | 5432 | 127.0.0.1 apenas |
-| pgAdmin (Docker) | 5050 | 127.0.0.1 apenas |
+| PostgreSQL | 5432 | instalação nativa, local |
+
+> **Docker**: o projeto usou `docker-compose.yml` (PostgreSQL + pgAdmin +
+> backend) no início do desenvolvimento. Desde setembro/2026 o PostgreSQL
+> roda como instalação nativa, não mais via Docker. O compose antigo fica
+> arquivado em `legado/docker-compose/` — ver `NOTA.md` lá dentro.
 
 ### Configuração
 

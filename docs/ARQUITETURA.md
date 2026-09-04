@@ -43,13 +43,14 @@ HMPCF-Automation-System/
 ├── bpa/                        # Flask — geração BPA-I e migração PG→Firebird
 ├── docs/                       # Esta documentação, guias de instalação/deploy
 ├── scripts/                    # deploy/, windows/, bpa/, importacao/, migrations/
-├── legado/                     # Sistema original — descontinuado, mantido como referência
-└── docker-compose.yml          # PostgreSQL + pgAdmin + backend (uso local/dev, não produção)
+└── legado/                     # Sistema original — descontinuado, mantido como referência
+    └── docker-compose.yml      # PostgreSQL + pgAdmin + backend (descontinuado, ver NOTA.md)
 ```
 
-> Não existe pasta `docker/` — a stack de desenvolvimento sobe direto do
-> `docker-compose.yml` na raiz. Produção roda nativamente no Windows, sem
-> Docker (ver `docs/DEPLOY_HOSPITAL.md`).
+> O `docker-compose.yml` foi descontinuado (desde 09/2026 o PostgreSQL roda
+> nativamente, sem Docker, inclusive em desenvolvimento) e está arquivado em
+> `legado/docker-compose/` — ver `legado/docker-compose/NOTA.md`. Produção
+> roda nativamente no Windows (ver `docs/DEPLOY_HOSPITAL.md`).
 
 ---
 
@@ -154,23 +155,15 @@ O SQLAlchemy mapeia diretamente sem aliases — atributo Python = nome da coluna
 
 ---
 
-## Docker (desenvolvimento local apenas)
+## Docker (descontinuado)
 
-```bash
-# Definir POSTGRES_PASSWORD e PGADMIN_PASSWORD antes (sem default fraco)
-cp .env.example .env
+O projeto usou `docker-compose.yml` (PostgreSQL + pgAdmin + backend) no
+início do desenvolvimento local. Desde 09/2026 o PostgreSQL roda como
+instalação nativa também em desenvolvimento — o compose não é mais usado
+e está arquivado em `legado/docker-compose/` (ver `NOTA.md` lá dentro para
+reativar, se algum dia precisar).
 
-docker compose up -d
-```
-
-### Serviços
-| Serviço | Porta | Credenciais |
-|---------|-------|-------------|
-| PostgreSQL | 127.0.0.1:5432 | definidas em `.env`, sem default |
-| pgAdmin | 127.0.0.1:5050 | definidas em `.env`, sem default |
-| Backend | 127.0.0.1:8000 | — |
-
-Produção **não usa Docker** — PostgreSQL nativo no Windows (ver
+Produção **nunca usou Docker** — PostgreSQL nativo no Windows (ver
 `docs/DEPLOY_HOSPITAL.md`).
 
 ---
