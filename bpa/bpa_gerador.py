@@ -637,7 +637,7 @@ def calcular_atendimentos_producao(
     complementado). Excluir o dia aqui foi a causa raiz da colisão de
     folha/sequência achada na auditoria de 06/2026 (achado 2) e reproduzida
     de novo em 10/07/2026 durante a reconstrução de emergência de S_PRD —
-    ver `docs/AUDITORIA_BPA_2026-06.md`.
+    ver `docs/historico/AUDITORIA_BPA_2026-06.md`.
 
     Retorna [{"folha": int, "seq": int}, ...] na mesma ordem de `pacientes`.
     Quem chama é responsável por dar `con.commit()` (ou rollback em caso de
