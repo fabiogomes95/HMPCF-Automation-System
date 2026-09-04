@@ -520,7 +520,14 @@ por um script standalone (o projeto ainda não usa Alembic):
 cd C:\HMPCF\backend
 .venv\Scripts\python scripts\criar_tabelas_auth.py
 # OK: tabelas 'usuarios' e 'sessoes' garantidas (criadas agora ou já existentes).
+
+.venv\Scripts\python scripts\criar_tabela_auditoria.py
+# OK: tabela 'logs_auditoria' garantida (criada agora ou já existente).
 ```
+
+> `logs_auditoria` registra quem (papel) criou/editou/apagou cada ficha de
+> paciente/atendimento e quais campos mudaram — nunca o valor em si. Não
+> precisa de conta própria, usa as mesmas contas de `usuarios`.
 
 Depois, criar as contas de papel (uma por área — não é login por pessoa
 nesta versão). A senha é digitada no prompt (nunca em argumento de linha
