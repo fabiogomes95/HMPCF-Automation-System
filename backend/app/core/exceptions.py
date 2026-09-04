@@ -27,3 +27,15 @@ class BusinessRuleError(HMPCFError):
 
 class ValidationError(HMPCFError):
     """Erro de validação de dados → HTTP 422."""
+
+
+class UnauthorizedError(HMPCFError):
+    """Sem sessão válida (ausente, expirada, conta inativa/bloqueada) → HTTP 401."""
+
+
+class ForbiddenError(HMPCFError):
+    """Sessão válida mas sem permissão pro papel exigido → HTTP 403.
+
+    Reservado para quando dashboard/bpa também tiverem login e existir
+    diferenciação real de papel — a recepção em si (v1) não usa ainda.
+    """
