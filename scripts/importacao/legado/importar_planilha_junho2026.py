@@ -11,6 +11,11 @@ Lógica:
   - Endereço: "RUA, NUMERO, BAIRRO" (separado por vírgula).
   - Telefone: adiciona DDD 84 antes do número.
   - Data do atendimento: 2026-06-16 + horário da coluna.
+
+ARQUIVADO (script one-off, já executado) — mantido só como referência
+histórica de como uma importação manual pontual foi feita. Movido de
+scripts/importacao/ para scripts/importacao/legado/ em 04/09/2026; os
+caminhos relativos abaixo já foram ajustados para a nova localização.
 """
 
 import csv
@@ -21,9 +26,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Carrega .env do projeto se existir
-_ENV = Path(__file__).parent.parent / "scripts" / ".env"
+_ENV = Path(__file__).parent.parent.parent / ".env"
 if not _ENV.exists():
-    _ENV = Path(__file__).parent / ".env"
+    _ENV = Path(__file__).parent.parent / ".env"
 if _ENV.exists():
     for _line in _ENV.read_text(encoding="utf-8").splitlines():
         if "=" in _line and not _line.startswith("#"):
@@ -47,7 +52,7 @@ PG = dict(
     password=os.getenv("POSTGRES_PASSWORD", ""),
 )
 
-PLANILHA    = Path(__file__).parent.parent / "PLANILHA 2026 RECEP - JUNHO 2026.csv"
+PLANILHA    = Path(__file__).parent.parent.parent.parent / "PLANILHA 2026 RECEP - JUNHO 2026.csv"
 DATA_BASE   = "2026-06-16"
 TZ_BR       = timezone(timedelta(hours=-3))
 
