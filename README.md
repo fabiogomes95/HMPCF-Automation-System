@@ -1,288 +1,412 @@
 # HMPCF Automation System
 
-> Sistema de automação hospitalar para recepção digital, painel gerencial em
-> tempo real e faturamento BPA/SUS. Desenvolvido para o Hospital Municipal
-> Pres. Café Filho — Extremoz/RN, Brasil.
+🇧🇷 [Leia em português](README.pt-BR.md)
 
-Arquitetura moderna com **FastAPI + PostgreSQL + React/Vite** para a recepção,
-um **painel gerencial em Streamlit** para coordenação/TI, e um serviço
-**Flask + Firebird** dedicado à geração dos arquivos de faturamento BPA/SUS.
+> Hospital automation system for digital reception, a real-time management
+> dashboard, and SUS/BPA billing. Built for Hospital Municipal Pres. Café
+> Filho — Extremoz, Rio Grande do Norte, Brazil.
+
+Modern stack — **FastAPI + PostgreSQL + React/Vite** for reception, a
+**Streamlit** dashboard for coordination/IT, and a standalone **Flask +
+Firebird** service dedicated to generating SUS/BPA billing files.
 
 ---
 
-## Visão Geral
+## Overview
 
-O HMPCF Automation System é composto por três frentes independentes, todas
-lendo o mesmo PostgreSQL como fonte de verdade:
+The system is made up of three independent fronts, all reading the same
+PostgreSQL database as the single source of truth:
 
-1. **Recepção digital** (`backend/` + `frontend/`) — cadastro e atendimento de
-   pacientes, em produção no terminal da recepção do hospital.
-2. **Painel gerencial** (`dashboard/`) — visão em tempo real para
-   coordenadores e TI: histórico diário, busca de paciente e importação de
-   planilhas manuais. Processo independente, somente leitura por padrão, não
-   interfere na recepção.
-3. **Faturamento BPA/SUS** (`bpa/`) — aplicação Flask separada que gera os
-   arquivos posicionais BPA-I (um por profissional/categoria, por
-   competência) a partir dos atendimentos do PostgreSQL, migrando os dados
-   para a base Firebird (`BPAMAG.GDB`) exigida pelo BPA Magnético do
-   Ministério da Saúde.
+1. **Digital reception** (`backend/` + `frontend/`) — patient registration
+   and visit intake, in production on the reception terminal at the
+   hospital.
+2. **Management dashboard** (`dashboard/`) — real-time view for
+   coordinators and IT: daily history, patient lookup, and manual
+   spreadsheet import. Independent process, read-only by default, doesn't
+   interfere with reception.
+3. **SUS/BPA billing** (`bpa/`) — a separate Flask app that generates the
+   positional BPA-I files (one per professional/category, per billing
+   period) from PostgreSQL attendance records, migrating data into the
+   Firebird database (`BPAMAG.GDB`) required by Brazil's BPA Magnético
+   system.
 
-O **sistema legado** (`legado/`, Python/Eel/SQLite) foi **descontinuado em
-02/07/2026** — permanece no repositório apenas como referência histórica e
-não recebe mais manutenção nem deploy.
+The **legacy system** (`legado/`, Python/Eel/SQLite) was **discontinued on
+2026-07-02** — it stays in the repo purely as historical reference and
+gets no further maintenance or deploys.
 
 ---
 
 ## Status
 
-| Módulo | Situação |
-|--------|----------|
-| Recepção digital (FastAPI + React) | **Em produção** |
-| Painel gerencial (Streamlit) | **Em produção** |
-| Faturamento BPA/SUS (geração de arquivo posicional) | **Em produção** |
-| Importação de planilhas manuais (deduplicação, correção de fuso/turno) | **Em produção** |
-| Início automático (Tarefa Agendada + watchdog) | **Configurado** |
-| Autenticação / autorização na API | **A fazer** — sistema pensado para rede local isolada do hospital; ver [Segurança](#segurança-e-limitações-conhecidas) |
-| Testes automatizados (backend) | 21 testes |
-| Testes automatizados (frontend / dashboard / bpa) | Não há |
-| Sistema legado (Firebird/Eel) | **Descontinuado** — mantido só como referência |
+| Module | State |
+|--------|-------|
+| Digital reception (FastAPI + React) | **In production** |
+| Management dashboard (Streamlit) | **In production** |
+| SUS/BPA billing (positional file generation) | **In production** |
+| Manual spreadsheet import (dedup, shift/timezone correction) | **In production** |
+| Auto-start (Scheduled Task + watchdog) | Configured |
+| API authentication / authorization | **Not implemented** — designed for the hospital's isolated LAN; see [Security](#security--known-limitations) |
+| Automated tests (backend) | 21 tests |
+| Automated tests (frontend / dashboard / bpa) | None yet |
+| Legacy system (Firebird/Eel) | **Discontinued** — kept for reference only |
 
 ---
 
-## Arquitetura
+## Features
 
-```
-📦 HMPCF-Automation-System
- ┣ 📂 backend/                       # API FastAPI — recepção digital
- ┃  ┗ 📂 app/
- ┃     ┣ 📜 main.py                  # Entrypoint (lifespan, CORS, handlers)
- ┃     ┣ 📂 core/                    # Config (pydantic-settings) + exceções
- ┃     ┣ 📂 database/                # Engine async, SessionLocal
- ┃     ┣ 📂 models/                  # SQLAlchemy ORM (pacientes, atendimentos)
- ┃     ┣ 📂 schemas/                 # Pydantic v2
- ┃     ┣ 📂 repositories/            # Queries isoladas
- ┃     ┣ 📂 services/                # Regras de negócio
- ┃     ┗ 📂 api/v1/endpoints/        # Pacientes · Recepção · Terminal
- ┃  ┗ 📂 tests/                      # 21 testes (pytest)
- ┣ 📂 frontend/                      # React + Vite — terminal de digitação
- ┣ 📂 dashboard/                     # Streamlit — painel gerencial (TI/coordenação)
- ┃  ┣ 📜 app.py                      # KPIs, gráficos (volume, sexo, idade, bairros)
- ┃  ┣ 📜 db.py                       # Conexão somente leitura + utilitários compartilhados
- ┃  ┣ 📜 bpa_gerador.py              # Lógica de geração BPA-I (reaproveitada por bpa/)
- ┃  ┣ 📜 importador.py               # Parser e importação de planilhas manuais
- ┃  ┗ 📂 pages/
- ┃     ┣ 📜 1_Historico_Diario.py    # Histórico do dia, filtrável (hoje/ontem/data)
- ┃     ┣ 📜 2_Importar_Planilha_Mensal.py  # Upload .tsv → compara e importa faltantes
- ┃     ┗ 📜 3_Buscar_Paciente.py     # Busca por nome/CPF/CNS → histórico completo
- ┣ 📂 bpa/                           # Flask — geração BPA-I e migração PG→Firebird
- ┃  ┗ 📜 app.py                      # Digitação, geração do BPA-I, migração (usa dashboard/bpa_gerador.py)
- ┣ 📂 docs/                          # Arquitetura, histórico, guias de instalação/deploy
- ┣ 📂 scripts/                       # deploy/, windows/ (launchers, backup, serviço), bpa/, importacao/, migrations/
- ┣ 📂 legado/                        # Sistema original — descontinuado, mantido como referência
- ┣ 📜 docker-compose.yml             # PostgreSQL + pgAdmin + backend (uso local/desenvolvimento)
- ┗ 📜 INICIAR.bat                    # Launcher da recepção (backend + frontend), produção
-```
+- Patient CRUD and grouped search by name, CPF, or CNS with full visit
+  history.
+- Attendance (visit) records tied to each patient, with pagination and
+  free-text search.
+- Read-only management dashboard: daily KPIs (volume, sex, age bracket,
+  neighborhood), full daily history, and patient lookup across all
+  records.
+- Manual spreadsheet import (`.tsv`) that diffs against the database and
+  imports only what's missing, with deduplication and automatic
+  night-shift date correction.
+- BPA-I file generation following the official DATASUS 350-character
+  positional layout, with continuous sheet/sequence numbering per
+  competency.
+- PostgreSQL → Firebird migration for the BPA Magnético cadastre
+  (`CADCNS`), with CPF validation before migrating.
+- Printable A4 attendance form (`boletim`) for the reception desk.
 
 ---
 
-## Como Rodar
+## Tech stack
 
-### Recepção (Windows, produção)
+| Component | Stack |
+|---|---|
+| Backend (reception API) | Python 3.12 · FastAPI · SQLAlchemy 2 (async) · asyncpg · Pydantic v2 · pytest |
+| Frontend (reception UI) | React 18.3 · Vite 5.4 · axios |
+| Dashboard | Streamlit · pandas · Plotly · SQLAlchemy (sync, psycopg2) |
+| BPA billing | Flask · firebirdsql · psycopg2 · pandas/openpyxl |
+| Database | PostgreSQL 16 — native install, **not containerized** |
+| Legacy (discontinued) | Python · Eel · SQLite |
 
-```bat
-INICIAR.bat
+---
+
+## Prerequisites
+
+- Windows 10/11 (the production target — hospital LAN, 24/7 uptime)
+- Python 3.12+
+- Node.js 18+ and npm (frontend build only)
+- PostgreSQL 16, installed natively (not Docker — see [Database](#database) note)
+- Firebird client + a `BPAMAG.GDB` database, for the `bpa/` module only
+
+TODO: pin exact Node.js/npm versions if the project starts using an `.nvmrc` or CI matrix.
+
+---
+
+## Installation
+
+Each app keeps its own virtual environment/dependencies, except `bpa/`,
+which reuses `dashboard/`'s (see [How to Run](#how-to-run) below).
+
+### Backend
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+cp .env.example .env   # fill in POSTGRES_PASSWORD
 ```
 
-Sobe o backend (`uvicorn`, porta 8001, que também serve o frontend buildado
-em `frontend/dist/`) e abre o navegador. Registrado como Tarefa Agendada
-(`HMPCF-Backend`) — inicia no boot e reinicia automaticamente se cair
-(watchdog em `scripts/windows/watchdog_backend.vbs`).
+### Frontend
 
-### Painel Gerencial (Streamlit)
+```bash
+cd frontend
+npm install
+npm run build   # outputs frontend/dist, served by the backend in production
+```
+
+### Dashboard (also used to run `bpa/`)
 
 ```bash
 cd dashboard
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
-.venv\Scripts\streamlit run app.py
+cp .env.example .env   # fill in FIREBIRD_* credentials
 ```
 
-Sobe em `http://localhost:8502` (rede local: `http://<ip-da-maquina>:8502`).
-Launcher em `scripts/windows/ABRIR_DASHBOARD.bat`, também registrado como
-Tarefa Agendada, independente do backend.
-
-### Faturamento BPA/SUS (Flask)
+### BPA billing
 
 ```bash
 cd bpa
-python app.py
+cp .env.example .env   # adjust BPA_LOTES_DIR / BPA_SAIDA_DIR for this machine
 ```
 
-Sobe em `http://localhost:8503` (ajustável). Reaproveita `dashboard/venv` e
-`dashboard/bpa_gerador.py`; exige acesso ao PostgreSQL (leitura dos
-atendimentos) e à base Firebird local do BPA Magnético.
+No separate virtual environment — `bpa/app.py` runs on
+`dashboard/.venv` (see `bpa/iniciar.bat`). `bpa/requirements.txt` exists
+to document what that shared environment needs, in case `bpa/` ever gets
+its own venv.
 
-### Portas
+---
 
-| Serviço | Porta | Acesso |
-|---------|-------|--------|
-| Backend API (recepção) | 8001 | http://localhost:8001/docs *(desabilitado em produção)* |
-| Painel Gerencial | 8502 | http://localhost:8502 |
-| BPA/SUS | 8503 | http://localhost:8503 |
-| Frontend (dev) | 5173 | http://localhost:5173 |
-| PostgreSQL | 5432 | instalação nativa, local |
+## Configuration
 
-> **Docker**: o projeto usou `docker-compose.yml` (PostgreSQL + pgAdmin +
-> backend) no início do desenvolvimento. Desde setembro/2026 o PostgreSQL
-> roda como instalação nativa, não mais via Docker. O compose antigo fica
-> arquivado em `legado/docker-compose/` — ver `NOTA.md` lá dentro.
+Real credentials never get committed — `.env` is covered everywhere by
+`.gitignore` (`.env`, `**/.env`). Copy the matching `.env.example` in each
+app folder and fill in real values.
 
-### Configuração
+`bpa/app.py` loads all three `.env` files, in this order (first value
+found wins): `bpa/.env` → `dashboard/.env` → `backend/.env`. `dashboard/db.py`
+reads `backend/.env` directly for its (read-only) PostgreSQL connection.
 
-```bash
-cp backend/.env.example backend/.env
-# edite com suas credenciais — o dashboard reaproveita esse mesmo .env
+### `backend/.env` — PostgreSQL, API
+
+| Variable | Default | Description |
+|---|---|---|
+| `APP_NAME` | `HMPCF` | Display name used in FastAPI's OpenAPI metadata |
+| `ENVIRONMENT` | `development` | `development` \| `staging` \| `production` — hides `/docs`, `/redoc`, `/openapi.json` in production |
+| `POSTGRES_HOST` | `localhost` | PostgreSQL host |
+| `POSTGRES_PORT` | `5432` | PostgreSQL port |
+| `POSTGRES_USER` | `postgres` | PostgreSQL user |
+| `POSTGRES_PASSWORD` | — (required) | PostgreSQL password — URL-encoded automatically before building the connection string |
+| `POSTGRES_DB` | `hmpcf` | Database name |
+| `DATABASE_POOL_SIZE` | `10` | SQLAlchemy async pool size |
+| `DATABASE_MAX_OVERFLOW` | `20` | Extra connections allowed on demand |
+| `DATABASE_POOL_PRE_PING` | `true` | Tests connections before reuse |
+| `CORS_ORIGINS` | `["*"]` | Safe as `["*"]` in production since frontend and backend share an origin on the hospital LAN |
+| `TEST_POSTGRES_DB` | `hmpcf_test` | Database used by the pytest suite — never point this at `hmpcf` |
+
+### `dashboard/.env` — Firebird (used by the BPA migration feature)
+
+| Variable | Default | Description |
+|---|---|---|
+| `FIREBIRD_PATH` | `C:\BPA\BPAMAG.GDB` | Path to the local Firebird database |
+| `FIREBIRD_USER` | `SYSDBA` | Firebird user |
+| `FIREBIRD_PASSWORD` | — (required) | Firebird password |
+| `BPA_LOTES_DIR` | `dashboard/bpa_lotes` (repo-relative) | Folder holding the raw daily `.txt` batch files |
+| `BPA_SAIDA_DIR` | *(empty → `~/Downloads`)* | Output folder for the generated BPA-I file |
+
+### `bpa/.env` — per-machine overrides for the Flask app
+
+| Variable | Default | Description |
+|---|---|---|
+| `BPA_LOTES_DIR` | `bpa/bpa_lotes` (repo-relative, if unset) | Same as above, overridable per machine |
+| `BPA_SAIDA_DIR` | *(empty → `~/Downloads`)* | Same as above |
+| `POSTGRES_HOST` | inherited from `backend/.env` | Override when running the Flask app on a machine with a different PostgreSQL host |
+| `BPA_DIGITACAO_PORT` | `8503` | Port for the Flask app |
+
+---
+
+## How to Run
+
+### Reception (Windows, production)
+
+```bat
+INICIAR.bat
 ```
 
-`.env` nunca é versionado (`.gitignore` cobre `.env` e `**/.env`). Nunca
-commitar senhas reais em scripts ou documentação — os scripts de
-deploy/backup pedem a senha interativamente ou a leem do `.env`.
+Starts the backend (`uvicorn`, port 8001 — which also serves the built
+frontend from `frontend/dist/`) and opens the browser. Registered as a
+Windows Scheduled Task (`HMPCF-Backend`) — starts on boot and auto-restarts
+if it goes down (watchdog at `scripts/windows/watchdog_backend.vbs`).
 
----
+> Two more launchers exist for the same backend
+> (`scripts/windows/ABRIR_HMPCF.bat`, `scripts/windows/iniciar_sistema.vbs`)
+> — TODO: consolidate into one once it's confirmed, on a test machine,
+> which one is actually registered in Task Scheduler on the production PC.
 
-## Painel Gerencial (Dashboard)
-
-Aplicação **Streamlit independente**, com seu próprio ambiente virtual e
-porta — não compartilha processo, código ou dependências com o backend da
-recepção. Lê o PostgreSQL em modo somente leitura por padrão; escreve apenas
-nas telas explicitamente destinadas a isso (importação de planilha), sempre
-com confirmação manual antes de gravar.
-
-**Painel principal** — KPIs (hoje / semana / mês / total), volume diário,
-distribuição por sexo, faixa etária e bairro de origem.
-
-**Histórico Diário** — lista completa de atendimentos de um dia específico,
-com nome, CPF, CNS, nascimento, idade, sexo, endereço e telefone.
-
-**Buscar Paciente** — pesquisa por nome, CPF ou CNS, retornando todas as
-entradas (data e horário) daquele paciente no sistema.
-
-**Importar Planilha Mensal** — compara a planilha manual de plantão (`.tsv`)
-com o banco e importa só os atendimentos que faltam (quando o plantão
-registra no papel mas não digita no sistema). Trata os casos reais já
-encontrados em produção:
-- Deduplicação por paciente: mesmo registro de plantão ou horário a poucos
-  minutos de distância → mantém só o lançamento mais recente.
-- Correção automática de erro de digitação no ano do cabeçalho do plantão.
-- Atendimentos de madrugada sob plantão noturno contam para o dia seguinte
-  (mesma regra usada pela digitação real da recepção).
-- Linhas com formato inesperado (ex: documento digitado no campo errado) são
-  isoladas para revisão manual, nunca importadas silenciosamente.
-
----
-
-## Faturamento BPA/SUS
-
-Aplicação Flask (`bpa/app.py`) responsável por:
-
-- **Digitação/consulta** de dados complementares exigidos pelo BPA Magnético
-  que não fazem parte da recepção digital.
-- **Geração do BPA-I** — um arquivo por profissional/categoria, por
-  competência, salvo em `BPA_LOTES_DIR`, com folha/sequência contínua e
-  nacionalidade fixa.
-- **Migração PostgreSQL → Firebird** — completa cadastros na base Firebird
-  (`BPAMAG.GDB`) a partir dos atendimentos reais do PostgreSQL, com validação
-  de CPF antes de migrar.
-
----
-
-## Banco de Dados
-
-PostgreSQL como única fonte de verdade. Migrations versionadas via Alembic.
+### Reception (development)
 
 ```bash
 cd backend
+.venv\Scripts\python -m uvicorn app.main:app --reload --port 8001
+```
 
-# Aplicar migrations
-alembic upgrade head
+```bash
+cd frontend
+npm run dev
+```
 
-# Nova migration após alterar models
-alembic revision --autogenerate -m "descricao"
+Vite's dev server proxies `/api` to `http://desktop-9c4s1co:8001` (see
+`frontend/vite.config.js`) — that hostname is the production machine's;
+edit the proxy target if you're running the backend somewhere else.
+
+### Management dashboard (Streamlit)
+
+```bash
+cd dashboard
+.venv\Scripts\streamlit run app.py
+```
+
+Runs on `http://localhost:8502` (LAN: `http://<machine-ip>:8502`).
+Launcher at `scripts/windows/ABRIR_DASHBOARD.bat`, also registered as its
+own Scheduled Task, independent from the backend.
+
+### SUS/BPA billing (Flask)
+
+```bash
+cd bpa
+..\dashboard\.venv\Scripts\python.exe app.py
+```
+
+Runs on `http://localhost:8503`. Requires read access to PostgreSQL
+(attendance records) and to the local Firebird database of the BPA
+Magnético system. Desktop-shortcut launchers: `bpa/iniciar.bat`,
+`bpa/start_bpa.vbs` (silent, no console window — see `bpa/README.md`).
+
+---
+
+## Project Structure
+
+```
+📦 HMPCF-Automation-System
+ ┣ 📂 backend/                       # FastAPI API — digital reception
+ ┃  ┗ 📂 app/
+ ┃     ┣ 📜 main.py                  # Entrypoint (lifespan, CORS, exception handlers)
+ ┃     ┣ 📂 core/                    # Settings (pydantic-settings) + domain exceptions
+ ┃     ┣ 📂 database/                # Async engine, SessionLocal
+ ┃     ┣ 📂 models/                  # SQLAlchemy ORM (patients, attendances)
+ ┃     ┣ 📂 schemas/                 # Pydantic v2
+ ┃     ┣ 📂 repositories/            # Isolated queries
+ ┃     ┣ 📂 services/                # Business rules
+ ┃     ┗ 📂 api/v1/endpoints/        # pacientes · recepcao · terminal
+ ┃  ┗ 📂 tests/                      # 21 tests (pytest)
+ ┣ 📂 frontend/                      # React + Vite — reception input terminal
+ ┣ 📂 dashboard/                     # Streamlit — management dashboard (IT/coordination)
+ ┃  ┣ 📜 app.py                      # KPIs, charts (volume, sex, age, neighborhood)
+ ┃  ┣ 📜 db.py                       # Read-only connection + shared helpers
+ ┃  ┗ 📂 pages/                      # Daily history · monthly import · patient search
+ ┣ 📂 bpa/                           # Flask — BPA-I generation, PG→Firebird migration
+ ┃  ┣ 📜 app.py                      # Data entry, BPA-I generation, migration
+ ┃  ┣ 📜 bpa_gerador.py              # Core BPA-I logic (layout, checksum, sheet/seq)
+ ┃  ┣ 📂 auditoria_mensal/           # Incident-response scripts, actively reused
+ ┃  ┗ 📂 legado/                     # Archived one-off/backup files local to bpa/
+ ┣ 📂 docs/                          # Living documentation (architecture, deploy, install)
+ ┃  ┗ 📂 historico/                  # Point-in-time records (past audits, migrations)
+ ┣ 📂 scripts/
+ ┃  ┣ 📂 bpa/                        # CLI helpers alongside the Flask app
+ ┃  ┣ 📂 importacao/                 # Monthly import pipeline (+ legado/ for one-offs)
+ ┃  ┣ 📂 migrations/legado/          # SQLite→PostgreSQL migration, already executed
+ ┃  ┗ 📂 windows/                    # Launchers, backup, Scheduled Task registration
+ ┣ 📂 legado/                        # Original system — discontinued, kept for reference
+ ┃  ┗ 📂 docker-compose/             # Discontinued Docker setup (see NOTA.md)
+ ┗ 📜 INICIAR.bat                    # Reception launcher (backend + frontend), production
 ```
 
 ---
 
-## Endpoints Ativos (Backend)
+## API (Backend)
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| GET | `/api/v1/pacientes` | Listar pacientes |
-| POST | `/api/v1/pacientes` | Criar paciente |
-| GET | `/api/v1/pacientes/{id}` | Buscar por ID |
-| GET | `/api/v1/recepcao` | Listar atendimentos |
-| POST | `/api/v1/recepcao` | Registrar atendimento |
-| GET | `/api/v1/recepcao/pacientes/agrupado?q=...` | Busca agrupada com histórico |
-| GET | `/api/v1/recepcao/paciente/{id}` | Histórico completo do paciente |
-| GET | `/api/v1/terminal` | Status do sistema |
-| GET | `/health` | Health check (sem autenticação, sem dados sensíveis) |
+Base path: `/api/v1`. Interactive docs (non-production only):
+`http://localhost:8001/docs`.
 
-Documentação interativa (apenas fora de produção): `http://localhost:8001/docs`
+### `pacientes`
+
+| Method | Route | Description |
+|---|---|---|
+| GET | `/pacientes` | List patients (paginated, optional `q` search — name/CPF/CNS) |
+| GET | `/pacientes/busca` | Look up a single patient by CPF or CNS (`documento`) |
+| GET | `/pacientes/{id}` | Get patient by ID |
+| POST | `/pacientes` | Create patient |
+| PUT | `/pacientes/{id}` | Update patient |
+| DELETE | `/pacientes/{id}` | Delete patient |
+
+### `recepcao`
+
+| Method | Route | Description |
+|---|---|---|
+| GET | `/recepcao` | List attendances, most recent first (paginated, optional `q`) |
+| GET | `/recepcao/pacientes/agrupado` | Grouped search — unique patients with total visit count (`q` required, min 3 chars) |
+| GET | `/recepcao/recentes` | Most recent attendances |
+| GET | `/recepcao/paciente/{paciente_id}` | Full attendance history for one patient |
+| GET | `/recepcao/{id}` | Full detail of one attendance |
+| POST | `/recepcao` | Register a new attendance |
+| PUT | `/recepcao/{id}` | Update an attendance |
+| DELETE | `/recepcao/{id}` | Remove an attendance |
+
+### `terminal`
+
+| Method | Route | Description |
+|---|---|---|
+| POST | `/terminal/start` | Start a terminal session |
+| POST | `/terminal/ping` | Keep-alive ping from the terminal |
+
+### Infra
+
+| Method | Route | Description |
+|---|---|---|
+| GET | `/health` | Health check — no auth required, no sensitive data |
 
 ---
 
-## Testes
+## Database
+
+PostgreSQL is the single source of truth. **TODO**: the docs previously
+referenced Alembic-managed migrations, but no `alembic.ini`, `alembic/`
+folder, or `alembic` dependency currently exist in this repo — how the
+schema is actually created/versioned needs to be confirmed and documented
+here (or an Alembic setup added, if that's still the intent).
+
+---
+
+## Testing
 
 ```bash
 cd backend
 pytest tests/ -v
 ```
 
-21 testes cobrindo pacientes, recepção e terminal (backend apenas — frontend,
-dashboard e bpa/ ainda não têm suíte automatizada).
+21 tests covering `pacientes`, `recepcao`, and `terminal` (backend only —
+frontend, dashboard, and `bpa/` have no automated suite yet). Frontend has
+Playwright installed as a dev dependency but no spec files exist yet —
+TODO if end-to-end coverage is planned.
 
 ---
 
-## Segurança e Limitações Conhecidas
+## Deploy
 
-Este sistema foi desenhado para operar dentro da **rede local isolada do
-hospital**, não exposto à internet. Pontos relevantes para quem for
-implantar ou operar:
+Production runs natively on Windows (no Docker, no containers) on the
+hospital's reception PC, over the internal LAN. Full step-by-step guides:
 
-- **Sem autenticação/autorização na API** ainda — qualquer dispositivo com
-  acesso à rede local do backend pode ler/escrever atendimentos. Compensar
-  com segmentação de rede adequada (perfil de firewall `Domain`/`Private`,
-  nunca `Public`, e VLAN dedicada se possível) até autenticação ser
-  implementada.
-- **Segredos vivem só em `.env`** (nunca em scripts ou docs versionados) —
-  ao gerar uma senha nova, evite caracteres que sejam delimitadores de URL
-  (`@ : / ? #`) em strings de conexão, ou garanta que o código faça
-  URL-encode antes de montar a connection string.
-- **Dados sensíveis (CPF, CNS, endereço, dados de saúde)** — evite logar
-  esses valores em texto puro em scripts de importação/migração; prefira
-  logar apenas identificadores técnicos (ID interno) em caso de erro.
-- **Backups** (`scripts/windows/backup_postgres.bat`) geram dump em texto
-  puro localmente — combine com controle de acesso ao diretório de backup e
-  rotação/expurgo (já implementado, 30 dias).
-
-Contribuições que fecham essas lacunas (auth de sessão, RBAC básico,
-criptografia de backup) são bem-vindas.
+- `docs/DEPLOY_HOSPITAL.md` — general deployment guide
+- `docs/INSTALACAO_PC_RECEPCAO.md` — setting up a reception PC from scratch
+- `docs/INSTALACAO_BPA_MIGRACAO.md` — installing the BPA app + PG→Firebird migration on a new machine
 
 ---
 
-## Legado
+## Security & Known Limitations
 
-O sistema original (`legado/`, Python/Eel/SQLite) foi **oficialmente
-descontinuado em 02/07/2026**. Permanece no repositório apenas como
-referência histórica e fallback documental — não recebe deploy nem
-manutenção. Consulte `legado/passo_a_passo.md` se precisar entender como ele
-operava.
+This system is designed to run inside the hospital's **isolated local
+network**, not exposed to the internet. Notes for anyone deploying or
+operating it:
+
+- **No API authentication/authorization yet** — any device with access to
+  the backend's LAN can read/write attendance records. Compensate with
+  proper network segmentation (Windows firewall profile `Domain`/`Private`,
+  never `Public`, and a dedicated VLAN if possible) until auth ships.
+- **Secrets live only in `.env` files** (never in versioned scripts or
+  docs) — when generating a new password, avoid URL delimiter characters
+  (`@ : / ? #`) in connection strings, or make sure the code URL-encodes
+  the password first (the backend already does this for PostgreSQL).
+- **Sensitive data** (CPF, CNS, address, health data) — avoid logging
+  these values in plaintext in import/migration scripts; log internal IDs
+  instead when something fails.
+- **Backups** (`scripts/windows/backup_postgres.bat`) produce a local
+  plaintext dump — pair this with access control on the backup directory
+  and rotation (already implemented, 30 days).
+
+Contributions that close these gaps (session auth, basic RBAC, backup
+encryption) are welcome.
 
 ---
 
-## Licença
+## Legacy System
 
-Copyright (c) 2026 Fabio Gomes. Todos os direitos reservados.
+The original system (`legado/`, Python/Eel/SQLite) was **officially
+discontinued on 2026-07-02**. It stays in the repo as historical reference
+and documentation fallback only — no deploys, no maintenance. See
+`legado/passo_a_passo.md` if you need to understand how it used to operate.
 
-Disponível publicamente para fins de estudo, demonstração técnica e
-portfólio. Não é permitido uso comercial, institucional ou implantação
-em produção sem autorização explícita do autor.
+---
+
+## License
+
+Copyright (c) 2026 Fabio Gomes. All rights reserved.
+
+Published for study, technical demonstration, and portfolio purposes.
+Commercial, institutional, or production use is not permitted without the
+author's explicit authorization.
