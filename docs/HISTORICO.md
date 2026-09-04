@@ -5,6 +5,33 @@ estão no código e nos commits do git.
 
 ---
 
+## 2026-09-04 — Reorganização de pastas (auditoria + arquivamento)
+
+### Estrutura de pastas
+
+- `bpa/bpa_gerador_bckp.py` (backup manual esquecido, sem referência no
+  código) movido para `bpa/legado/`.
+- `scripts/importacao/importar_planilha_junho2026.py` (one-off, já
+  executado) arquivado em `scripts/importacao/legado/` — caminhos
+  relativos (`.env`, planilha csv) ajustados pra nova profundidade.
+- `scripts/migrations/archive/` renomeado para `scripts/migrations/legado/`
+  — padroniza o nome com as demais pastas de arquivamento do repo.
+- `docs/AUDITORIA_BPA_2026-06.md`, `docs/PENDENCIAS_2026-07-03.md` e
+  `docs/MIGRACAO.md` movidos para `docs/historico/` — separa registros de
+  um momento específico da documentação viva (`ARQUITETURA.md`,
+  `DEPLOY_HOSPITAL.md`, `INSTALACAO_*.md`).
+- `docker-compose.yml` e o `.env.example` da raiz (específicos do compose)
+  arquivados em `legado/docker-compose/`, com `NOTA.md` explicando a
+  descontinuação — desde então o PostgreSQL roda como instalação nativa
+  também em desenvolvimento, não só em produção.
+- `bpa/auditoria_mensal/` avaliado e **mantido no lugar** (uso frequente,
+  não é código morto apesar de ter nascido de um incidente pontual).
+- Os três launchers redundantes do backend (`INICIAR.bat`,
+  `scripts/windows/ABRIR_HMPCF.bat`, `iniciar_sistema.vbs`) **não foram
+  tocados** — seguem com o mesmo problema já registrado na entrada de
+  02/07/2026 (não dá pra saber pelo repo qual está no Agendador de
+  Tarefas); antes de consolidar, teste numa máquina de teste.
+
 ## 2026-07-02 — Hardening de segurança, incidente de produção e reorganização de pastas
 
 ### Segurança
