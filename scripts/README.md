@@ -1,14 +1,15 @@
 # Scripts — HMPCF
 
-## migrate_to_postgres.py
+## migrations/legado/migrate_to_postgres.py
 
 Script ETL de migração única: SQLite (`hospital.db`) → PostgreSQL.
 
-Localização original: `hmpcf-system/migrate_to_postgres.py`
+Arquivado em `scripts/migrations/legado/` — já foi executado e não roda
+mais em produção, mantido só como referência histórica.
 
 Uso:
 ```bash
-cd hmpcf-system
+cd scripts/migrations/legado
 python migrate_to_postgres.py --dry-run   # simula sem gravar
 python migrate_to_postgres.py             # migração real
 python migrate_to_postgres.py --truncate  # limpa e re-migra
