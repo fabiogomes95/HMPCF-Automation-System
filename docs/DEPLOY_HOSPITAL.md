@@ -871,6 +871,51 @@ Remove-Item $backup -Force
 
 ---
 
+### 9.6 Cópia externa (OneDrive)
+
+Até aqui, backup local **e** os 30 dias de retenção ficam na mesma
+máquina do Postgres — se o disco dela falhar (ou pior: incêndio, roubo),
+o banco e todo o histórico de backup somem juntos. `backup_postgres.bat`
+já chama `scripts\windows\copiar_backup_onedrive.ps1` automaticamente
+logo depois de criptografar, copiando o `.sql.enc` do dia para uma pasta
+local sincronizada pelo OneDrive (gratuito, 5GB, já vem com o Windows
+10/11 — nenhum custo, nenhuma credencial de nuvem pra configurar no
+código).
+
+**Passo manual, só uma vez por máquina** (não dá pra automatizar — exige
+login interativo):
+
+1. Verificar se o OneDrive já está instalado e logado (ícone de nuvem na
+   bandeja do sistema). Se não estiver, abrir o app OneDrive e entrar com
+   uma conta Microsoft (pessoal, sem custo).
+2. Confirmar que a pasta padrão existe:
+   `%USERPROFILE%\OneDrive\HMPCF-Backups` — se o nome da pasta do
+   OneDrive na sua conta for diferente de "OneDrive" (ex: contas
+   corporativas mostram "OneDrive - Nome da Empresa"), ajuste o parâmetro
+   `-DestinoPasta` na chamada dentro de `backup_postgres.bat`.
+
+Se a cópia externa falhar (OneDrive não sincronizado, sem espaço, etc.),
+`backup_postgres.bat` mostra `[AVISO]` mas **não** interrompe o backup —
+o backup local (a rede de segurança principal) já está feito nesse ponto.
+
+**Nunca copiar `scripts\windows\.backup_passphrase` para a pasta do
+OneDrive** (nem para nenhum lugar perto do backup criptografado) —
+guardar a senha ao lado do dado criptografado anula a proteção. Guarde
+essa senha separadamente (gerenciador de senhas, ou papel em local
+trancado) — sem ela, nem o backup local nem a cópia externa podem ser
+restaurados.
+
+Testar manualmente:
+
+```powershell
+C:\HMPCF-Automation-System\scripts\windows\backup_postgres.bat
+# procure por "Copiando backup para fora da maquina (OneDrive)..." e "[OK] Copia externa: ..."
+
+ls "$env:USERPROFILE\OneDrive\HMPCF-Backups"
+```
+
+---
+
 ## 10. Rede Interna
 
 ### 10.1 Descobrir o IP do PC servidor
@@ -953,6 +998,9 @@ Execute este checklist após a implantação e a cada atualização importante.
 - [ ] Nenhum erro crítico no `migration.log`
 - [ ] Backup manual executado com sucesso
 - [ ] Backup agendado configurado no Task Scheduler
+- [ ] OneDrive instalado e logado na máquina; cópia externa do backup
+      aparece em `%USERPROFILE%\OneDrive\HMPCF-Backups` depois de rodar
+      o backup manual (ver seção 9.6)
 - [ ] `scripts\criar_tabelas_auth.py` rodado — tabelas `usuarios`/`sessoes` existem
 - [ ] Contas `recepcao`/`coordenacao`/`bpa` criadas (`scripts\gerenciar_usuarios.py listar`)
 
