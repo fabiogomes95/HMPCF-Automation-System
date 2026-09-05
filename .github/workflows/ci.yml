@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Backend (pytest + Postgres)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          # Senha de um container efemero, destruido no fim do job -- nunca
+          # acessivel de fora do runner. Nao e a senha de producao.
+          POSTGRES_PASSWORD: ci_test_password
+          POSTGRES_DB: hmpcf_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instalar dependências
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Rodar testes
+        working-directory: backend
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PASSWORD: ci_test_password
+          TEST_POSTGRES_DB: hmpcf_test
+        run: pytest tests/ -v
+
+  bpa-tests:
+    name: BPA (pytest, sem banco -- Firebird mockado)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: bpa/requirements.txt
+
+      - name: Instalar dependências
+        working-directory: bpa
+        run: pip install -r requirements.txt
+
+      - name: Rodar testes
+        working-directory: bpa
+        run: pytest tests/ -v
+
+  frontend-build:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
