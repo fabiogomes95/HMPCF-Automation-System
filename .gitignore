@@ -16,6 +16,7 @@ frontend-teste/
 .env
 **/.env
 scripts/windows/.backup_passphrase
+DEPLOY_LOGIN_PRODUCAO.md
 
 # Misc
 *.log
