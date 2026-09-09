@@ -76,6 +76,12 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   const pacienteEncontradoRef = useRef(false);
   const cpfRef = useRef(null);
   const formRef = useRef(form);
+  // Marcam se a recepcionista digitou cidade/estado manualmente ANTES da busca
+  // por CPF/CNS resolver. Sem isso, o valor padrão "EXTREMOZ"/"RN" do form em
+  // branco é indistinguível de digitação manual, e o dado real do paciente
+  // (de outra cidade) nunca prevalece na busca.
+  const cidadeEditadaRef = useRef(false);
+  const estadoEditadaRef = useRef(false);
 
   useEffect(() => {
     formRef.current = form;
@@ -156,8 +162,13 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
             numpcn: preencheSeVazio(prev.numpcn, p.numpcn),
             bairro_pcnte: preencheSeVazio(prev.bairro_pcnte, p.bairro_pcnte),
             ceppcn: preencheSeVazio(prev.ceppcn, p.ceppcn),
-            cidade: preencheSeVazio(prev.cidade, p.cidade || "EXTREMOZ"),
-            estado: preencheSeVazio(prev.estado, p.estado || "RN"),
+            // cidade/estado não usam preencheSeVazio: o form em branco já nasce
+            // com "EXTREMOZ"/"RN" preenchidos (não vazios), então essa função
+            // sempre trataria o default como "digitação manual" e nunca deixaria
+            // o valor real do paciente (vindo do banco) prevalecer. Aqui o dado
+            // do banco só perde se a recepcionista já tiver editado o campo à mão.
+            cidade: cidadeEditadaRef.current ? prev.cidade : (p.cidade || "EXTREMOZ"),
+            estado: estadoEditadaRef.current ? prev.estado : (p.estado || "RN"),
             telefone: preencheSeVazio(prev.telefone, formatTelefone(p.telefone)),
             naturalidade: preencheSeVazio(prev.naturalidade, p.naturalidade),
             nacionalidade: preencheSeVazio(prev.nacionalidade, "010"),
@@ -197,6 +208,8 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     setMsg("");
     setRegistrado(false);
     pacienteEncontradoRef.current = false;
+    cidadeEditadaRef.current = false;
+    estadoEditadaRef.current = false;
     if (edicao.documento) {
       autoBusca(edicao.documento);
     }
@@ -243,6 +256,8 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   function handleChange(e) {
     congelarRelogio();
     const { name, value } = e.target;
+    if (name === "cidade") cidadeEditadaRef.current = true;
+    if (name === "estado") estadoEditadaRef.current = true;
     if (camposTexto.includes(name)) {
       setForm((prev) => ({ ...prev, [name]: uc(value) }));
     } else {
@@ -446,6 +461,8 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     setErroDtnasc("");
     setProcedencia("NORMAL");
     pacienteEncontradoRef.current = false;
+    cidadeEditadaRef.current = false;
+    estadoEditadaRef.current = false;
     setAtdInfo({ data: dataAtual(), hora: horaAtual(), registro: "" });
     cpfRef.current?.focus();
   }
