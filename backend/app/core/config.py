@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     # Autenticação (sessão por cookie httpOnly — ver app/services/auth_service.py)
     SESSION_COOKIE_NAME: str = "hmpcf_session"
     SESSION_TTL_HOURS: int = 12
+    # Usado quando o login marca "manter conectado neste computador" — terminal
+    # de recepção fica logado o tempo todo, só desloga se o navegador/PC for
+    # reiniciado e o cookie expirar de fato (365 dias cobre isso na prática).
+    SESSION_TTL_LEMBRAR_HORAS: int = 24 * 365
     LOGIN_MAX_TENTATIVAS: int = 5
     LOGIN_BLOQUEIO_MINUTOS: int = 15
 

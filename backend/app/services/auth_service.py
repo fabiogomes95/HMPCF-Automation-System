@@ -39,7 +39,7 @@ class AuthService:
         self._sessoes = SessaoRepository(session)
 
     async def autenticar(
-        self, username: str, password: str, ip: Optional[str] = None
+        self, username: str, password: str, ip: Optional[str] = None, lembrar: bool = False
     ) -> tuple[Usuario, str]:
         """Confere credenciais e abre uma sessão nova. Retorna (usuario, token_bruto) —
         o token bruto só existe aqui, nunca é persistido."""
@@ -72,11 +72,12 @@ class AuthService:
         usuario.last_login_at = agora
         await self._sessoes.delete_expiradas()
 
+        ttl_horas = settings.SESSION_TTL_LEMBRAR_HORAS if lembrar else settings.SESSION_TTL_HOURS
         token = secrets.token_urlsafe(32)
         sessao = Sessao(
             usuario_id=usuario.id,
             token_hash=_hash_token(token),
-            expira_em=agora + timedelta(hours=settings.SESSION_TTL_HOURS),
+            expira_em=agora + timedelta(hours=ttl_horas),
             ip_criacao=ip,
         )
         self.session.add(sessao)

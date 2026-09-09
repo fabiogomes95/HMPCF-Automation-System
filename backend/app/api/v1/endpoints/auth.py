@@ -16,11 +16,14 @@ async def login(
     session: DBSession,
 ) -> UsuarioResponse:
     ip = request.client.host if request.client else None
-    usuario, token = await AuthService(session).autenticar(dados.username, dados.password, ip=ip)
+    usuario, token = await AuthService(session).autenticar(
+        dados.username, dados.password, ip=ip, lembrar=dados.lembrar
+    )
+    ttl_horas = settings.SESSION_TTL_LEMBRAR_HORAS if dados.lembrar else settings.SESSION_TTL_HOURS
     response.set_cookie(
         key=settings.SESSION_COOKIE_NAME,
         value=token,
-        max_age=settings.SESSION_TTL_HOURS * 3600,
+        max_age=ttl_horas * 3600,
         httponly=True,
         samesite="lax",
         secure=False,  # sistema roda em HTTP puro na LAN do hospital, sem TLS ainda

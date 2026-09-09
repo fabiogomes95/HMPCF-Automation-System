@@ -5,6 +5,10 @@ import "./Login.css";
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  // Terminal de recepção fica ligado o tempo todo — por padrão a sessão
+  // dura muito tempo (praticamente não expira), só some se desmarcar aqui
+  // (ex.: alguém acessando de outro computador, não o fixo da recepção).
+  const [manterConectado, setManterConectado] = useState(true);
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
 
@@ -13,7 +17,7 @@ export default function Login({ onLogin }) {
     setErro("");
     setCarregando(true);
     try {
-      const res = await login(username.trim(), password);
+      const res = await login(username.trim(), password, manterConectado);
       onLogin(res.data); // { username, role }
     } catch (err) {
       const msg = err.response?.data?.message || "Não foi possível entrar. Tente novamente.";
@@ -48,6 +52,15 @@ export default function Login({ onLogin }) {
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
           />
+        </label>
+
+        <label className="login-lembrar">
+          <input
+            type="checkbox"
+            checked={manterConectado}
+            onChange={(e) => setManterConectado(e.target.checked)}
+          />
+          Manter conectado neste computador
         </label>
 
         {erro && <p className="login-erro">{erro}</p>}
