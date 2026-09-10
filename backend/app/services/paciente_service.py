@@ -81,7 +81,10 @@ class PacienteService:
             if await self._repo.get_by_cns(data.cns):
                 raise ConflictError(f"Paciente com CNS {data.cns} já existe")
 
-        paciente = Paciente(**data.model_dump())
+        # Só o CPF importa pra essa marcação -- sinaliza sem_documento sozinho
+        # quando a recepção deixa o CPF em branco, sem precisar de nada na tela
+        # (usado futuramente na exportação BPA/Firebird).
+        paciente = Paciente(**data.model_dump(), sem_documento=not data.num_cpf)
         paciente = await self._repo.add(paciente)
         await self._auditoria.registrar(self._usuario, "criar", "paciente", paciente.id)
         return PacienteResponse.model_validate(paciente)

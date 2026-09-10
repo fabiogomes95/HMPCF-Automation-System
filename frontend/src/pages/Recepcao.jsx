@@ -46,7 +46,6 @@ const vazio = {
   estado_civil: "",
   ocupacao: "",
   responsavel: "",
-  sem_documento: false,
 };
 
 const camposTexto = [
@@ -254,19 +253,6 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     }
   }
 
-  function handleSemDocumentoChange(e) {
-    const marcado = e.target.checked;
-    setForm((prev) => ({
-      ...prev,
-      sem_documento: marcado,
-      // CPF/CNS deixam de fazer sentido quando o paciente não tem documento
-      num_cpf: marcado ? "" : prev.num_cpf,
-      cns: marcado ? "" : prev.cns,
-    }));
-    setErroCpf("");
-    setErroCns("");
-  }
-
   function handleChange(e) {
     congelarRelogio();
     const { name, value } = e.target;
@@ -351,11 +337,8 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
       erros.push({ campo: "sexo", msg: "Selecione o sexo (M ou F)." });
     }
 
-    const cpfOk = form.num_cpf && validarCPF(form.num_cpf);
-    const cnsOk = form.cns && validarCNS(form.cns);
-    if (!cpfOk && !cnsOk && !form.sem_documento) {
-      erros.push({ campo: "num_cpf", msg: "Informe um CPF ou CNS válido, ou marque \"sem documento\"." });
-    }
+    // CPF/CNS agora são opcionais -- deixando os dois em branco, o backend
+    // marca sem_documento sozinho (usado futuramente na exportação BPA).
 
     if (!form.dtnasc || form.dtnasc.trim() === "") {
       erros.push({ campo: "dtnasc", msg: "Data de nascimento é obrigatória." });
