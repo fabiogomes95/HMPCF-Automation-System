@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Recepcao from "./pages/Recepcao";
 import Historico from "./pages/Historico";
+import PlanilhaAtendimentos from "./pages/PlanilhaAtendimentos";
 import Login from "./pages/Login";
 import { getMe, logout } from "./services/auth";
 import { setOnUnauthorized } from "./services/api";
@@ -61,6 +62,10 @@ export default function App() {
     setTela("historico");
   }
 
+  function navPlanilha() {
+    setTela("planilha");
+  }
+
   function abrirEdicao(dadosEdicao) {
     setEdicao(dadosEdicao);
     setTela("recepcao");
@@ -100,16 +105,24 @@ export default function App() {
         >
           Histórico
         </button>
+        <button
+          className={`app-nav-btn${tela === "planilha" ? " ativo" : ""}`}
+          onClick={navPlanilha}
+        >
+          Planilha
+        </button>
         <button className="app-nav-btn app-nav-sair" onClick={handleSair}>
           Sair ({usuario.username})
         </button>
       </nav>
 
-      {tela === "recepcao" ? (
+      {tela === "recepcao" && (
         <Recepcao edicao={edicao} onVoltar={fecharEdicao} />
-      ) : (
+      )}
+      {tela === "historico" && (
         <Historico onNavigate={setTela} onEditar={abrirEdicao} />
       )}
+      {tela === "planilha" && <PlanilhaAtendimentos />}
     </>
   );
 }
