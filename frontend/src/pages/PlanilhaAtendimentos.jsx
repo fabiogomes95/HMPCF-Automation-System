@@ -11,6 +11,26 @@ const LABEL_PROCEDENCIA = {
   NORMAL: "", // "em normal deixar em branco"
 };
 
+// Código de raça/cor padrão BPA-SUS (paciente.raca) -- "03" (parda) é o
+// padrão quando a recepção não indica nada no boletim.
+const LABEL_RACA = {
+  "01": "BRANCA",
+  "1": "BRANCA",
+  "02": "PRETA",
+  "2": "PRETA",
+  "03": "PARDA",
+  "3": "PARDA",
+  "04": "AMARELA",
+  "4": "AMARELA",
+  "05": "INDÍGENA",
+  "5": "INDÍGENA",
+};
+
+function formatRaca(raca) {
+  if (!raca) return "—";
+  return LABEL_RACA[raca] ?? raca;
+}
+
 function mesAtualISO() {
   const hoje = new Date();
   return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
@@ -205,7 +225,7 @@ export default function PlanilhaAtendimentos() {
                       <td>{dtnascBR || "—"}</td>
                       <td>{dtnascBR ? calcularIdadeEm(dtnascBR, new Date(item.data_atendimento)) : "—"}</td>
                       <td>{item.sexo || "—"}</td>
-                      <td>{item.raca || "—"}</td>
+                      <td>{formatRaca(item.raca)}</td>
                       <td>{item.cidade || "—"}</td>
                       <td>{formatHora(item.data_atendimento)}</td>
                       <td>{item.num_cpf ? formatCPF(item.num_cpf) : "—"}</td>
