@@ -1,4 +1,5 @@
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,18 +77,19 @@ async def test_planilha_mensal_classifica_turno_e_dia_referencia(
 ):
     svc = RecepcaoService(session)
 
+    fuso = ZoneInfo("America/Sao_Paulo")
     diurno = RecepcaoAtendimento(
         paciente_id=paciente.id,
-        data_atendimento=datetime(2026, 9, 15, 8, 0, tzinfo=timezone.utc),
+        data_atendimento=datetime(2026, 9, 15, 8, 0, tzinfo=fuso),
     )
     noturno_mesmo_dia = RecepcaoAtendimento(
         paciente_id=paciente.id,
-        data_atendimento=datetime(2026, 9, 15, 20, 0, tzinfo=timezone.utc),
+        data_atendimento=datetime(2026, 9, 15, 20, 0, tzinfo=fuso),
     )
     # 03h do dia 16 pertence ao plantao noturno que comecou no dia 15
     madrugada_noturno_anterior = RecepcaoAtendimento(
         paciente_id=paciente2.id,
-        data_atendimento=datetime(2026, 9, 16, 3, 0, tzinfo=timezone.utc),
+        data_atendimento=datetime(2026, 9, 16, 3, 0, tzinfo=fuso),
     )
     session.add_all([diurno, noturno_mesmo_dia, madrugada_noturno_anterior])
     await session.flush()
@@ -106,6 +108,29 @@ async def test_planilha_mensal_classifica_turno_e_dia_referencia(
 
 
 @pytest.mark.asyncio
+async def test_planilha_mensal_classifica_pelo_horario_de_brasilia_no_utc(
+    session: AsyncSession, paciente: Paciente
+):
+    """data_atendimento fica salvo em UTC -- 16:24 em Brasília (horário real
+    do atendimento) é 19:24Z. Classificar pela hora UTC crua bateria como
+    NOTURNO (>= 19:00); precisa converter pro fuso de Brasília antes."""
+    svc = RecepcaoService(session)
+
+    atd = RecepcaoAtendimento(
+        paciente_id=paciente.id,
+        data_atendimento=datetime(2026, 9, 9, 19, 24, tzinfo=timezone.utc),
+    )
+    session.add(atd)
+    await session.flush()
+
+    result = await svc.planilha_mensal(ano=2026, mes=9)
+    item = next(i for i in result.items if i.atendimento_id == atd.id)
+
+    assert item.turno == "DIURNO"
+    assert item.dia_referencia == date(2026, 9, 9)
+
+
+@pytest.mark.asyncio
 async def test_planilha_mensal_vira_mes_no_plantao_noturno(session: AsyncSession, paciente: Paciente):
     """01h do dia 01/10 pertence ao noturno do dia 30/09 -- deve aparecer no
     relatorio de SETEMBRO, não no de OUTUBRO."""
@@ -113,7 +138,7 @@ async def test_planilha_mensal_vira_mes_no_plantao_noturno(session: AsyncSession
 
     virada = RecepcaoAtendimento(
         paciente_id=paciente.id,
-        data_atendimento=datetime(2026, 10, 1, 1, 0, tzinfo=timezone.utc),
+        data_atendimento=datetime(2026, 10, 1, 1, 0, tzinfo=ZoneInfo("America/Sao_Paulo")),
     )
     session.add(virada)
     await session.flush()
@@ -158,7 +183,7 @@ async def test_planilha_mensal_monta_endereco_e_campos_extra(session: AsyncSessi
         paciente_id=paciente_endereco.id,
         registro=42,
         procedencia="SAMU",
-        data_atendimento=datetime(2026, 9, 10, 9, 0, tzinfo=timezone.utc),
+        data_atendimento=datetime(2026, 9, 10, 9, 0, tzinfo=ZoneInfo("America/Sao_Paulo")),
     )
     session.add(atd)
     await session.flush()

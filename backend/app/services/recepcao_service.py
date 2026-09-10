@@ -1,5 +1,6 @@
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,18 +23,23 @@ from app.services.auditoria_service import AuditoriaService
 
 _INICIO_DIURNO = time(7, 0)
 _INICIO_NOTURNO = time(19, 0)
+_FUSO_HOSPITAL = ZoneInfo("America/Sao_Paulo")
 
 
 def _turno_e_dia_referencia(dt: datetime) -> tuple[str, date]:
-    """Diurno = 07:00-18:59, noturno = 19:00-06:59 (vira a virada do dia).
+    """Diurno = 07:00-18:59, noturno = 19:00-06:59 (vira a virada do dia),
+    sempre no horário de Brasília -- data_atendimento fica salvo em UTC, e
+    classificar pela hora UTC direto dava turno errado perto da troca de
+    turno (ex.: 16:24 local = 19:24 UTC, bateria como NOTURNO sem converter).
     O plantão noturno é "referenciado" pelo dia em que começou -- 03:00 de
     01/09 pertence ao noturno de 31/08, não ao diurno de 01/09."""
-    hora = dt.time()
+    local = dt.astimezone(_FUSO_HOSPITAL)
+    hora = local.time()
     if _INICIO_DIURNO <= hora < _INICIO_NOTURNO:
-        return "DIURNO", dt.date()
+        return "DIURNO", local.date()
     if hora >= _INICIO_NOTURNO:
-        return "NOTURNO", dt.date()
-    return "NOTURNO", dt.date() - timedelta(days=1)
+        return "NOTURNO", local.date()
+    return "NOTURNO", local.date() - timedelta(days=1)
 
 
 def _montar_endereco(logpcn: Optional[str], numpcn: Optional[str], bairro: Optional[str]) -> Optional[str]:
