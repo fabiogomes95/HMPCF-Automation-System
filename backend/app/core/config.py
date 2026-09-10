@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     LOGIN_MAX_TENTATIVAS: int = 5
     LOGIN_BLOQUEIO_MINUTOS: int = 15
 
+    # Acesso feito na própria máquina (loopback, ex.: terminal fixo da
+    # recepção abrindo http://localhost:8001) pula a tela de login e usa
+    # direto este usuário. Acesso de outra máquina pela rede (ex.:
+    # http://192.168.1.29:8001) continua exigindo login normalmente —
+    # ver app/api/deps.py.
+    AUTO_LOGIN_LOCAL: bool = True
+    AUTO_LOGIN_USERNAME: str = "recepcao"
+
     @computed_field
     @property
     def database_url(self) -> str:

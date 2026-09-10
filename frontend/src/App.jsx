@@ -29,7 +29,15 @@ export default function App() {
     try {
       await logout();
     } finally {
-      setUsuario(null);
+      // No terminal fixo da recepção (acesso local) o backend loga de volta
+      // sozinho no próximo /auth/me — não faz sentido mostrar a tela de
+      // login nesse caso. Só quem acessa pela rede realmente desloga.
+      try {
+        const res = await getMe();
+        setUsuario(res.data);
+      } catch {
+        setUsuario(null);
+      }
     }
   }
 
