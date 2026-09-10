@@ -7,6 +7,7 @@ from app.models.usuario import Usuario
 from app.schemas.common import PaginatedResponse
 from app.schemas.recepcao import (
     PacienteAgrupadoResponse,
+    PlanilhaMensalResponse,
     RecepcaoCreate,
     RecepcaoListResponse,
     RecepcaoResponse,
@@ -79,6 +80,20 @@ async def atendimentos_do_paciente(
     return await _svc(session, usuario).listar_por_paciente(
         paciente_id=paciente_id, page=page, page_size=page_size
     )
+
+
+@router.get(
+    "/planilha",
+    response_model=PlanilhaMensalResponse,
+    summary="Relatório mensal estilo planilha, separado por turno (diurno/noturno)",
+)
+async def planilha_mensal(
+    session: DBSession,
+    usuario: CurrentUser,
+    ano: int = Query(..., ge=2020, le=2100),
+    mes: int = Query(..., ge=1, le=12),
+) -> PlanilhaMensalResponse:
+    return await _svc(session, usuario).planilha_mensal(ano=ano, mes=mes)
 
 
 @router.get(

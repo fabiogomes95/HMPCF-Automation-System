@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import ConfigDict, Field
@@ -74,6 +74,33 @@ class PacienteAgrupadoResponse(BaseSchema):
     dtnasc: Optional[str] = None
     total_entradas: int = 0
     ultima_data: Optional[datetime] = None
+
+
+class PlanilhaAtendimentoResponse(BaseSchema):
+    """Uma linha do relatório mensal estilo planilha (ver RecepcaoService.planilha_mensal)."""
+
+    atendimento_id: int
+    registro: Optional[int] = None
+    data_atendimento: datetime
+    nome: Optional[str] = None
+    dtnasc: Optional[str] = None
+    sexo: Optional[str] = None
+    raca: Optional[str] = None
+    cidade: Optional[str] = None
+    num_cpf: Optional[str] = None
+    cns: Optional[str] = None
+    procedencia: Optional[str] = None
+    endereco: Optional[str] = None
+    telefone: Optional[str] = None
+    dia_referencia: date
+    turno: str
+
+
+class PlanilhaMensalResponse(BaseSchema):
+    ano: int
+    mes: int
+    total: int
+    items: list[PlanilhaAtendimentoResponse]
 
 
 class RecepcaoListResponse(BaseSchema):

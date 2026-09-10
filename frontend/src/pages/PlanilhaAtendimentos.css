@@ -1,0 +1,176 @@
+.planilha {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: #1e293b;
+}
+
+/* ── Cabeçalho e filtros ──────────────────────────────────────────────── */
+.planilha-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.planilha-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.planilha-titulo h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: 0.5px;
+}
+
+.planilha-total {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.planilha-filtros {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.planilha-filtro-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+}
+
+.planilha-filtro-campo input,
+.planilha-filtro-campo select {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  background: #fff;
+  color: #1e293b;
+}
+
+.planilha-filtro-campo input:focus,
+.planilha-filtro-campo select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px #bfdbfe;
+}
+
+/* ── Estado vazio / carregando / erro ─────────────────────────────────── */
+.planilha-loading,
+.planilha-vazio {
+  text-align: center;
+  padding: 36px 12px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.planilha-erro {
+  text-align: center;
+  padding: 20px 12px;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+}
+
+/* ── Grupos por plantão ───────────────────────────────────────────────── */
+.planilha-grupo {
+  margin-bottom: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.planilha-plantao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff;
+  background: #1e293b;
+}
+
+.planilha-plantao-diurno {
+  background: #1d4ed8;
+}
+
+.planilha-plantao-noturno {
+  background: #1e293b;
+}
+
+.planilha-plantao-contador {
+  font-weight: 600;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+/* ── Tabela ───────────────────────────────────────────────────────────── */
+.planilha-tabela {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.planilha-tabela thead tr {
+  background: #f1f5f9;
+}
+
+.planilha-tabela th {
+  padding: 7px 10px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.planilha-tabela td {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
+}
+
+.planilha-tabela tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.cel-nome {
+  font-weight: 600;
+  white-space: normal;
+}
+
+.cel-endereco {
+  white-space: normal;
+}
+
+.cel-aba {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+@media print {
+  .no-print { display: none !important; }
+}

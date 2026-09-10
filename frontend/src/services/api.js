@@ -85,6 +85,10 @@ export function listarAtendimentosPorPaciente(pacienteId, page = 1, pageSize = 1
   return api.get(`/recepcao/paciente/${pacienteId}`, { params: { page, page_size: pageSize } });
 }
 
+export function buscarPlanilhaMensal(ano, mes) {
+  return api.get("/recepcao/planilha", { params: { ano, mes } });
+}
+
 export function criarRecepcao(dados) {
   return api.post("/recepcao/", dados);
 }

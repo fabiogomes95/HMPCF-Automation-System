@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,12 +11,41 @@ from app.repositories.recepcao_repository import RecepcaoRepository
 from app.schemas.common import PaginatedResponse
 from app.schemas.recepcao import (
     PacienteAgrupadoResponse,
+    PlanilhaAtendimentoResponse,
+    PlanilhaMensalResponse,
     RecepcaoCreate,
     RecepcaoListResponse,
     RecepcaoResponse,
     RecepcaoUpdate,
 )
 from app.services.auditoria_service import AuditoriaService
+
+_INICIO_DIURNO = time(7, 0)
+_INICIO_NOTURNO = time(19, 0)
+
+
+def _turno_e_dia_referencia(dt: datetime) -> tuple[str, date]:
+    """Diurno = 07:00-18:59, noturno = 19:00-06:59 (vira a virada do dia).
+    O plantão noturno é "referenciado" pelo dia em que começou -- 03:00 de
+    01/09 pertence ao noturno de 31/08, não ao diurno de 01/09."""
+    hora = dt.time()
+    if _INICIO_DIURNO <= hora < _INICIO_NOTURNO:
+        return "DIURNO", dt.date()
+    if hora >= _INICIO_NOTURNO:
+        return "NOTURNO", dt.date()
+    return "NOTURNO", dt.date() - timedelta(days=1)
+
+
+def _montar_endereco(logpcn: Optional[str], numpcn: Optional[str], bairro: Optional[str]) -> Optional[str]:
+    """Formato 'Rua, Número - Bairro', omitindo partes ausentes."""
+    rua_num = (logpcn or "").strip()
+    numero = (numpcn or "").strip()
+    if numero:
+        rua_num = f"{rua_num}, {numero}" if rua_num else numero
+    bairro = (bairro or "").strip()
+    if bairro:
+        return f"{rua_num} - {bairro}" if rua_num else bairro
+    return rua_num or None
 
 
 class RecepcaoService:
@@ -135,6 +164,44 @@ class RecepcaoService:
             page_size=page_size,
             pages=pages,
         )
+
+    async def planilha_mensal(self, ano: int, mes: int) -> PlanilhaMensalResponse:
+        """Relatório mensal estilo planilha (ver docs do pedido) -- uma linha por
+        atendimento, com turno (DIURNO/NOTURNO) e dia_referencia calculados.
+        Busca com folga de 1 dia de cada lado pra não perder atendimentos do
+        plantão noturno que viram a virada do mês, depois filtra pelo mês real."""
+        inicio_mes = date(ano, mes, 1)
+        fim_mes = date(ano + 1, 1, 1) if mes == 12 else date(ano, mes + 1, 1)
+        inicio_busca = datetime.combine(inicio_mes - timedelta(days=1), time.min, tzinfo=timezone.utc)
+        fim_busca = datetime.combine(fim_mes + timedelta(days=1), time.min, tzinfo=timezone.utc)
+
+        atendimentos = await self._repo.list_por_intervalo(inicio_busca, fim_busca)
+
+        items = []
+        for a in atendimentos:
+            turno, dia_referencia = _turno_e_dia_referencia(a.data_atendimento)
+            if not (inicio_mes <= dia_referencia < fim_mes):
+                continue
+            p = a.paciente
+            items.append(PlanilhaAtendimentoResponse(
+                atendimento_id=a.id,
+                registro=a.registro,
+                data_atendimento=a.data_atendimento,
+                nome=p.nome if p else None,
+                dtnasc=p.dtnasc if p else None,
+                sexo=p.sexo if p else None,
+                raca=p.raca if p else None,
+                cidade=p.cidade if p else None,
+                num_cpf=p.num_cpf if p else None,
+                cns=p.cns if p else None,
+                procedencia=a.procedencia,
+                endereco=_montar_endereco(p.logpcn, p.numpcn, p.bairro_pcnte) if p else None,
+                telefone=f"{p.ddtel_pcnte or ''}{p.tel_pcnte or ''}".strip() or None if p else None,
+                dia_referencia=dia_referencia,
+                turno=turno,
+            ))
+
+        return PlanilhaMensalResponse(ano=ano, mes=mes, total=len(items), items=items)
 
     # ── Escrita ────────────────────────────────────────────────────────────────
 

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import func, or_, select
@@ -167,6 +168,25 @@ class RecepcaoRepository(BaseRepository[RecepcaoAtendimento]):
         result = await self.session.execute(stmt)
         return result.scalar_one()
 
+
+    async def list_por_intervalo(
+        self, inicio: datetime, fim: datetime
+    ) -> list[RecepcaoAtendimento]:
+        """Todos os atendimentos com data_atendimento em [inicio, fim), paciente
+        carregado, em ordem cronológica. Usado pelo relatório mensal (planilha) --
+        o chamador passa um intervalo com folga (ver RecepcaoService.planilha_mensal)
+        pra não perder atendimentos do plantão noturno que viram a virada do mês."""
+        stmt = (
+            select(RecepcaoAtendimento)
+            .options(selectinload(RecepcaoAtendimento.paciente))
+            .where(
+                RecepcaoAtendimento.data_atendimento >= inicio,
+                RecepcaoAtendimento.data_atendimento < fim,
+            )
+            .order_by(RecepcaoAtendimento.data_atendimento.asc())
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 
     async def add_and_load(self, obj: RecepcaoAtendimento) -> RecepcaoAtendimento:
         """Persiste e recarrega com o relacionamento paciente."""

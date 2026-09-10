@@ -7,6 +7,37 @@
   color: #1e293b;
 }
 
+/* ── Sub-abas ─────────────────────────────────────────────────────────── */
+.historico-sub-abas {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.historico-sub-aba-btn {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  background: transparent;
+  color: #64748b;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+}
+
+.historico-sub-aba-btn:hover {
+  color: #1e293b;
+}
+
+.historico-sub-aba-btn.ativo {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
 /* ── Cabeçalho ────────────────────────────────────────────────────────── */
 .historico-header {
   display: flex;

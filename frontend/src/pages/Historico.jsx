@@ -4,6 +4,7 @@ import {
   listarAtendimentosPorPaciente,
 } from "../services/api";
 import { formatCPF } from "../utils";
+import PlanilhaAtendimentos from "./PlanilhaAtendimentos";
 import "./Historico.css";
 
 
@@ -25,6 +26,7 @@ function formatDtnasc(dtnasc) {
 }
 
 export default function Historico({ onNavigate }) {
+  const [subAba, setSubAba]       = useState("busca");
   const [items, setItems]         = useState([]);
   const [total, setTotal]         = useState(0);
   const [pages, setPages]         = useState(1);
@@ -105,6 +107,25 @@ export default function Historico({ onNavigate }) {
   return (
     <div className="historico">
 
+      <div className="historico-sub-abas no-print">
+        <button
+          className={`historico-sub-aba-btn${subAba === "busca" ? " ativo" : ""}`}
+          onClick={() => setSubAba("busca")}
+        >
+          Busca de Pacientes
+        </button>
+        <button
+          className={`historico-sub-aba-btn${subAba === "planilha" ? " ativo" : ""}`}
+          onClick={() => setSubAba("planilha")}
+        >
+          Planilha de Atendimentos
+        </button>
+      </div>
+
+      {subAba === "planilha" ? (
+        <PlanilhaAtendimentos />
+      ) : (
+      <>
       <div className="historico-header">
         <div className="historico-titulo">
           <h2>Busca de Pacientes</h2>
@@ -272,6 +293,8 @@ export default function Historico({ onNavigate }) {
             Próxima ›
           </button>
         </div>
+      )}
+      </>
       )}
     </div>
   );
