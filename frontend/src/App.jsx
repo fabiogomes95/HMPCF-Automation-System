@@ -13,30 +13,41 @@ export default function App() {
   // null = ainda verificando sessão · undefined-like "sem usuário" = false
   const [usuario, setUsuario]     = useState(null);
   const [verificando, setVerificando] = useState(true);
+  const [avisoRelogin, setAvisoRelogin] = useState(null); // username pro qual recaiu, se trocou
+
+  // Busca /auth/me e reflete no estado. Usado tanto na carga inicial quanto
+  // depois de "Sair" -- no terminal fixo da recepção (acesso local) o backend
+  // loga de volta sozinho aqui, então os dois pontos usam a mesma lógica.
+  async function refreshUsuario() {
+    try {
+      const res = await getMe();
+      setUsuario(res.data);
+      return res.data;
+    } catch {
+      setUsuario(null);
+      return null;
+    }
+  }
 
   useEffect(() => {
     // Qualquer chamada que volte 401 (sessão expirou no meio do uso) derruba
     // a tela pro login de novo, sem precisar cada página tratar isso na mão.
     setOnUnauthorized(() => setUsuario(null));
 
-    getMe()
-      .then((res) => setUsuario(res.data))
-      .catch(() => setUsuario(null))
-      .finally(() => setVerificando(false));
+    refreshUsuario().finally(() => setVerificando(false));
   }, []);
 
   async function handleSair() {
+    const usuarioAnterior = usuario;
     try {
       await logout();
     } finally {
-      // No terminal fixo da recepção (acesso local) o backend loga de volta
-      // sozinho no próximo /auth/me — não faz sentido mostrar a tela de
-      // login nesse caso. Só quem acessa pela rede realmente desloga.
-      try {
-        const res = await getMe();
-        setUsuario(res.data);
-      } catch {
-        setUsuario(null);
+      const novoUsuario = await refreshUsuario();
+      // Se voltou logado como outro usuário (auto-login local), avisa --
+      // "Sair" não deixou o terminal deslogado, só voltou pro padrão.
+      if (novoUsuario && usuarioAnterior && novoUsuario.username !== usuarioAnterior.username) {
+        setAvisoRelogin(novoUsuario.username);
+        setTimeout(() => setAvisoRelogin(null), 6000);
       }
     }
   }
@@ -70,6 +81,11 @@ export default function App() {
 
   return (
     <>
+      {avisoRelogin && (
+        <div className="app-aviso-relogin no-print">
+          Sessão encerrada — este terminal continua liberado como {avisoRelogin}.
+        </div>
+      )}
       <nav className="app-nav no-print">
         <span className="app-nav-brand">HMPCF</span>
         <button

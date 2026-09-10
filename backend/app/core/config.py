@@ -49,8 +49,10 @@ class Settings(BaseSettings):
     # recepção abrindo http://localhost:8001) pula a tela de login e usa
     # direto este usuário. Acesso de outra máquina pela rede (ex.:
     # http://192.168.1.29:8001) continua exigindo login normalmente —
-    # ver app/api/deps.py.
-    AUTO_LOGIN_LOCAL: bool = True
+    # ver app/api/deps.py. Desligado por padrão -- precisa ser ligado
+    # explicitamente no .env de cada máquina que deve ter esse
+    # comportamento (ex.: só o terminal fixo da recepção).
+    AUTO_LOGIN_LOCAL: bool = False
     AUTO_LOGIN_USERNAME: str = "recepcao"
 
     @computed_field

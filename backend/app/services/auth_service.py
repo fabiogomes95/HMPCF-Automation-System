@@ -84,6 +84,23 @@ class AuthService:
         await self.session.flush()
         return usuario, token
 
+    async def usuario_para_auto_login(self, username: str) -> Optional[Usuario]:
+        """Usado só pelo bypass de acesso local (ver app/api/deps.py) --
+        mesma elegibilidade do login normal (ativo, sem bloqueio por
+        tentativas), mas sem senha. Quem decide SE o bypass se aplica
+        (IP de origem, config) é o dependency, não este método. Atualiza
+        last_login_at só nesta chamada -- ela só acontece quando não há
+        sessão válida (cookie ausente/expirado), não a cada request."""
+        usuario = await self._usuarios.get_by_username(username)
+        if usuario is None or not usuario.ativo:
+            return None
+        agora = datetime.now(timezone.utc)
+        if usuario.bloqueado_ate and _aware(usuario.bloqueado_ate) > agora:
+            return None
+        usuario.last_login_at = agora
+        await self.session.flush()
+        return usuario
+
     async def validar_sessao(self, token: Optional[str]) -> Usuario:
         if not token:
             raise UnauthorizedError("Sessão ausente — faça login novamente")

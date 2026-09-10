@@ -44,6 +44,16 @@
   margin-left: auto;
 }
 
+.app-aviso-relogin {
+  padding: 6px 16px;
+  background: #78350f;
+  color: #fef3c7;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
 @media print {
   .app-nav { display: none !important; }
+  .app-aviso-relogin { display: none !important; }
 }
