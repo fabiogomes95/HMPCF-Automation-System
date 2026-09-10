@@ -27,6 +27,7 @@ export default function BoletimA4({
   onRegistroChange,
   onCPFChange,
   onCNSChange,
+  onSemDocumentoChange,
   onDtnascChange,
   onTelChange,
   onRacaChange,
@@ -111,6 +112,7 @@ export default function BoletimA4({
               placeholder="000.000.000-00"
               maxLength={14}
               autoFocus
+              disabled={form.sem_documento}
             />
             {erroCpf && <span style={{ color: "#dc2626", fontSize: 10, whiteSpace: "nowrap" }}>{erroCpf}</span>}
           </div>
@@ -122,8 +124,19 @@ export default function BoletimA4({
               onChange={onCNSChange}
               placeholder="000 0000 0000 0000"
               maxLength={18}
+              disabled={form.sem_documento}
             />
             {erroCns && <span style={{ color: "#dc2626", fontSize: 10, whiteSpace: "nowrap" }}>{erroCns}</span>}
+          </div>
+          <div className="field campo-sem-documento no-print" style={{ flex: 1 }}>
+            <label>
+              <input
+                type="checkbox"
+                checked={!!form.sem_documento}
+                onChange={onSemDocumentoChange}
+              />
+              {" "}SEM CPF/CNS
+            </label>
           </div>
           <div className="field" style={{ flex: 1 }}>
             <label>SEXO:</label>

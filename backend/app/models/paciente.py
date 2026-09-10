@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import DateTime, Index, Integer, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -42,6 +42,11 @@ class Paciente(Base):
     estado:        Mapped[Optional[str]] = mapped_column(String(2),   nullable=True)
     nacionalidade: Mapped[str]           = mapped_column(String(50),  nullable=False, server_default="010")
     naturalidade:  Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    # Paciente sem CPF nem CNS -- BPA/SUS agora tem uma opção própria pra
+    # esse caso (validação fica a cargo de quem gera o arquivo BPA). Sem
+    # isso marcado, CPF ou CNS continuam obrigatórios (ver schemas/paciente.py).
+    sem_documento: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
 
     migrated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

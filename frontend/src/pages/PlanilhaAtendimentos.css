@@ -124,8 +124,13 @@
 }
 
 /* ── Tabela ───────────────────────────────────────────────────────────── */
+.planilha-tabela-scroll {
+  overflow-x: auto;
+}
+
 .planilha-tabela {
   width: 100%;
+  min-width: 1100px;
   border-collapse: collapse;
 }
 

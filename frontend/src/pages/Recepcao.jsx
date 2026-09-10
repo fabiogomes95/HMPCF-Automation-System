@@ -46,6 +46,7 @@ const vazio = {
   estado_civil: "",
   ocupacao: "",
   responsavel: "",
+  sem_documento: false,
 };
 
 const camposTexto = [
@@ -253,6 +254,19 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     }
   }
 
+  function handleSemDocumentoChange(e) {
+    const marcado = e.target.checked;
+    setForm((prev) => ({
+      ...prev,
+      sem_documento: marcado,
+      // CPF/CNS deixam de fazer sentido quando o paciente não tem documento
+      num_cpf: marcado ? "" : prev.num_cpf,
+      cns: marcado ? "" : prev.cns,
+    }));
+    setErroCpf("");
+    setErroCns("");
+  }
+
   function handleChange(e) {
     congelarRelogio();
     const { name, value } = e.target;
@@ -339,8 +353,8 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
 
     const cpfOk = form.num_cpf && validarCPF(form.num_cpf);
     const cnsOk = form.cns && validarCNS(form.cns);
-    if (!cpfOk && !cnsOk) {
-      erros.push({ campo: "num_cpf", msg: "Informe um CPF ou CNS válido." });
+    if (!cpfOk && !cnsOk && !form.sem_documento) {
+      erros.push({ campo: "num_cpf", msg: "Informe um CPF ou CNS válido, ou marque \"sem documento\"." });
     }
 
     if (!form.dtnasc || form.dtnasc.trim() === "") {
@@ -375,7 +389,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     if (erros.length > 0) {
       setErroDtnasc(erros.find(e => e.campo === "dtnasc")?.msg || "");
       setMsg(erros[0].msg);
-      return;
+      return false;
     }
     setErroDtnasc("");
     setLoading(true);
@@ -422,10 +436,12 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
         setMsg("✓ Registrado!");
         setRegistrado(true);
       }
+      return true;
     } catch (err) {
       const data = err.response?.data || {};
       const msg = data.detail || data.message || "Erro ao registrar";
       setMsg(typeof msg === "string" ? msg : JSON.stringify(msg));
+      return false;
     } finally {
       setLoading(false);
     }
@@ -467,7 +483,14 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
     cpfRef.current?.focus();
   }
 
-  function handleImprimir() {
+  async function handleImprimir() {
+    // Recepção às vezes esquece de clicar "Registrar Atendimento" e vai
+    // direto pro Imprimir -- registra na hora, sem diálogo, só então abre
+    // a impressão. Em modo edição o atendimento já existe, não precisa.
+    if (!edicao && !registrado) {
+      const ok = await handleAtendimento();
+      if (!ok) return; // erro já aparece no msg-badge -- não imprime sem registrar
+    }
     window.print();
   }
 
@@ -538,6 +561,7 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
           onRegistroChange={handleAtdRegistroChange}
           onCPFChange={handleCPFChange}
           onCNSChange={handleCNSChange}
+          onSemDocumentoChange={handleSemDocumentoChange}
           onDtnascChange={handleDtnascChange}
           onTelChange={handleTelChange}
           onRacaChange={handleRacaChange}

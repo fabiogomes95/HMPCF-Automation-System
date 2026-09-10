@@ -197,6 +197,7 @@ export default function PlanilhaAtendimentos() {
               <span className="planilha-plantao-contador">{grupo.items.length} atendimento{grupo.items.length !== 1 ? "s" : ""}</span>
             </div>
 
+            <div className="planilha-tabela-scroll">
             <table className="planilha-tabela">
               <thead>
                 <tr>
@@ -238,6 +239,7 @@ export default function PlanilhaAtendimentos() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         ))}
       </div>

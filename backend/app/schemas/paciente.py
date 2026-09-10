@@ -85,6 +85,7 @@ class PacienteCreate(BaseSchema):
     estado:       Optional[str] = None
     nacionalidade: str = Field(default="010")
     naturalidade: Optional[str] = None
+    sem_documento: bool = False
 
     @field_validator("num_cpf", "cns", mode="before")
     @classmethod
@@ -155,8 +156,8 @@ class PacienteCreate(BaseSchema):
 
     @model_validator(mode="after")
     def _requer_campos_obrigatorios(self) -> "PacienteCreate":
-        if not self.num_cpf and not self.cns:
-            raise ValueError("Informe pelo menos um CPF ou CNS válido")
+        if not self.num_cpf and not self.cns and not self.sem_documento:
+            raise ValueError("Informe um CPF ou CNS válido, ou marque 'sem documento'")
         if not self.nome:
             raise ValueError("Nome é obrigatório")
         if not self.sexo:
@@ -190,6 +191,7 @@ class PacienteUpdate(BaseSchema):
     estado:       Optional[str] = None
     nacionalidade: Optional[str] = "010"
     naturalidade: Optional[str] = None
+    sem_documento: Optional[bool] = None
 
     @field_validator("nome", mode="before")
     @classmethod
@@ -262,4 +264,5 @@ class PacienteResponse(BaseSchema):
     estado:       Optional[str] = None
     nacionalidade: str = "010"
     naturalidade: Optional[str] = None
+    sem_documento: bool = False
     migrated_at:  Optional[datetime] = None
