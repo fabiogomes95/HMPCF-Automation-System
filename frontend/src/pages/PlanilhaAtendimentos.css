@@ -176,6 +176,30 @@
   font-size: 11px;
 }
 
+.cel-copiar {
+  text-align: center;
+  padding: 4px !important;
+}
+
+.btn-copiar-linha {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  background: #fff;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.btn-copiar-linha:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
 @media print {
   .no-print { display: none !important; }
 }

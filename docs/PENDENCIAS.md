@@ -20,6 +20,7 @@ os itens vão sendo feitos ou entrando na lista.
 | 7 | Nova aba "Planilha" — relatório mensal estilo planilha manual, separado por plantão diurno/noturno (07h-18h59 / 19h-06h59), com filtro de mês/turno/dia | `frontend/src/pages/PlanilhaAtendimentos.jsx`, `GET /api/v1/recepcao/planilha` |
 | 8 | Botão "Imprimir" registra o atendimento sozinho se a recepção esquecer de clicar "Registrar Atendimento" antes | `frontend/src/pages/Recepcao.jsx` (`handleImprimir`) |
 | 9 | Paciente sem CPF/CNS — os dois viram opcionais pra salvar; `sem_documento` é marcado sozinho no banco quando falta CPF (usado futuramente na exportação BPA/Firebird) | `backend/app/services/paciente_service.py`, coluna `pacientes.sem_documento` |
+| 13 | Copiar linha da Planilha pro clipboard — botão por linha, cola direto nas colunas do Excel; aba também passou a abrir já filtrada no plantão vigente (evita travar a página com ~6mil atendimentos/mês) | `frontend/src/pages/PlanilhaAtendimentos.jsx` |
 
 ## Deploy em produção — em andamento
 
@@ -54,15 +55,6 @@ Paciente sem CPF/CNS agora pode ser salvo na recepção (`pacientes.sem_document
 = true`, automático). BPA/SUS tem uma opção própria pra esse caso, mas o lado
 do BPA (`bpa/`) ainda não lê nem valida esse campo — combinado pra ser feito
 "amanhã" (a partir de 11/09/2026).
-
-### 13. Copiar linha da Planilha pro clipboard (opcional, só se precisarem)
-
-As meninas da recepção ainda alimentam uma planilha manual (Excel) em
-paralelo com os mesmos dados. Ideia: um botão por linha na aba "Planilha"
-que copia os campos daquela linha formatados com TAB entre eles (cola
-direto nas colunas do Excel). Baixa prioridade — só implementar se, na
-prática, elas continuarem de fato usando a planilha manual depois que a
-aba nova estiver disponível.
 
 ### 14. Consolidar os 3 launchers redundantes do backend
 

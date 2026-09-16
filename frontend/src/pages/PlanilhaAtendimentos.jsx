@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { buscarPlanilhaMensal } from "../services/api";
 import { formatCPF, formatCNS, formatTelefone, parseDateFromDB } from "../utils";
 import "./PlanilhaAtendimentos.css";
@@ -31,9 +31,33 @@ function formatRaca(raca) {
   return LABEL_RACA[raca] ?? raca;
 }
 
-function mesAtualISO() {
-  const hoje = new Date();
-  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+// Mesma regra de turno/dia_referencia do backend (recepcao_service.py) --
+// diurno 07h-18h59, noturno 19h-06h59 (referenciado pelo dia em que
+// começou), sempre no horário de Brasília, não no fuso do navegador/PC.
+function turnoVigenteInfo() {
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false,
+  }).formatToParts(new Date());
+  const obter = tipo => Number(partes.find(p => p.type === tipo)?.value);
+  const ano = obter("year");
+  const mes = obter("month");
+  const dia = obter("day");
+  const hora = obter("hour");
+
+  let turno = "NOTURNO";
+  let dataRef = new Date(ano, mes - 1, dia);
+  if (hora >= 7 && hora < 19) {
+    turno = "DIURNO";
+  } else if (hora < 7) {
+    dataRef = new Date(ano, mes - 1, dia - 1);
+  }
+
+  const anoRef = dataRef.getFullYear();
+  const mesRef = String(dataRef.getMonth() + 1).padStart(2, "0");
+  const diaRef = String(dataRef.getDate()).padStart(2, "0");
+
+  return { turno, diaISO: `${anoRef}-${mesRef}-${diaRef}`, mesISO: `${anoRef}-${mesRef}` };
 }
 
 function formatHora(iso) {
@@ -73,6 +97,36 @@ function calcularIdadeEm(dtnascBR, dataReferencia) {
   return `${dias} ${dias === 1 ? "DIA" : "DIAS"}`;
 }
 
+// Copia texto pro clipboard. `navigator.clipboard` só existe em contexto
+// seguro (HTTPS ou localhost) -- a segunda máquina da recepção acessa por
+// http://IP:8001 (não é contexto seguro), então cai no fallback via
+// textarea + execCommand, que funciona em HTTP normal.
+async function copiarTexto(texto) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    } catch {
+      // cai pro fallback abaixo
+    }
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = texto;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch {
+    ok = false;
+  }
+  document.body.removeChild(textarea);
+  return ok;
+}
+
 // Agrupa a lista (já ordenada cronologicamente pelo backend) em blocos
 // consecutivos de mesmo dia_referencia + turno, igual às linhas separadoras
 // da planilha original ("PLANTAO DIURNO/NOTURNO DD/MM/YYYY").
@@ -90,20 +144,32 @@ function agruparPorPlantao(items) {
 }
 
 export default function PlanilhaAtendimentos() {
-  const [mes, setMes]         = useState(mesAtualISO());
-  const [turnoFiltro, setTurnoFiltro] = useState("TODOS");
-  const [diaFiltro, setDiaFiltro]     = useState("TODOS");
+  // Ao abrir a página: mês/dia/turno já vêm no plantão vigente (evita
+  // renderizar o mês inteiro de cara -- com ~6mil atendimentos/mês isso
+  // travava a página). "Ver o mês todo" continua disponível trocando os
+  // filtros manualmente (ver efeito abaixo).
+  const [mes, setMes]         = useState(() => turnoVigenteInfo().mesISO);
+  const [turnoFiltro, setTurnoFiltro] = useState(() => turnoVigenteInfo().turno);
+  const [diaFiltro, setDiaFiltro]     = useState(() => turnoVigenteInfo().diaISO);
   const [items, setItems]     = useState([]);
   const [total, setTotal]     = useState(0);
   const [loading, setLoading] = useState(false);
   const [erro, setErro]       = useState("");
+  const [copiadoId, setCopiadoId] = useState(null);
+  const primeiraCargaRef = useRef(true);
 
   useEffect(() => {
     const [ano, mesNum] = mes.split("-").map(Number);
     if (!ano || !mesNum) return;
     setLoading(true);
     setErro("");
-    setDiaFiltro("TODOS");
+    // Só reseta o filtro de dia quando o mês é trocado manualmente -- na
+    // carga inicial o dia já vem pré-selecionado no plantão vigente.
+    if (primeiraCargaRef.current) {
+      primeiraCargaRef.current = false;
+    } else {
+      setDiaFiltro("TODOS");
+    }
     buscarPlanilhaMensal(ano, mesNum)
       .then(res => {
         setItems(res.data.items);
@@ -138,6 +204,15 @@ export default function PlanilhaAtendimentos() {
   }, [items, turnoFiltro, diaFiltro]);
 
   const grupos = useMemo(() => agruparPorPlantao(itemsFiltrados), [itemsFiltrados]);
+
+  async function handleCopiarLinha(item, linha) {
+    const ok = await copiarTexto(linha);
+    if (!ok) return;
+    setCopiadoId(item.atendimento_id);
+    setTimeout(() => {
+      setCopiadoId(id => (id === item.atendimento_id ? null : id));
+    }, 1500);
+  }
 
   return (
     <div className="planilha">
@@ -201,6 +276,7 @@ export default function PlanilhaAtendimentos() {
             <table className="planilha-tabela">
               <thead>
                 <tr>
+                  <th style={{ width: 36 }} className="no-print"></th>
                   <th style={{ width: 60 }}>Registro</th>
                   <th>Nome</th>
                   <th style={{ width: 90 }}>Nascimento</th>
@@ -219,8 +295,34 @@ export default function PlanilhaAtendimentos() {
               <tbody>
                 {grupo.items.map(item => {
                   const dtnascBR = parseDateFromDB(item.dtnasc);
+                  const campos = [
+                    item.registro ?? "",
+                    item.nome || "",
+                    dtnascBR || "",
+                    dtnascBR ? calcularIdadeEm(dtnascBR, new Date(item.data_atendimento)) : "",
+                    item.sexo || "",
+                    formatRaca(item.raca) === "—" ? "" : formatRaca(item.raca),
+                    item.cidade || "",
+                    formatHora(item.data_atendimento),
+                    item.num_cpf ? formatCPF(item.num_cpf) : "",
+                    item.cns ? formatCNS(item.cns) : "",
+                    LABEL_PROCEDENCIA[item.procedencia] ?? item.procedencia ?? "",
+                    item.endereco || "",
+                    item.telefone ? formatTelefone(item.telefone) : "",
+                  ];
+                  const linhaCopia = campos.join("\t");
                   return (
                     <tr key={item.atendimento_id}>
+                      <td className="cel-copiar no-print">
+                        <button
+                          type="button"
+                          className="btn-copiar-linha"
+                          onClick={() => handleCopiarLinha(item, linhaCopia)}
+                          title="Copiar linha (cola direto nas colunas do Excel)"
+                        >
+                          {copiadoId === item.atendimento_id ? "✓" : "⧉"}
+                        </button>
+                      </td>
                       <td>{item.registro ?? "—"}</td>
                       <td className="cel-nome">{item.nome || "—"}</td>
                       <td>{dtnascBR || "—"}</td>
