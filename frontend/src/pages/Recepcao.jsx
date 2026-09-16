@@ -544,7 +544,6 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
           onRegistroChange={handleAtdRegistroChange}
           onCPFChange={handleCPFChange}
           onCNSChange={handleCNSChange}
-          onSemDocumentoChange={handleSemDocumentoChange}
           onDtnascChange={handleDtnascChange}
           onTelChange={handleTelChange}
           onRacaChange={handleRacaChange}
