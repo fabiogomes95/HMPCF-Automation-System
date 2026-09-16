@@ -17,6 +17,7 @@ frontend-teste/
 **/.env
 scripts/windows/.backup_passphrase
 DEPLOY_LOGIN_PRODUCAO.md
+RODAR__NO_PC_PRODUÇÃO.MD
 
 # Misc
 *.log
