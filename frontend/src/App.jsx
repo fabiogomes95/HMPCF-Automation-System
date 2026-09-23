@@ -16,13 +16,13 @@ import "./App.css";
 // o que é só da TI (TIUser) -- esconder aqui é conveniência, não segurança.
 const TELAS = [
   { id: "recepcao",  rotulo: "Recepção",  papeis: ["recepcao", "ti", "faturamento"] },
-  { id: "historico", rotulo: "Histórico", papeis: ["recepcao", "ti"] },
-  { id: "planilha",  rotulo: "Planilha",  papeis: ["recepcao", "ti"] },
+  { id: "historico", rotulo: "Histórico", papeis: ["recepcao", "ti", "faturamento"] },
+  { id: "planilha",  rotulo: "Planilha",  papeis: ["recepcao", "ti", "faturamento"] },
   { id: "painel",    rotulo: "Painel",    papeis: ["ti"] },
   { id: "auditoria", rotulo: "Auditoria", papeis: ["ti"] },
   { id: "usuarios",  rotulo: "Usuários",  papeis: ["ti"] },
   { id: "correcao",  rotulo: "Correção",  papeis: ["ti", "faturamento"] },
-  { id: "senha",     rotulo: "Senha",     papeis: ["ti", "faturamento"] },
+  { id: "senha",     rotulo: "Senha",     papeis: ["ti"] },
 ];
 // BPA roda local em cada notebook do faturamento (Firebird/BPA Magnético offline).
 const URL_BPA_LOCAL = "http://localhost:8503";
