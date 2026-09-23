@@ -20,10 +20,12 @@ PostgreSQL database as the single source of truth:
 1. **Digital reception** (`backend/` + `frontend/`) — patient registration
    and visit intake, in production on the reception terminal at the
    hospital.
-2. **Management dashboard** (`dashboard/`) — real-time view for
-   coordinators and IT: daily history, patient lookup, and manual
-   spreadsheet import. Independent process, read-only by default, doesn't
-   interfere with reception.
+2. **Management dashboard** (the system's own **Painel** tab, IT only) —
+   real-time view: today's and current-shift volume, month vs. same period
+   last month, hourly load, profile (sex, age bracket, neighborhood, city,
+   origin) and registration quality. Route `GET /api/v1/ti/painel`,
+   aggregates only. Replaced the old Streamlit dashboard, archived in
+   `legado/dashboard_streamlit/`.
 3. **SUS/BPA billing** (`bpa/`) — a separate Flask app that generates the
    positional BPA-I files (one per professional/category, per billing
    period) from PostgreSQL attendance records, migrating data into the
@@ -41,7 +43,7 @@ gets no further maintenance or deploys.
 | Module | State |
 |--------|-------|
 | Digital reception (FastAPI + React) | **In production** |
-| Management dashboard (Streamlit) | **In production** |
+| Management dashboard (Painel tab, IT) | **In production** |
 | SUS/BPA billing (positional file generation) | **In production** |
 | Manual spreadsheet import (dedup, shift/timezone correction) | **In production** |
 | Auto-start (Scheduled Task + watchdog) | Configured |
@@ -58,9 +60,9 @@ gets no further maintenance or deploys.
   history.
 - Attendance (visit) records tied to each patient, with pagination and
   free-text search.
-- Read-only management dashboard: daily KPIs (volume, sex, age bracket,
-  neighborhood), full daily history, and patient lookup across all
-  records.
+- Read-only management dashboard (IT): today's and current-shift volume,
+  month vs. same period last month, hourly load, profile (sex, age bracket,
+  neighborhood, city, origin) and registration quality.
 - Manual spreadsheet import (`.tsv`) that diffs against the database and
   imports only what's missing, with deduplication and automatic
   night-shift date correction.
@@ -101,7 +103,8 @@ TODO: pin exact Node.js/npm versions if the project starts using an `.nvmrc` or 
 ## Installation
 
 Each app keeps its own virtual environment/dependencies, except `bpa/`,
-which reuses `dashboard/`'s (see [How to Run](#how-to-run) below).
+which still runs on a local `dashboard/` environment (not in git — see
+below).
 
 ### Backend
 
@@ -120,13 +123,17 @@ npm install
 npm run build   # outputs frontend/dist, served by the backend in production
 ```
 
-### Dashboard (also used to run `bpa/`)
+### `bpa/` environment (local `dashboard/` folder)
+
+The old Streamlit dashboard code moved to `legado/dashboard_streamlit/`, but
+`bpa/` still runs on the Python and `.env` of a local `dashboard/` folder
+(not in git). Until BPA gets its own environment, on a new machine:
 
 ```bash
-cd dashboard
+mkdir dashboard && cd dashboard
 python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
-cp .env.example .env   # fill in FIREBIRD_* credentials
+.venv\Scripts\pip install -r ..\legado\dashboard_streamlit\requirements.txt
+copy ..\legado\dashboard_streamlit\.env.example .env   # fill in FIREBIRD_*
 ```
 
 ### BPA billing
@@ -150,8 +157,7 @@ Real credentials never get committed — `.env` is covered everywhere by
 app folder and fill in real values.
 
 `bpa/app.py` loads all three `.env` files, in this order (first value
-found wins): `bpa/.env` → `dashboard/.env` → `backend/.env`. `dashboard/db.py`
-reads `backend/.env` directly for its (read-only) PostgreSQL connection.
+found wins): `bpa/.env` → `dashboard/.env` → `backend/.env`.
 
 ### `backend/.env` — PostgreSQL, API
 
@@ -225,16 +231,10 @@ Vite's dev server proxies `/api` to `http://desktop-9c4s1co:8001` (see
 `frontend/vite.config.js`) — that hostname is the production machine's;
 edit the proxy target if you're running the backend somewhere else.
 
-### Management dashboard (Streamlit)
+### Management dashboard
 
-```bash
-cd dashboard
-.venv\Scripts\streamlit run app.py
-```
-
-Runs on `http://localhost:8502` (LAN: `http://<machine-ip>:8502`).
-Launcher at `scripts/windows/ABRIR_DASHBOARD.bat`, also registered as its
-own Scheduled Task, independent from the backend.
+No process of its own: it's the system's **Painel** tab (IT role), served
+by the same backend on port 8001.
 
 ### SUS/BPA billing (Flask)
 
@@ -266,10 +266,6 @@ Magnético system. Desktop-shortcut launchers: `bpa/iniciar.bat`,
  ┃     ┗ 📂 api/v1/endpoints/        # pacientes · recepcao · terminal
  ┃  ┗ 📂 tests/                      # 21 tests (pytest)
  ┣ 📂 frontend/                      # React + Vite — reception input terminal
- ┣ 📂 dashboard/                     # Streamlit — management dashboard (IT/coordination)
- ┃  ┣ 📜 app.py                      # KPIs, charts (volume, sex, age, neighborhood)
- ┃  ┣ 📜 db.py                       # Read-only connection + shared helpers
- ┃  ┗ 📂 pages/                      # Daily history · monthly import · patient search
  ┣ 📂 bpa/                           # Flask — BPA-I generation, PG→Firebird migration
  ┃  ┣ 📜 app.py                      # Data entry, BPA-I generation, migration
  ┃  ┣ 📜 bpa_gerador.py              # Core BPA-I logic (layout, checksum, sheet/seq)

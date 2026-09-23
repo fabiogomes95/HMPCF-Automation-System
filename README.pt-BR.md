@@ -20,10 +20,12 @@ PostgreSQL como fonte única de verdade:
 
 1. **Recepção digital** (`backend/` + `frontend/`) — cadastro e atendimento
    de pacientes, em produção no terminal da recepção do hospital.
-2. **Painel gerencial** (`dashboard/`) — visão em tempo real para
-   coordenadores e TI: histórico diário, busca de paciente e importação de
-   planilhas manuais. Processo independente, somente leitura por padrão,
-   não interfere na recepção.
+2. **Painel gerencial** (aba **Painel** do próprio sistema, só TI) —
+   visão em tempo real: atendimentos do dia e do plantão, comparação com o
+   mês anterior, movimento por hora, perfil (sexo, faixa etária, bairro,
+   cidade, procedência) e qualidade do cadastro. Rota `GET /api/v1/ti/painel`,
+   só números agregados. Substituiu o antigo dashboard Streamlit, arquivado
+   em `legado/dashboard_streamlit/`.
 3. **Faturamento BPA/SUS** (`bpa/`) — aplicação Flask separada que gera os
    arquivos posicionais BPA-I (um por profissional/categoria, por
    competência) a partir dos atendimentos do PostgreSQL, migrando os dados
@@ -41,7 +43,7 @@ não recebe mais manutenção nem deploy.
 | Módulo | Situação |
 |--------|----------|
 | Recepção digital (FastAPI + React) | **Em produção** |
-| Painel gerencial (Streamlit) | **Em produção** |
+| Painel gerencial (aba Painel, TI) | **Em produção** |
 | Faturamento BPA/SUS (geração de arquivo posicional) | **Em produção** |
 | Importação de planilhas manuais (deduplicação, correção de fuso/turno) | **Em produção** |
 | Início automático (Tarefa Agendada + watchdog) | Configurado |
@@ -58,9 +60,9 @@ não recebe mais manutenção nem deploy.
   completo de atendimentos.
 - Registro de atendimentos vinculado a cada paciente, com paginação e
   busca livre.
-- Painel gerencial somente leitura: KPIs diários (volume, sexo, faixa
-  etária, bairro), histórico completo de um dia específico e busca de
-  paciente em toda a base.
+- Painel gerencial (TI) somente leitura: atendimentos de hoje e do plantão,
+  mês contra o mesmo período do mês anterior, movimento por hora, perfil
+  (sexo, faixa etária, bairro, cidade, procedência) e qualidade do cadastro.
 - Importação de planilha manual (`.tsv`) que compara com o banco e
   importa só o que falta, com deduplicação e correção automática de data
   pra atendimentos de plantão noturno.
@@ -100,7 +102,7 @@ TODO: fixar versão exata de Node.js/npm se o projeto adotar `.nvmrc` ou matriz 
 ## Instalação
 
 Cada aplicação tem seu próprio ambiente virtual/dependências, exceto o
-`bpa/`, que reaproveita o do `dashboard/` (ver [Como Rodar](#como-rodar)
+`bpa/`, que ainda usa um ambiente local em `dashboard/` (fora do git — ver
 abaixo).
 
 ### Backend
@@ -120,13 +122,17 @@ npm install
 npm run build   # gera frontend/dist, servido pelo backend em produção
 ```
 
-### Dashboard (também usado pra rodar o `bpa/`)
+### Ambiente do `bpa/` (pasta `dashboard/`, só local)
+
+O código do antigo dashboard Streamlit foi para `legado/dashboard_streamlit/`,
+mas o `bpa/` ainda roda com o Python e o `.env` de uma pasta `dashboard/`
+local (fora do git). Até o BPA ganhar ambiente próprio, numa máquina nova:
 
 ```bash
-cd dashboard
+mkdir dashboard && cd dashboard
 python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
-cp .env.example .env   # preencha as credenciais FIREBIRD_*
+.venv\Scripts\pip install -r ..\legado\dashboard_streamlit\requirements.txt
+copy ..\legado\dashboard_streamlit\.env.example .env   # preencha FIREBIRD_*
 ```
 
 ### Faturamento BPA
@@ -150,9 +156,7 @@ lugar pelo `.gitignore` (`.env`, `**/.env`). Copie o `.env.example`
 correspondente em cada pasta e preencha com valores reais.
 
 O `bpa/app.py` carrega os três `.env`, nesta ordem (o primeiro valor
-encontrado vale): `bpa/.env` → `dashboard/.env` → `backend/.env`. Já o
-`dashboard/db.py` lê `backend/.env` direto pra sua conexão (somente
-leitura) com o PostgreSQL.
+encontrado vale): `bpa/.env` → `dashboard/.env` → `backend/.env`.
 
 ### `backend/.env` — PostgreSQL, API
 
@@ -229,17 +233,10 @@ O servidor de dev do Vite redireciona `/api` pra
 hostname é o da máquina de produção; ajuste o proxy se estiver rodando o
 backend em outro lugar.
 
-### Painel Gerencial (Streamlit)
+### Painel gerencial
 
-```bash
-cd dashboard
-.venv\Scripts\streamlit run app.py
-```
-
-Sobe em `http://localhost:8502` (rede local:
-`http://<ip-da-máquina>:8502`). Launcher em
-`scripts/windows/ABRIR_DASHBOARD.bat`, também registrado como Tarefa
-Agendada própria, independente do backend.
+Não tem processo próprio: é a aba **Painel** do sistema (perfil TI),
+servida pelo mesmo backend na porta 8001.
 
 ### Faturamento BPA/SUS (Flask)
 
@@ -271,10 +268,6 @@ atalho de área de trabalho: `bpa/iniciar.bat`, `bpa/start_bpa.vbs`
  ┃     ┗ 📂 api/v1/endpoints/        # pacientes · recepcao · terminal
  ┃  ┗ 📂 tests/                      # 21 testes (pytest)
  ┣ 📂 frontend/                      # React + Vite — terminal de digitação da recepção
- ┣ 📂 dashboard/                     # Streamlit — painel gerencial (TI/coordenação)
- ┃  ┣ 📜 app.py                      # KPIs, gráficos (volume, sexo, idade, bairro)
- ┃  ┣ 📜 db.py                       # Conexão somente leitura + utilitários compartilhados
- ┃  ┗ 📂 pages/                      # Histórico diário · importação mensal · busca de paciente
  ┣ 📂 bpa/                           # Flask — geração BPA-I e migração PG→Firebird
  ┃  ┣ 📜 app.py                      # Digitação, geração do BPA-I, migração
  ┃  ┣ 📜 bpa_gerador.py              # Lógica central do BPA-I (layout, checksum, folha/seq)

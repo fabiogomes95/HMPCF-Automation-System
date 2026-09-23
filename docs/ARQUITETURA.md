@@ -39,7 +39,6 @@ HMPCF-Automation-System/
 │   └── .env                    # Variáveis de ambiente (não versionado)
 │
 ├── frontend/                   # React + Vite — terminal de digitação da recepção
-├── dashboard/                  # Streamlit — painel gerencial (leitura, KPIs, buscas)
 ├── bpa/                        # Flask — geração BPA-I e migração PG→Firebird
 ├── docs/                       # Esta documentação, guias de instalação/deploy
 ├── scripts/                    # deploy/, windows/, bpa/, importacao/, migrations/

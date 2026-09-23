@@ -135,6 +135,10 @@ if DIST.exists():
     @app.get("/{full_path:path}", include_in_schema=False)
     async def spa_fallback(full_path: str):
         """Serve arquivos estáticos existentes ou index.html para rotas React."""
+        # Rota de API inexistente devolve 404 de verdade -- se caísse no
+        # index.html, a tela receberia HTML no lugar de JSON e ficaria em branco.
+        if full_path == "api" or full_path.startswith("api/"):
+            return JSONResponse(status_code=404, content={"error": "NOT_FOUND", "message": "Rota da API não encontrada"})
         p = DIST / full_path
         if p.is_file():
             return FileResponse(p)

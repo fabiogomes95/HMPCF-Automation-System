@@ -148,6 +148,8 @@ export function listarUsuarios() { return api.get("/ti/usuarios"); }
 export function criarUsuario(dados) { return api.post("/ti/usuarios", dados); }
 export function resetarSenhaUsuario(id, nova_senha) { return api.patch(`/ti/usuarios/${id}/senha`, { nova_senha }); }
 export function toggleAtivoUsuario(id, ativo) { return api.patch(`/ti/usuarios/${id}/ativo`, { ativo }); }
+// Painel gerencial (TI) -- só agregados; periodo: hoje | 7d | 30d | mes | tudo
+export function buscarPainel(periodo) { return api.get("/ti/painel", { params: { periodo } }); }
 
 // ── Alterar própria senha ─────────────────────────────────────────────────────
 export function alterarSenha(senha_atual, senha_nova) { return api.post("/auth/change-password", { senha_atual, senha_nova }); }

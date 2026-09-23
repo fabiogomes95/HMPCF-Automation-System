@@ -3,6 +3,7 @@ import Recepcao from "./pages/Recepcao";
 import Historico from "./pages/Historico";
 import PlanilhaAtendimentos from "./pages/PlanilhaAtendimentos";
 import Auditoria from "./pages/Auditoria";
+import Painel from "./pages/Painel";
 import GerenciarUsuarios from "./pages/GerenciarUsuarios";
 import Correcao from "./pages/Correcao";
 import AlterarSenha from "./pages/AlterarSenha";
@@ -14,7 +15,7 @@ import "./App.css";
 export default function App() {
   const [tela, setTelaState] = useState(() => {
     const salva = sessionStorage.getItem("hmpcf_tela");
-    return ["recepcao", "historico", "planilha", "auditoria", "usuarios", "correcao", "senha"].includes(salva) ? salva : "recepcao";
+    return ["recepcao", "historico", "planilha", "painel", "auditoria", "usuarios", "correcao", "senha"].includes(salva) ? salva : "recepcao";
   });
   const [edicao, setEdicao] = useState(null);
   // Atendimento manual vindo da Correção (TI): A4 completa, atendimento NOVO,
@@ -80,6 +81,10 @@ export default function App() {
 
   function navPlanilha() {
     setTela("planilha");
+  }
+
+  function navPainel() {
+    setTela("painel");
   }
 
   function navAuditoria() {
@@ -156,6 +161,14 @@ export default function App() {
         </button>
         {usuario.role === "ti" && (
           <button
+            className={`app-nav-btn${tela === "painel" ? " ativo" : ""}`}
+            onClick={navPainel}
+          >
+            Painel
+          </button>
+        )}
+        {usuario.role === "ti" && (
+          <button
             className={`app-nav-btn${tela === "auditoria" ? " ativo" : ""}`}
             onClick={navAuditoria}
           >
@@ -204,6 +217,7 @@ export default function App() {
         <Historico onNavigate={setTela} onEditar={abrirEdicao} />
       )}
       {tela === "planilha" && <PlanilhaAtendimentos />}
+      {tela === "painel" && usuario.role === "ti" && <Painel />}
       {tela === "auditoria" && usuario.role === "ti" && <Auditoria />}
       {tela === "usuarios" && usuario.role === "ti" && <GerenciarUsuarios />}
       {tela === "correcao" && usuario.role === "ti" && <Correcao onAbrirA4={abrirManual} />}

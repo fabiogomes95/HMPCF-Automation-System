@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 import bcrypt
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from app.api.deps import TIUser, DBSession
@@ -13,6 +13,7 @@ from app.repositories.sessao_repository import SessaoRepository
 from app.repositories.usuario_repository import UsuarioRepository
 from app.services.auditoria_service import AuditoriaService
 from app.services.recepcao_service import RecepcaoService
+from app.services.painel_service import Periodo, montar_painel
 
 router = APIRouter()
 
@@ -112,3 +113,11 @@ async def excluir_atendimento(atendimento_id: int, session: DBSession, usuario: 
     """Exclui um atendimento pelo ID (somente TI) -- registrado na auditoria."""
     await RecepcaoService(session, usuario).remover(atendimento_id)
     return {"status": "ok"}
+
+
+# ── Painel gerencial ─────────────────────────────────────────────────────────
+
+@router.get("/painel")
+async def painel(session: DBSession, _: TIUser, periodo: Periodo = Query("30d")) -> dict:
+    """Agregados da recepção (substitui o antigo dashboard Streamlit) -- só números, nenhum dado pessoal."""
+    return await montar_painel(session, periodo)
