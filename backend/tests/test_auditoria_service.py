@@ -131,3 +131,30 @@ async def test_atualizar_e_remover_atendimento_geram_log(session: AsyncSession, 
     acoes = [log.acao for log in logs]
     assert acoes == ["criar", "atualizar", "remover"]
     assert logs[1].campos_alterados == ["procedencia"]
+
+
+@pytest.mark.asyncio
+async def test_gestao_de_usuarios_gera_log_sem_senha(session: AsyncSession):
+    # Endpoints da TI chamados direto (sem HTTP): criar, resetar senha e desativar
+    # conta ficam na auditoria -- só metadados, a senha nunca vai pro log.
+    from app.api.v1.endpoints.ti import (
+        AtivoInput, CriarUsuarioInput, ResetarSenhaInput, criar_usuario, resetar_senha, toggle_ativo,
+    )
+
+    ti = await _criar_usuario_teste(session, "teste_ti_auditoria")
+    ti.role = "ti"
+    novo = await criar_usuario(
+        CriarUsuarioInput(username="teste_novo_usuario", password="senha-secreta-1", role="recepcao"),
+        session, ti,
+    )
+    await resetar_senha(novo.id, ResetarSenhaInput(nova_senha="senha-secreta-2"), session, ti)
+    await toggle_ativo(novo.id, AtivoInput(ativo=False), session, ti)
+
+    logs = [l for l in await _logs(session) if l.recurso == "usuario"]
+    assert [(l.acao, l.recurso_id, l.campos_alterados) for l in logs] == [
+        ("criar", novo.id, ["role"]),
+        ("atualizar", novo.id, ["senha"]),
+        ("atualizar", novo.id, ["ativo"]),
+    ]
+    assert all(l.usuario_username == "teste_ti_auditoria" for l in logs)
+    assert "senha-secreta" not in repr([(l.acao, l.campos_alterados) for l in logs])

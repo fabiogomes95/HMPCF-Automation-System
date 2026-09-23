@@ -31,7 +31,7 @@ class LogAuditoria(Base):
     usuario_username: Mapped[str] = mapped_column(String(50), nullable=False)
 
     acao:    Mapped[str] = mapped_column(String(20), nullable=False)  # criar | atualizar | remover
-    recurso: Mapped[str] = mapped_column(String(30), nullable=False)  # paciente | atendimento
+    recurso: Mapped[str] = mapped_column(String(30), nullable=False)  # paciente | atendimento | usuario
     recurso_id: Mapped[int] = mapped_column(Integer, nullable=False)
 
     campos_alterados: Mapped[Optional[list[str]]] = mapped_column(JSON, nullable=True)

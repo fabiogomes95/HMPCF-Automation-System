@@ -11,6 +11,7 @@ from app.core.exceptions import BusinessRuleError, ConflictError, NotFoundError
 from app.models.usuario import Usuario
 from app.repositories.sessao_repository import SessaoRepository
 from app.repositories.usuario_repository import UsuarioRepository
+from app.services.auditoria_service import AuditoriaService
 from app.services.recepcao_service import RecepcaoService
 
 router = APIRouter()
@@ -57,7 +58,7 @@ async def listar_usuarios(session: DBSession, _: TIUser) -> list[UsuarioOut]:
 
 
 @router.post("/usuarios", response_model=UsuarioOut, status_code=201)
-async def criar_usuario(dados: CriarUsuarioInput, session: DBSession, _: TIUser) -> UsuarioOut:
+async def criar_usuario(dados: CriarUsuarioInput, session: DBSession, usuario: TIUser) -> UsuarioOut:
     username = dados.username.strip()
     if not username:
         raise BusinessRuleError("Login é obrigatório")
@@ -69,11 +70,12 @@ async def criar_usuario(dados: CriarUsuarioInput, session: DBSession, _: TIUser)
         raise ConflictError(f"Usuário '{username}' já existe")
     pw_hash = bcrypt.hashpw(dados.password.encode(), bcrypt.gensalt()).decode()
     user = await repo.add(Usuario(username=username, password_hash=pw_hash, role=dados.role))
+    await AuditoriaService(session).registrar(usuario, "criar", "usuario", user.id, campos_alterados=["role"])
     return UsuarioOut.model_validate(user)
 
 
 @router.patch("/usuarios/{usuario_id}/senha")
-async def resetar_senha(usuario_id: int, dados: ResetarSenhaInput, session: DBSession, _: TIUser) -> dict:
+async def resetar_senha(usuario_id: int, dados: ResetarSenhaInput, session: DBSession, usuario: TIUser) -> dict:
     _checar_senha(dados.nova_senha)
     repo = UsuarioRepository(session)
     user = await repo.get(usuario_id)
@@ -83,6 +85,7 @@ async def resetar_senha(usuario_id: int, dados: ResetarSenhaInput, session: DBSe
     # Senha resetada = quem estava logado com a senha antiga precisa entrar de novo.
     await SessaoRepository(session).delete_do_usuario(usuario_id)
     await session.flush()
+    await AuditoriaService(session).registrar(usuario, "atualizar", "usuario", usuario_id, campos_alterados=["senha"])
     return {"status": "ok"}
 
 
@@ -98,6 +101,7 @@ async def toggle_ativo(usuario_id: int, dados: AtivoInput, session: DBSession, u
     if not dados.ativo:
         await SessaoRepository(session).delete_do_usuario(usuario_id)
     await session.flush()
+    await AuditoriaService(session).registrar(usuario, "atualizar", "usuario", usuario_id, campos_alterados=["ativo"])
     return {"status": "ok"}
 
 

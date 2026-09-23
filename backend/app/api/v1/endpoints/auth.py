@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from app.api.deps import CurrentUser, DBSession
 from app.core.config import settings
 from app.schemas.auth import LoginRequest, UsuarioResponse
+from app.services.auditoria_service import AuditoriaService
 from app.services.auth_service import AuthService
 
 
@@ -53,4 +54,5 @@ async def me(usuario: CurrentUser) -> UsuarioResponse:
 @router.post("/change-password", summary="Alterar própria senha")
 async def change_password(dados: AlterarSenhaInput, usuario: CurrentUser, session: DBSession) -> dict:
     await AuthService(session).alterar_senha(usuario, dados.senha_atual, dados.senha_nova)
+    await AuditoriaService(session).registrar(usuario, "atualizar", "usuario", usuario.id, campos_alterados=["senha"])
     return {"status": "ok"}

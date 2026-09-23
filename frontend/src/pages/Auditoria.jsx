@@ -3,7 +3,7 @@ import api from "../services/api";
 import "./Auditoria.css";
 
 const LABEL_ACAO = { criar: "Criou", atualizar: "Editou", remover: "Removeu" };
-const LABEL_RECURSO = { paciente: "Paciente", atendimento: "Atendimento" };
+const LABEL_RECURSO = { paciente: "Paciente", atendimento: "Atendimento", usuario: "Usuário" };
 
 function formatDataHora(iso) {
   const d = new Date(iso);
@@ -67,6 +67,7 @@ export default function Auditoria() {
             <option value="TODOS">Todos</option>
             <option value="paciente">Paciente</option>
             <option value="atendimento">Atendimento</option>
+            <option value="usuario">Usuário</option>
           </select>
         </label>
         <label>

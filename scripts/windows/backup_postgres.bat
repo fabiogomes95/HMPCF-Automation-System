@@ -33,5 +33,9 @@ if %ERRORLEVEL% NEQ 0 (echo [AVISO] Copia externa falhou -- backup local OK, mas
 
 REM Expurgo: 30 dias, agora sobre os arquivos .enc (o .sql em claro ja foi apagado)
 powershell -NoProfile -Command "Get-ChildItem '%BACKUP_DIR%' -Filter *.sql.enc | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } | Remove-Item -Force"
+
+REM Logs do backend ja trocados pelo nssm (a cada 10 MB, nssm_backend-<data>.log):
+REM o nssm nunca apaga os antigos, entao o expurgo de 90 dias fica aqui.
+powershell -NoProfile -Command "Get-ChildItem '%~dp0..\..\backend' -Filter 'nssm_backend-*.log' | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-90) } | Remove-Item -Force"
 echo [OK] Fim do backup.
 exit /b 0

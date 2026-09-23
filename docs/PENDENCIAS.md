@@ -14,13 +14,19 @@ os itens vão sendo feitos ou entrando na lista.
 | 1 | Autenticação na recepção (login por papel, sessão em cookie) | `backend/app/services/auth_service.py` |
 | 2 | Log de auditoria (quem criou/editou/apagou o quê) | `backend/app/services/auditoria_service.py` |
 | 3 | Testes do layout DATASUS + rollover de folha/sequência do BPA | `bpa/tests/test_bpa_gerador.py` |
-| 4 | Backup criptografado com cópia fora da máquina (OneDrive) | `scripts/windows/copiar_backup_onedrive.ps1` |
+| 4 | Backup criptografado com cópia fora da máquina — Google Drive desde 23/09/2026 (estava parado desde 17/06), com log por execução; restauração testada | `scripts/windows/copiar_backup_nuvem.ps1`, `backup_postgres.bat` |
 | 5 | CI no GitHub Actions (roda os testes automaticamente a cada push) | `.github/workflows/ci.yml` |
 | 6 | Login automático no acesso local (terminal fixo da recepção não vê tela de login; acesso remoto continua exigindo) | `backend/app/api/deps.py`, `AUTO_LOGIN_LOCAL`/`AUTO_LOGIN_USERNAME` no `.env` |
 | 7 | Nova aba "Planilha" — relatório mensal estilo planilha manual, separado por plantão diurno/noturno (07h-18h59 / 19h-06h59), com filtro de mês/turno/dia | `frontend/src/pages/PlanilhaAtendimentos.jsx`, `GET /api/v1/recepcao/planilha` |
 | 8 | Botão "Imprimir" registra o atendimento sozinho se a recepção esquecer de clicar "Registrar Atendimento" antes | `frontend/src/pages/Recepcao.jsx` (`handleImprimir`) |
 | 9 | Paciente sem CPF/CNS — os dois viram opcionais pra salvar; `sem_documento` é marcado sozinho no banco quando falta CPF (usado futuramente na exportação BPA/Firebird) | `backend/app/services/paciente_service.py`, coluna `pacientes.sem_documento` |
 | 13 | Copiar linha da Planilha pro clipboard — botão por linha, cola direto nas colunas do Excel; aba também passou a abrir já filtrada no plantão vigente (evita travar a página com ~6mil atendimentos/mês) | `frontend/src/pages/PlanilhaAtendimentos.jsx` |
+| 15 | Remoção de atendimento REPETIDO pela própria recepção — o servidor só aceita duplicata real (mesmo paciente, mesmo plantão, até 15 min) e mantém o registro mais novo; tudo na auditoria | `RecepcaoService.remover_repetido`, `DELETE /recepcao/{id}/repetido` |
+| 16 | Sem bloqueio de login por tentativas erradas — travava o terminal fixo (auto-login usa a mesma conta) | `backend/app/services/auth_service.py` |
+| 17 | Postgres fechado pra rede: `postgres` só local; pela rede só o usuário `bpa_leitura` (SELECT em `pacientes` e `recepcao_atendimentos`, tudo que o BPA lê). Senha antiga removida do histórico do git | `pg_hba.conf` do servidor, `docs/INSTALACAO_BPA_MIGRACAO.md` |
+| 18 | Fuso do Postgres `America/Sao_Paulo` (era `America/Cayenne` — mesmo horário hoje, mas erraria se voltar o horário de verão) | `postgresql.auto.conf` do servidor |
+| 19 | Log do backend troca de arquivo a cada 10 MB (nssm); arquivos com mais de 90 dias são apagados pelo backup diário | serviço `HMPCF-Backend-Svc`, `backup_postgres.bat` |
+| 20 | Auditoria também registra gestão de usuários (criar, redefinir senha, ativar/desativar, trocar a própria senha) — nunca a senha em si | `endpoints/ti.py`, `endpoints/auth.py` |
 
 ## Deploy em produção — em andamento
 
