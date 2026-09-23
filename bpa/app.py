@@ -40,6 +40,46 @@ import fechamento_mes
 # ── Flask ─────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
 
+# ── Quem pode chamar este BPA local ───────────────────────────────────────────
+# O sistema do hospital (servidor) chama a API daqui direto do navegador do
+# notebook. Só ele e a própria página local são aceitos: qualquer outro site
+# aberto no notebook é recusado -- sem isso, uma página qualquer poderia mandar
+# gravar/gerar no Firebird deste PC.
+_ORIGENS_SISTEMA = {
+    o.strip().rstrip("/")
+    for o in os.getenv(
+        "BPA_ORIGENS_PERMITIDAS", "http://192.168.1.29:8001,http://desktop-9c4s1co:8001"
+    ).split(",")
+    if o.strip()
+}
+
+
+def _origem_local(origem: str) -> bool:
+    return origem.rstrip("/") in {"http://localhost:8503", "http://127.0.0.1:8503"}
+
+
+@app.before_request
+def _checar_origem():
+    origem = request.headers.get("Origin")
+    if origem and not _origem_local(origem) and origem.rstrip("/") not in _ORIGENS_SISTEMA:
+        return jsonify({"ok": False, "erro": "Origem não autorizada"}), 403
+    if request.method == "OPTIONS":  # preflight do navegador -- responde vazio
+        return Response(status=204)
+
+
+@app.after_request
+def _cabecalhos_cors(resp):
+    origem = (request.headers.get("Origin") or "").rstrip("/")
+    if origem in _ORIGENS_SISTEMA:
+        resp.headers["Access-Control-Allow-Origin"] = origem
+        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        # Chrome: página da rede local chamando o próprio PC (Local/Private Network Access).
+        resp.headers["Access-Control-Allow-Private-Network"] = "true"
+        resp.headers["Access-Control-Max-Age"] = "600"
+        resp.headers["Vary"] = "Origin"
+    return resp
+
 # ── Cache RAM ─────────────────────────────────────────────────────────────────
 _pacientes:     list[dict] = []
 _profissionais: list[dict] = []

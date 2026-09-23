@@ -13,6 +13,9 @@ echo.
 echo  Para encerrar: feche esta janela ou Ctrl+C
 echo.
 
-..\dashboard\.venv\Scripts\python.exe app.py
+REM Python do BPA: bpa\.venv (instalar.ps1); enquanto nao instalado, o antigo dashboard\.venv.
+set "PY=%~dp0.venv\Scripts\python.exe"
+if not exist "%PY%" set "PY=%~dp0..\dashboard\.venv\Scripts\python.exe"
+"%PY%" app.py
 
 pause
