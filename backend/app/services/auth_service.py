@@ -50,25 +50,15 @@ class AuthService:
         if usuario is None or not usuario.ativo:
             raise UnauthorizedError("Usuário ou senha inválidos")
 
-        if usuario.bloqueado_ate and _aware(usuario.bloqueado_ate) > agora:
-            raise UnauthorizedError(
-                "Conta bloqueada por tentativas incorretas. "
-                f"Tente novamente após {usuario.bloqueado_ate.strftime('%H:%M')}."
-            )
-
+        # Sem bloqueio por tentativas erradas (decisão de 23/09/2026): o
+        # terminal fixo usa o mesmo usuário "recepcao" no auto-login, e errar
+        # a senha em outro PC travava a recepção no meio do plantão.
         senha_ok = bcrypt.checkpw(
             password.encode("utf-8"), usuario.password_hash.encode("utf-8")
         )
         if not senha_ok:
-            usuario.tentativas_falhas += 1
-            if usuario.tentativas_falhas >= settings.LOGIN_MAX_TENTATIVAS:
-                usuario.bloqueado_ate = agora + timedelta(minutes=settings.LOGIN_BLOQUEIO_MINUTOS)
-                usuario.tentativas_falhas = 0
-            await self.session.flush()
             raise UnauthorizedError("Usuário ou senha inválidos")
 
-        usuario.tentativas_falhas = 0
-        usuario.bloqueado_ate = None
         usuario.last_login_at = agora
         await self._sessoes.delete_expiradas()
 
@@ -86,18 +76,15 @@ class AuthService:
 
     async def usuario_para_auto_login(self, username: str) -> Optional[Usuario]:
         """Usado só pelo bypass de acesso local (ver app/api/deps.py) --
-        mesma elegibilidade do login normal (ativo, sem bloqueio por
-        tentativas), mas sem senha. Quem decide SE o bypass se aplica
-        (IP de origem, config) é o dependency, não este método. Atualiza
-        last_login_at só nesta chamada -- ela só acontece quando não há
-        sessão válida (cookie ausente/expirado), não a cada request."""
+        mesma elegibilidade do login normal (conta ativa), mas sem senha.
+        Quem decide SE o bypass se aplica (IP de origem, config) é o
+        dependency, não este método. Atualiza last_login_at só nesta
+        chamada -- ela só acontece quando não há sessão válida (cookie
+        ausente/expirado), não a cada request."""
         usuario = await self._usuarios.get_by_username(username)
         if usuario is None or not usuario.ativo:
             return None
-        agora = datetime.now(timezone.utc)
-        if usuario.bloqueado_ate and _aware(usuario.bloqueado_ate) > agora:
-            return None
-        usuario.last_login_at = agora
+        usuario.last_login_at = datetime.now(timezone.utc)
         await self.session.flush()
         return usuario
 
@@ -121,8 +108,6 @@ class AuthService:
         if len(senha_nova or "") < 4:
             raise BusinessRuleError("Senha nova deve ter pelo menos 4 caracteres")
         usuario.password_hash = bcrypt.hashpw(senha_nova.encode("utf-8"), bcrypt.gensalt()).decode()
-        usuario.tentativas_falhas = 0
-        usuario.bloqueado_ate = None
         await self.session.flush()
 
     async def logout(self, token: Optional[str]) -> None:

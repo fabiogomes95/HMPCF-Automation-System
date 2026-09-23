@@ -132,7 +132,6 @@ export default function GerenciarUsuarios() {
               <th>Perfil</th>
               <th>Status</th>
               <th>Último acesso</th>
-              <th>Bloqueado até</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -143,7 +142,6 @@ export default function GerenciarUsuarios() {
                 <td>{u.role}</td>
                 <td>{u.ativo ? "Ativo" : "Inativo"}</td>
                 <td>{formatDataHora(u.last_login_at)}</td>
-                <td>{formatDataHora(u.bloqueado_ate)}</td>
                 <td className="cel-acoes">
                   {resetId === u.id ? (
                     <span className="gu-reset-inline">

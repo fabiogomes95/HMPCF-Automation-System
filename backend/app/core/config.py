@@ -42,8 +42,6 @@ class Settings(BaseSettings):
     # de recepção fica logado o tempo todo, só desloga se o navegador/PC for
     # reiniciado e o cookie expirar de fato (365 dias cobre isso na prática).
     SESSION_TTL_LEMBRAR_HORAS: int = 24 * 365
-    LOGIN_MAX_TENTATIVAS: int = 5
-    LOGIN_BLOQUEIO_MINUTOS: int = 15
 
     # Acesso feito na própria máquina (loopback, ex.: terminal fixo da
     # recepção abrindo http://localhost:8001) pula a tela de login e usa

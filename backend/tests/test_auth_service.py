@@ -4,7 +4,6 @@ import bcrypt
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.exceptions import UnauthorizedError
 from app.models.sessao import Sessao
 from app.models.usuario import Usuario
@@ -36,7 +35,6 @@ async def test_autenticar_login_correto(session: AsyncSession):
 
     assert usuario.username == "teste_login_ok"
     assert token
-    assert usuario.tentativas_falhas == 0
     assert usuario.last_login_at is not None
 
 
@@ -49,31 +47,26 @@ async def test_autenticar_usuario_inexistente(session: AsyncSession):
 
 @pytest.mark.asyncio
 async def test_autenticar_senha_errada(session: AsyncSession):
-    usuario = await _criar_usuario(session, "teste_senha_errada")
+    await _criar_usuario(session, "teste_senha_errada")
     svc = AuthService(session)
 
     with pytest.raises(UnauthorizedError):
         await svc.autenticar("teste_senha_errada", "senha-errada")
 
-    await session.refresh(usuario)
-    assert usuario.tentativas_falhas == 1
-
 
 @pytest.mark.asyncio
-async def test_autenticar_bloqueia_apos_max_tentativas(session: AsyncSession):
-    usuario = await _criar_usuario(session, "teste_bloqueio")
+async def test_autenticar_nao_bloqueia_apos_erros(session: AsyncSession):
+    # Sem bloqueio por tentativas: errar a senha em outro PC não pode travar
+    # o usuário "recepcao", que o terminal fixo usa no auto-login.
+    await _criar_usuario(session, "teste_sem_bloqueio")
     svc = AuthService(session)
 
-    for _ in range(settings.LOGIN_MAX_TENTATIVAS):
+    for _ in range(10):
         with pytest.raises(UnauthorizedError):
-            await svc.autenticar("teste_bloqueio", "senha-errada")
+            await svc.autenticar("teste_sem_bloqueio", "senha-errada")
 
-    await session.refresh(usuario)
-    assert usuario.bloqueado_ate is not None
-
-    # Mesmo com a senha certa, continua bloqueado até o prazo passar.
-    with pytest.raises(UnauthorizedError):
-        await svc.autenticar("teste_bloqueio", SENHA_PADRAO)
+    usuario, token = await svc.autenticar("teste_sem_bloqueio", SENHA_PADRAO)
+    assert token
 
 
 @pytest.mark.asyncio

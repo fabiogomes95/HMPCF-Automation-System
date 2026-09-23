@@ -1,6 +1,7 @@
 import asyncio
 import os
 from typing import AsyncGenerator
+from urllib.parse import quote_plus
 
 import pytest
 import pytest_asyncio
@@ -21,7 +22,7 @@ from app.models.recepcao_atendimento import RecepcaoAtendimento
 # Exemplo: TEST_POSTGRES_DB=hmpcf_test
 _test_db = os.getenv("TEST_POSTGRES_DB", "hmpcf_test")
 TEST_DATABASE_URL = (
-    f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
+    f"postgresql+asyncpg://{settings.POSTGRES_USER}:{quote_plus(settings.POSTGRES_PASSWORD)}"
     f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{_test_db}"
 )
 

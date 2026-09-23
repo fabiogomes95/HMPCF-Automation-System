@@ -43,8 +43,6 @@ class UsuarioOut(BaseModel):
     username: str
     role: str
     ativo: bool
-    tentativas_falhas: int
-    bloqueado_ate: Optional[datetime] = None
     last_login_at: Optional[datetime] = None
     created_at: datetime
 
@@ -82,8 +80,6 @@ async def resetar_senha(usuario_id: int, dados: ResetarSenhaInput, session: DBSe
     if not user:
         raise NotFoundError("Usuário", usuario_id)
     user.password_hash = bcrypt.hashpw(dados.nova_senha.encode(), bcrypt.gensalt()).decode()
-    user.tentativas_falhas = 0
-    user.bloqueado_ate = None
     # Senha resetada = quem estava logado com a senha antiga precisa entrar de novo.
     await SessaoRepository(session).delete_do_usuario(usuario_id)
     await session.flush()
