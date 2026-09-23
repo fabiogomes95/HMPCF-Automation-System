@@ -58,7 +58,10 @@ function uc(v) {
   return v ? v.toUpperCase() : v;
 }
 
-export default function Recepcao({ edicao = null, onVoltar = null }) {
+// `manual` (vindo da Correção, só TI): { documento, data: "DD/MM/AAAA", hora: "HH:MM" }
+// -- cadastra/registra um atendimento NOVO com data/hora escolhidas, usando
+// a A4 completa (mesmo fluxo da recepção). Relógio parado desde o início.
+export default function Recepcao({ edicao = null, manual = null, onVoltar = null }) {
   const [form, setForm] = useState({ ...vazio });
   const [pacienteId, setPacienteId] = useState(null);
   const [msg, setMsg] = useState("");
@@ -71,11 +74,12 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   const [erroDtnasc, setErroDtnasc] = useState("");
   const [procedencia, setProcedencia] = useState("NORMAL");
   const [atdInfo, setAtdInfo] = useState({ data: "", hora: "", registro: "" });
-  const [relogioAtivo, setRelogioAtivo] = useState(true);
+  const [relogioAtivo, setRelogioAtivo] = useState(!manual);
   const debounceRef = useRef(null);
   const pacienteEncontradoRef = useRef(false);
   const cpfRef = useRef(null);
   const formRef = useRef(form);
+  const pacienteIdRef = useRef(null);
   // Marcam se a recepcionista digitou cidade/estado manualmente ANTES da busca
   // por CPF/CNS resolver. Sem isso, o valor padrão "EXTREMOZ"/"RN" do form em
   // branco é indistinguível de digitação manual, e o dado real do paciente
@@ -86,6 +90,10 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
   useEffect(() => {
     formRef.current = form;
   }, [form]);
+
+  useEffect(() => {
+    pacienteIdRef.current = pacienteId;
+  }, [pacienteId]);
 
   useEffect(() => {
     cpfRef.current?.focus();
@@ -99,8 +107,17 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
       localStorage.setItem("terminal_nome", id);
       iniciarSessao(id, window.location.hostname);
     }
-    setAtdInfo(prev => ({ ...prev, data: dataAtual(), hora: horaAtual(), registro: "" }));
-  }, []);
+    if (manual) {
+      setAtdInfo({ data: manual.data || dataAtual(), hora: manual.hora || horaAtual(), registro: "" });
+      const doc = apenasNumeros(manual.documento || "");
+      if (doc.length === 11) setForm(prev => ({ ...prev, num_cpf: doc }));
+      if (doc.length === 15) setForm(prev => ({ ...prev, cns: doc }));
+      // Confere de novo: se alguém cadastrou esse documento nesse meio tempo, já carrega.
+      if (doc.length === 11 || doc.length === 15) autoBusca(doc);
+    } else {
+      setAtdInfo(prev => ({ ...prev, data: dataAtual(), hora: horaAtual(), registro: "" }));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Relógio em tempo real — para completamente ao primeiro campo digitado
   useEffect(() => {
@@ -144,8 +161,18 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
         // setForm só roda quando o React processa a atualização (assíncrono
         // aqui, pois estamos fora de um event handler), então usar seu valor
         // logo abaixo (calcIdade/setAviso) pegaria undefined.
+        // Exceção: se já havia outro paciente carregado (ex.: achado pelo SUS)
+        // e o documento digitado pertence a um paciente diferente, o form
+        // passa a ser inteiramente o do paciente encontrado -- senão os dados
+        // do primeiro sobrescreveriam o cadastro do segundo ao registrar.
+        const trocouPaciente =
+          pacienteIdRef.current != null && pacienteIdRef.current !== p.id;
+        if (trocouPaciente) {
+          cidadeEditadaRef.current = false;
+          estadoEditadaRef.current = false;
+        }
         const preencheSeVazio = (atual, encontrado) =>
-          atual && String(atual).trim() !== "" ? atual : encontrado || "";
+          !trocouPaciente && atual && String(atual).trim() !== "" ? atual : encontrado || "";
         const dtnascFinal = preencheSeVazio(formRef.current.dtnasc, dtnascEncontrada);
         setForm((prev) => {
           return {
@@ -181,7 +208,9 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
         setErroCpf("");
         setErroCns("");
         calcIdade(dtnascFinal);
-        setMsg("✓ Paciente encontrado");
+        setMsg(trocouPaciente
+          ? `⚠ Documento pertence a ${p.nome} — dados carregados`
+          : "✓ Paciente encontrado");
         if (!dtnascFinal || dtnascFinal.trim() === "") {
           setAviso("⚠️ Data de nascimento ausente — atualize");
         } else {
@@ -385,7 +414,10 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
       if (edicao) {
         // Modo edição: atualiza paciente + atendimento existente
         if (id) await atualizarPaciente(id, dados);
+        // paciente_id vai junto: se o CPF digitado era de outro cadastro, o
+        // atendimento passa pra ele (o backend ignora se for o mesmo).
         await atualizarAtendimento(edicao.atendimentoId, {
+          paciente_id: id,
           data_atendimento: atdInfo.data,
           hora_atendimento: atdInfo.hora,
           procedencia,
@@ -488,6 +520,9 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
           {edicao && (
             <span className="badge-edicao">Editando #{edicao.atendimentoId}</span>
           )}
+          {manual && (
+            <span className="badge-edicao">Correção — atendimento manual (confira data e hora)</span>
+          )}
         </div>
         <div className="header-right">
           {pacienteId && <span className="badge-ok">✓ Paciente</span>}
@@ -516,9 +551,9 @@ export default function Recepcao({ edicao = null, onVoltar = null }) {
         <button onClick={handleImprimir} className="btn-imprimir">
           Imprimir
         </button>
-        {edicao ? (
+        {edicao || manual ? (
           <button onClick={onVoltar} className="btn-limpar">
-            ← Voltar ao Histórico
+            {manual ? "← Voltar à Correção" : "← Voltar ao Histórico"}
           </button>
         ) : (
           <button onClick={handleLimpar} className="btn-limpar">

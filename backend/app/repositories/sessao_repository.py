@@ -16,6 +16,11 @@ class SessaoRepository(BaseRepository[Sessao]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def delete_do_usuario(self, usuario_id: int) -> None:
+        """Derruba todas as sessões abertas de um usuário (ex.: senha resetada pela TI)."""
+        await self.session.execute(delete(Sessao).where(Sessao.usuario_id == usuario_id))
+        await self.session.flush()
+
     async def delete_expiradas(self) -> None:
         """Limpeza oportunista — chamada a cada login, sem job/cron dedicado."""
         stmt = delete(Sessao).where(Sessao.expira_em < datetime.now(timezone.utc))

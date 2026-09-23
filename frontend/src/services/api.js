@@ -23,6 +23,15 @@ api.interceptors.response.use(
   }
 );
 
+// Texto de erro legível de uma resposta do backend. Erros de domínio vêm em
+// `message`; erros de validação do Pydantic vêm em `detail`.
+export function mensagemErro(err, padrao) {
+  const data = err?.response?.data || {};
+  if (typeof data.message === "string" && data.message) return data.message;
+  if (typeof data.detail === "string" && data.detail) return data.detail;
+  return padrao;
+}
+
 // DD/MM/YYYY + HH:MM → YYYY-MM-DDTHH:MM:00 (ISO para o backend)
 function toISODatetime(dataBR, hora) {
   if (!dataBR || !hora) return null;
@@ -89,6 +98,11 @@ export function buscarPlanilhaMensal(ano, mes) {
   return api.get("/recepcao/planilha", { params: { ano, mes } });
 }
 
+// Só um plantão (dia de referência + turno) -- leve, pro refresh rápido.
+export function buscarPlanilhaPlantao(dia, turno) {
+  return api.get("/recepcao/planilha/plantao", { params: { dia, turno } });
+}
+
 export function criarRecepcao(dados) {
   return api.post("/recepcao/", dados);
 }
@@ -107,10 +121,52 @@ export function criarAtendimento({ paciente_id, data_atendimento, hora_atendimen
   });
 }
 
-export function atualizarAtendimento(id, { data_atendimento, hora_atendimento, procedencia }) {
+export function atualizarAtendimento(id, { paciente_id, data_atendimento, hora_atendimento, procedencia }) {
   return api.put(`/recepcao/${id}`, {
+    ...(paciente_id ? { paciente_id } : {}),
     data_atendimento: toISODatetime(data_atendimento, hora_atendimento),
     procedencia: procedencia || null,
+  });
+}
+
+// Só o nº de registro -- não reenvia data/hora (evita mexer no horário sem querer).
+export function atualizarRegistroAtendimento(id, registro) {
+  const num = parseInt(registro, 10);
+  return api.put(`/recepcao/${id}`, { registro: isNaN(num) ? null : num });
+}
+
+// Busca pacientes por nome/CPF/CNS -- inclusive os que ainda não têm atendimento.
+export function buscarPacientesPorNome(q, pageSize = 15) {
+  return api.get("/pacientes/", { params: { q, page: 1, page_size: pageSize } });
+}
+
+// ── TI: usuários ─────────────────────────────────────────────────────────────
+export function excluirAtendimento(id) { return api.delete(`/ti/atendimentos/${id}`); }
+// Recepção e TI -- o backend só aceita se o atendimento for mesmo repetido.
+export function excluirAtendimentoRepetido(id) { return api.delete(`/recepcao/${id}/repetido`); }
+export function listarUsuarios() { return api.get("/ti/usuarios"); }
+export function criarUsuario(dados) { return api.post("/ti/usuarios", dados); }
+export function resetarSenhaUsuario(id, nova_senha) { return api.patch(`/ti/usuarios/${id}/senha`, { nova_senha }); }
+export function toggleAtivoUsuario(id, ativo) { return api.patch(`/ti/usuarios/${id}/ativo`, { ativo }); }
+
+// ── Alterar própria senha ─────────────────────────────────────────────────────
+export function alterarSenha(senha_atual, senha_nova) { return api.post("/auth/change-password", { senha_atual, senha_nova }); }
+
+// ── Correção manual de atendimento ────────────────────────────────────────────
+export function criarAtendimentoManual({ paciente_id, data, hora, registro, procedencia }) {
+  const num = parseInt(registro, 10);
+  return api.post("/recepcao/", {
+    paciente_id,
+    data_atendimento: `${data}T${hora}:00`,
+    registro: isNaN(num) ? null : num,
+    procedencia: procedencia || null,
+  });
+}
+export function editarAtendimentoManual(id, { data, hora, registro }) {
+  const num = parseInt(registro, 10);
+  return api.put(`/recepcao/${id}`, {
+    data_atendimento: `${data}T${hora}:00`,
+    registro: isNaN(num) ? null : num,
   });
 }
 

@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Query
 
-from app.api.deps import CurrentUser, DBSession
+from app.api.deps import CurrentUser, DBSession, TIUser
 from app.models.usuario import Usuario
 from app.schemas.common import PaginatedResponse
 from app.schemas.paciente import PacienteCreate, PacienteResponse, PacienteUpdate
@@ -67,6 +67,6 @@ async def atualizar_paciente(
 async def remover_paciente(
     paciente_id: int,
     session: DBSession,
-    usuario: CurrentUser,
+    usuario: TIUser,
 ) -> None:
     await _svc(session, usuario).remover(paciente_id)

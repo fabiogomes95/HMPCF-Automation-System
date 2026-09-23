@@ -1,0 +1,128 @@
+.rep {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px dashed #e0e0e0;
+}
+
+.rep h3 {
+  margin: 0 0 0.2rem;
+  font-size: 1rem;
+  color: #c62828;
+}
+
+.rep-sub {
+  font-size: 0.85rem;
+  color: #777;
+  margin: 0 0 0.75rem;
+}
+
+.rep-filtro {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.rep-filtro input {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.rep-filtro button {
+  padding: 0.35rem 0.9rem;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.rep-filtro button:hover { background: #1565c0; }
+.rep-filtro button:disabled { background: #90bce8; cursor: default; }
+
+.rep-msg {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.rep-vazio {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.rep-topo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.rep-contador {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #c62828;
+}
+
+.rep-btn-todos {
+  padding: 0.3rem 0.8rem;
+  background: #c62828;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.rep-btn-todos:hover { background: #b71c1c; }
+
+.rep-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.rep-tabela th,
+.rep-tabela td {
+  text-align: left;
+  padding: 0.4rem 0.65rem;
+  border-bottom: 1px solid #fce4e4;
+}
+
+.rep-tabela th {
+  background: #fdecea;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #c62828;
+  font-weight: 600;
+}
+
+.rep-tabela tr:hover td { background: #fff5f5; }
+
+.rep-nome { font-weight: 600; }
+
+.rep-plantao {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.rep-btn-remover {
+  padding: 0.2rem 0.55rem;
+  border: 1px solid #ef9a9a;
+  border-radius: 3px;
+  background: #fdecea;
+  color: #c62828;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.rep-btn-remover:hover { background: #ef9a9a; color: #fff; }
+.rep-btn-remover:disabled { opacity: 0.5; cursor: default; }

@@ -1,6 +1,6 @@
 import "./boletim.css";
 
-const procedencias = [
+export const procedencias = [
   { v: "SAMU", label: "SAMU", cls: "btn-samu" },
   { v: "TROCA", label: "TROCA", cls: "btn-troca" },
   { v: "OBS", label: "UBS", cls: "btn-obs" },

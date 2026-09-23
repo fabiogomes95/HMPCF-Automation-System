@@ -1,0 +1,110 @@
+.auditoria {
+  padding: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.auditoria-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.auditoria-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.auditoria-total {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.auditoria-filtros {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.auditoria-filtros label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  color: #555;
+  gap: 3px;
+}
+
+.auditoria-filtros select {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.auditoria-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.auditoria-tabela th {
+  background: #f0f0f0;
+  padding: 6px 10px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #ddd;
+  white-space: nowrap;
+}
+
+.auditoria-tabela td {
+  padding: 5px 10px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.auditoria-tabela tr.acao-criar    td { border-left: 3px solid #22c55e; }
+.auditoria-tabela tr.acao-atualizar td { border-left: 3px solid #f59e0b; }
+.auditoria-tabela tr.acao-remover  td { border-left: 3px solid #ef4444; }
+
+.cel-data    { white-space: nowrap; color: #555; }
+.cel-usuario { font-weight: 600; }
+.cel-acao    { white-space: nowrap; }
+.cel-campos  { color: #666; font-size: 0.8rem; }
+
+.auditoria-vazio {
+  text-align: center;
+  color: #999;
+  padding: 2rem !important;
+}
+
+.auditoria-loading,
+.auditoria-erro {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.auditoria-erro { color: #dc2626; }
+
+.auditoria-paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+}
+
+.auditoria-paginacao button {
+  padding: 4px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+}
+
+.auditoria-paginacao button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

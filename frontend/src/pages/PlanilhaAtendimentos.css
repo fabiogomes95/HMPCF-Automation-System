@@ -200,6 +200,90 @@
   color: #2563eb;
 }
 
+.linha-duplicata td {
+  background: #fdecea !important;
+}
+
+.badge-duplicata {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #c62828;
+  letter-spacing: 0.04em;
+}
+
+.btn-excluir-duplicata {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #ef9a9a;
+  border-radius: 3px;
+  background: #fdecea;
+  color: #c62828;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-excluir-duplicata:hover {
+  background: #ef9a9a;
+  color: #fff;
+}
+
+.planilha-msg-ok {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+  border-radius: 4px;
+  padding: 0.4rem 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.cel-registro-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cel-registro-edit input {
+  width: 52px;
+  padding: 0.15rem 0.3rem;
+  border: 1px solid #1976d2;
+  border-radius: 3px;
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.btn-salvar-registro {
+  padding: 0.15rem 0.4rem;
+  border: 1px solid #1976d2;
+  border-radius: 3px;
+  background: #1976d2;
+  color: #fff;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.btn-salvar-registro:hover { background: #1565c0; }
+
+.btn-cancelar-registro {
+  padding: 0.15rem 0.4rem;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  background: #fff;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.registro-editavel {
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
 @media print {
   .no-print { display: none !important; }
+  .registro-editavel { text-decoration: none; }
 }

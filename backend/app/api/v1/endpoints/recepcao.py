@@ -1,8 +1,9 @@
-from typing import Optional
+from datetime import date
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Query
 
-from app.api.deps import CurrentUser, DBSession
+from app.api.deps import CurrentUser, DBSession, TIUser
 from app.models.usuario import Usuario
 from app.schemas.common import PaginatedResponse
 from app.schemas.recepcao import (
@@ -97,6 +98,20 @@ async def planilha_mensal(
 
 
 @router.get(
+    "/planilha/plantao",
+    response_model=PlanilhaMensalResponse,
+    summary="Planilha de um único plantão (refresh rápido da tela)",
+)
+async def planilha_plantao(
+    session: DBSession,
+    usuario: CurrentUser,
+    dia: date = Query(..., description="Dia de referência do plantão (YYYY-MM-DD)"),
+    turno: Literal["DIURNO", "NOTURNO"] = Query(...),
+) -> PlanilhaMensalResponse:
+    return await _svc(session, usuario).planilha_plantao(dia=dia, turno=turno)
+
+
+@router.get(
     "/{atendimento_id}",
     response_model=RecepcaoResponse,
     summary="Detalhe completo da ficha de atendimento",
@@ -138,13 +153,26 @@ async def atualizar_atendimento(
 
 
 @router.delete(
+    "/{atendimento_id}/repetido",
+    status_code=204,
+    summary="Remover atendimento repetido (recepção e TI; só aceita duplicata)",
+)
+async def remover_atendimento_repetido(
+    atendimento_id: int,
+    session: DBSession,
+    usuario: CurrentUser,
+) -> None:
+    await _svc(session, usuario).remover_repetido(atendimento_id)
+
+
+@router.delete(
     "/{atendimento_id}",
     status_code=204,
-    summary="Remover atendimento",
+    summary="Remover atendimento (somente TI)",
 )
 async def remover_atendimento(
     atendimento_id: int,
     session: DBSession,
-    usuario: CurrentUser,
+    usuario: TIUser,
 ) -> None:
     await _svc(session, usuario).remover(atendimento_id)

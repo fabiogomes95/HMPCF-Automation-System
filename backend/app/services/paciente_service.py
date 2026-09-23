@@ -3,10 +3,11 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ConflictError, NotFoundError
+from app.core.exceptions import BusinessRuleError, ConflictError, NotFoundError
 from app.models.paciente import Paciente
 from app.models.usuario import Usuario
 from app.repositories.paciente_repository import PacienteRepository
+from app.repositories.recepcao_repository import RecepcaoRepository
 from app.schemas.common import PaginatedResponse
 from app.schemas.paciente import PacienteCreate, PacienteResponse, PacienteUpdate
 from app.services.auditoria_service import AuditoriaService
@@ -96,8 +97,34 @@ class PacienteService:
             raise NotFoundError("Paciente", paciente_id)
 
         update_data = data.model_dump(exclude_unset=True)
+
+        # Documento vazio no form nunca apaga o que já está salvo -- só completa
+        # ou troca. sem_documento é derivado do CPF, não aceito do cliente.
+        update_data.pop("sem_documento", None)
+        for doc in ("num_cpf", "cns"):
+            if not update_data.get(doc) or update_data[doc] == getattr(paciente, doc):
+                update_data.pop(doc, None)
+
+        novo_cpf = update_data.get("num_cpf")
+        if novo_cpf:
+            outro = await self._repo.get_by_cpf(novo_cpf)
+            if outro is not None and outro.id != paciente_id:
+                raise ConflictError(
+                    f"CPF {novo_cpf} já pertence a outro paciente ({outro.nome}, id {outro.id})"
+                )
+
+        # SUS é só complemento: se já pertence a outro cadastro, mantém o SUS
+        # atual em vez de travar o atendimento.
+        novo_cns = update_data.get("cns")
+        if novo_cns:
+            outro = await self._repo.get_by_cns(novo_cns)
+            if outro is not None and outro.id != paciente_id:
+                update_data.pop("cns")
+
         for field, value in update_data.items():
             setattr(paciente, field, value)
+        if novo_cpf:
+            paciente.sem_documento = False
 
         await self.session.flush()
         await self.session.refresh(paciente)
@@ -111,5 +138,7 @@ class PacienteService:
         paciente = await self._repo.get(paciente_id)
         if paciente is None:
             raise NotFoundError("Paciente", paciente_id)
+        if await RecepcaoRepository(self.session).count_by_paciente(paciente_id):
+            raise BusinessRuleError("Paciente tem atendimentos -- mova ou exclua os atendimentos antes")
         await self._repo.delete(paciente)
         await self._auditoria.registrar(self._usuario, "remover", "paciente", paciente_id)

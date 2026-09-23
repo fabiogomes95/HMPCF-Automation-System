@@ -141,6 +141,69 @@ export function dataAtual() {
   return `${String(agora.getDate()).padStart(2, "0")}/${String(agora.getMonth() + 1).padStart(2, "0")}/${agora.getFullYear()}`;
 }
 
+// Data LOCAL (horário do hospital) em "YYYY-MM-DD" / hora em "HH:MM".
+// Não usar toISOString(): converte pra UTC e, das 21h às 23h59, vira o dia seguinte.
+export function dataLocalISO(d = new Date()) {
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+export function horaLocal(d = new Date()) {
+  return d.toTimeString().slice(0, 5);
+}
+
+// "YYYY-MM-DD" → "DD/MM/YYYY" sem passar por Date (new Date("2026-09-01")
+// é meia-noite UTC = 31/08 21h em Brasília, mostrava o dia anterior).
+export function isoParaBR(iso) {
+  if (!iso || iso.length < 10) return "";
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+}
+
+// Janela pra considerar dois registros do mesmo paciente como duplicata.
+// Caso típico: a recepcionista registra, percebe endereço/cidade errados,
+// corrige e registra de novo -- sai um segundo atendimento minutos depois.
+// Retorno real do paciente (horas depois, mesmo plantão) NÃO é duplicata.
+export const JANELA_REPETIDO_MIN = 15;
+
+function chavesPaciente(item) {
+  const chaves = [];
+  if (item.num_cpf) chaves.push(`cpf:${item.num_cpf}`);
+  if (item.cns) chaves.push(`cns:${item.cns}`);
+  if (item.nome && item.dtnasc) chaves.push(`nome:${item.nome.trim().toUpperCase()}|${item.dtnasc}`);
+  return chaves;
+}
+
+// Atendimentos duplicados, no MESMO PLANTÃO (dia_referencia + turno), do mesmo
+// paciente (CPF, CNS ou nome+nascimento), quando o registro seguinte veio:
+//   - logo em seguida na lista (nenhum outro paciente no meio), ou
+//   - até JANELA_REPETIDO_MIN minutos depois.
+// Mantém o ÚLTIMO registro (o corrigido) e marca o ANTERIOR.
+// Retorna Map<atendimento_id marcado, item que fica no lugar dele>.
+// Itens precisam estar em ordem cronológica (como a planilha vem do backend).
+export function idsRepetidosPorPlantao(items) {
+  const repetidos = new Map();
+  const ultimoPorChave = new Map(); // `${plantao}|${chave}` -> { item, idx }
+  items.forEach((item, idx) => {
+    const plantao = `${item.dia_referencia}|${item.turno}`;
+    const chaves = chavesPaciente(item);
+
+    let anterior = null;
+    for (const c of chaves) {
+      const visto = ultimoPorChave.get(`${plantao}|${c}`);
+      if (visto && (!anterior || visto.idx > anterior.idx)) anterior = visto;
+    }
+    if (anterior) {
+      const logoEmSeguida = anterior.idx === idx - 1;
+      const minutos = (new Date(item.data_atendimento) - new Date(anterior.item.data_atendimento)) / 60000;
+      if (logoEmSeguida || minutos <= JANELA_REPETIDO_MIN) {
+        repetidos.set(anterior.item.atendimento_id, item);
+      }
+    }
+    chaves.forEach((c) => ultimoPorChave.set(`${plantao}|${c}`, { item, idx }));
+  });
+  return repetidos;
+}
+
 export function dataOperacional(dataStr, hora) {
   if (!dataStr || !hora) return dataStr || "";
   const turno = calcularTurno(hora);

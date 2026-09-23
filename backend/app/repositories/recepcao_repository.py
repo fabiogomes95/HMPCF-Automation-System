@@ -183,7 +183,8 @@ class RecepcaoRepository(BaseRepository[RecepcaoAtendimento]):
                 RecepcaoAtendimento.data_atendimento >= inicio,
                 RecepcaoAtendimento.data_atendimento < fim,
             )
-            .order_by(RecepcaoAtendimento.data_atendimento.asc())
+            # id desempata horários iguais -- a regra de repetido depende da ordem
+            .order_by(RecepcaoAtendimento.data_atendimento.asc(), RecepcaoAtendimento.id.asc())
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())

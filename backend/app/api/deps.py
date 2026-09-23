@@ -4,7 +4,7 @@ from fastapi import Cookie, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.database.session import get_db
 from app.models.usuario import Usuario
 from app.services.auth_service import AuthService
@@ -59,3 +59,12 @@ async def get_current_user(
 # Tipo anotado para exigir sessão válida num endpoint.
 # Uso: async def endpoint(session: DBSession, usuario: CurrentUser) -> ...
 CurrentUser = Annotated[Usuario, Depends(get_current_user)]
+
+
+async def get_ti_user(usuario: CurrentUser) -> Usuario:
+    if usuario.role != "ti":
+        raise ForbiddenError("Acesso restrito ao perfil TI")
+    return usuario
+
+
+TIUser = Annotated[Usuario, Depends(get_ti_user)]

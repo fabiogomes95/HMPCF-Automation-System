@@ -37,6 +37,9 @@ class RecepcaoCreate(BaseSchema):
 class RecepcaoUpdate(BaseSchema):
     """Todos os campos opcionais — semântica PATCH."""
 
+    # Troca o paciente do atendimento (edição na Recepção quando o CPF digitado
+    # era de outro cadastro).
+    paciente_id:          Optional[int] = None
     data_atendimento:     Optional[datetime] = None
     registro:             Optional[int] = None
     classificacao_risco:  Optional[ClassificacaoRisco] = None

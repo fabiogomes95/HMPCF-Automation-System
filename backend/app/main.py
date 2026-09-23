@@ -113,6 +113,7 @@ async def health():
     return {"status": "ok", "app": settings.APP_NAME, "env": settings.ENVIRONMENT}
 
 
+
 # ── Frontend estático (produção) ──────────────────────────────────────────────
 # Montado APÓS as rotas de API para não conflitar.
 # Só ativa se o build Vite existir (frontend/dist/).

@@ -168,6 +168,10 @@ class PacienteCreate(BaseSchema):
 
 class PacienteUpdate(BaseSchema):
 
+    # Documentos entram no update pra permitir completar um cadastro que só
+    # tinha SUS (ou só CPF). Vazio/None = "não mexer" (ver PacienteService.atualizar).
+    cns:          Optional[str] = None
+    num_cpf:      Optional[str] = None
     nome:         Optional[str] = None
     dtnasc:       Optional[str] = None
     sexo:         Optional[str] = None
@@ -191,6 +195,33 @@ class PacienteUpdate(BaseSchema):
     nacionalidade: Optional[str] = "010"
     naturalidade: Optional[str] = None
     sem_documento: Optional[bool] = None
+
+    @field_validator("num_cpf", "cns", mode="before")
+    @classmethod
+    def _normalizar_documento(cls, v: object) -> Optional[str]:
+        if v is None:
+            return None
+        limpo = _so_digitos(v)
+        return limpo or None
+
+    @field_validator("num_cpf", mode="after")
+    @classmethod
+    def _checar_cpf(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        if not _validar_cpf(v):
+            raise ValueError("CPF inválido")
+        return v
+
+    @field_validator("cns", mode="after")
+    @classmethod
+    def _checar_cns(cls, v: Optional[str]) -> Optional[str]:
+        # SUS é só complemento, mas SUS falso é pior que nenhum -- inválido dá erro.
+        if v is None:
+            return None
+        if not _validar_cns(v):
+            raise ValueError("CNS/SUS inválido")
+        return v
 
     @field_validator("nome", mode="before")
     @classmethod

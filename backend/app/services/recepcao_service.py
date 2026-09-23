@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import BusinessRuleError, NotFoundError
 from app.models.recepcao_atendimento import RecepcaoAtendimento
 from app.models.usuario import Usuario
 from app.repositories.paciente_repository import PacienteRepository
@@ -52,6 +52,47 @@ def _montar_endereco(logpcn: Optional[str], numpcn: Optional[str], bairro: Optio
     if bairro:
         return f"{rua_num} - {bairro}" if rua_num else bairro
     return rua_num or None
+
+
+# Janela de duplicata -- manter igual a JANELA_REPETIDO_MIN em frontend/src/utils.js
+JANELA_REPETIDO_MIN = 15
+
+
+def _chaves_paciente(a: RecepcaoAtendimento) -> set:
+    """Identidade do paciente pra detectar duplicata: id do cadastro, CPF, CNS
+    ou nome+nascimento (pega também cadastros duplicados da mesma pessoa)."""
+    p = a.paciente
+    chaves = {("id", a.paciente_id)}
+    if p is not None:
+        if p.num_cpf:
+            chaves.add(("cpf", p.num_cpf))
+        if p.cns:
+            chaves.add(("cns", p.cns))
+        if p.nome and p.dtnasc:
+            chaves.add(("nome", p.nome.strip().upper(), p.dtnasc))
+    return chaves
+
+
+def _linha_planilha(a: RecepcaoAtendimento) -> PlanilhaAtendimentoResponse:
+    turno, dia_referencia = _turno_e_dia_referencia(a.data_atendimento)
+    p = a.paciente
+    return PlanilhaAtendimentoResponse(
+        atendimento_id=a.id,
+        registro=a.registro,
+        data_atendimento=a.data_atendimento,
+        nome=p.nome if p else None,
+        dtnasc=p.dtnasc if p else None,
+        sexo=p.sexo if p else None,
+        raca=p.raca if p else None,
+        cidade=p.cidade if p else None,
+        num_cpf=p.num_cpf if p else None,
+        cns=p.cns if p else None,
+        procedencia=a.procedencia,
+        endereco=_montar_endereco(p.logpcn, p.numpcn, p.bairro_pcnte) if p else None,
+        telefone=f"{p.ddtel_pcnte or ''}{p.tel_pcnte or ''}".strip() or None if p else None,
+        dia_referencia=dia_referencia,
+        turno=turno,
+    )
 
 
 class RecepcaoService:
@@ -185,29 +226,22 @@ class RecepcaoService:
 
         items = []
         for a in atendimentos:
-            turno, dia_referencia = _turno_e_dia_referencia(a.data_atendimento)
-            if not (inicio_mes <= dia_referencia < fim_mes):
-                continue
-            p = a.paciente
-            items.append(PlanilhaAtendimentoResponse(
-                atendimento_id=a.id,
-                registro=a.registro,
-                data_atendimento=a.data_atendimento,
-                nome=p.nome if p else None,
-                dtnasc=p.dtnasc if p else None,
-                sexo=p.sexo if p else None,
-                raca=p.raca if p else None,
-                cidade=p.cidade if p else None,
-                num_cpf=p.num_cpf if p else None,
-                cns=p.cns if p else None,
-                procedencia=a.procedencia,
-                endereco=_montar_endereco(p.logpcn, p.numpcn, p.bairro_pcnte) if p else None,
-                telefone=f"{p.ddtel_pcnte or ''}{p.tel_pcnte or ''}".strip() or None if p else None,
-                dia_referencia=dia_referencia,
-                turno=turno,
-            ))
+            linha = _linha_planilha(a)
+            if inicio_mes <= linha.dia_referencia < fim_mes:
+                items.append(linha)
 
         return PlanilhaMensalResponse(ano=ano, mes=mes, total=len(items), items=items)
+
+    async def planilha_plantao(self, dia: date, turno: str) -> PlanilhaMensalResponse:
+        """Só um plantão (12h) -- usado pelo refresh rápido da Planilha, que
+        roda a cada poucos segundos e não pode baixar o mês inteiro.
+        DIURNO = dia 07:00-19:00; NOTURNO = dia 19:00 até 07:00 do dia seguinte
+        (mesma regra de _turno_e_dia_referencia)."""
+        hora_inicio = _INICIO_DIURNO if turno == "DIURNO" else _INICIO_NOTURNO
+        inicio = datetime.combine(dia, hora_inicio, tzinfo=_FUSO_HOSPITAL)
+        atendimentos = await self._repo.list_por_intervalo(inicio, inicio + timedelta(hours=12))
+        items = [_linha_planilha(a) for a in atendimentos]
+        return PlanilhaMensalResponse(ano=dia.year, mes=dia.month, total=len(items), items=items)
 
     # ── Escrita ────────────────────────────────────────────────────────────────
 
@@ -233,6 +267,12 @@ class RecepcaoService:
             raise NotFoundError("Atendimento", atendimento_id)
 
         update_data = data.model_dump(exclude_unset=True)
+        if "paciente_id" in update_data:
+            novo = update_data["paciente_id"]
+            if novo is None or novo == atendimento.paciente_id:
+                update_data.pop("paciente_id")
+            elif not await self._paciente_repo.get(novo):
+                raise NotFoundError("Paciente", novo)
         for field, value in update_data.items():
             setattr(atendimento, field, value)
 
@@ -248,6 +288,36 @@ class RecepcaoService:
             campos_alterados=list(update_data.keys()),
         )
         return RecepcaoResponse.model_validate(atendimento)
+
+    async def remover_repetido(self, atendimento_id: int) -> None:
+        """Remove um atendimento SÓ se ele for duplicata (liberado pra recepção).
+        Mesma regra da tela (frontend/src/utils.js idsRepetidosPorPlantao): o
+        mesmo paciente foi registrado de novo, no mesmo plantão, logo em seguida
+        ou em até JANELA_REPETIDO_MIN minutos -- fica o registro mais novo e sai
+        este. Retorno real (horas depois) é recusado."""
+        atendimento = await self._repo.get_by_id(atendimento_id)
+        if atendimento is None:
+            raise NotFoundError("Atendimento", atendimento_id)
+
+        turno, dia = _turno_e_dia_referencia(atendimento.data_atendimento)
+        hora_inicio = _INICIO_DIURNO if turno == "DIURNO" else _INICIO_NOTURNO
+        inicio = datetime.combine(dia, hora_inicio, tzinfo=_FUSO_HOSPITAL)
+        plantao = await self._repo.list_por_intervalo(inicio, inicio + timedelta(hours=12))
+
+        idx = next((i for i, a in enumerate(plantao) if a.id == atendimento_id), None)
+        chaves = _chaves_paciente(atendimento)
+        seguintes = plantao[idx + 1:] if idx is not None else []
+        limite = atendimento.data_atendimento + timedelta(minutes=JANELA_REPETIDO_MIN)
+        eh_repetido = any(
+            chaves & _chaves_paciente(b) and (pos == 0 or b.data_atendimento <= limite)
+            for pos, b in enumerate(seguintes)
+        )
+        if not eh_repetido:
+            raise BusinessRuleError(
+                "Este atendimento não é repetido (não há registro do mesmo paciente logo "
+                f"em seguida nem em até {JANELA_REPETIDO_MIN} min no mesmo plantão)"
+            )
+        await self.remover(atendimento_id)
 
     async def remover(self, atendimento_id: int) -> None:
         atendimento = await self._repo.get_by_id(atendimento_id)

@@ -7,7 +7,7 @@ import bcrypt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import BusinessRuleError, UnauthorizedError
 from app.models.sessao import Sessao
 from app.models.usuario import Usuario
 from app.repositories.sessao_repository import SessaoRepository
@@ -112,6 +112,18 @@ class AuthService:
         if not sessao.usuario.ativo:
             raise UnauthorizedError("Conta desativada")
         return sessao.usuario
+
+    async def alterar_senha(self, usuario: Usuario, senha_atual: str, senha_nova: str) -> None:
+        # BusinessRuleError (422), não Unauthorized (401): 401 faz o frontend
+        # derrubar a sessão, e errar a senha atual não é sessão inválida.
+        if not bcrypt.checkpw(senha_atual.encode("utf-8"), usuario.password_hash.encode("utf-8")):
+            raise BusinessRuleError("Senha atual incorreta")
+        if len(senha_nova or "") < 4:
+            raise BusinessRuleError("Senha nova deve ter pelo menos 4 caracteres")
+        usuario.password_hash = bcrypt.hashpw(senha_nova.encode("utf-8"), bcrypt.gensalt()).decode()
+        usuario.tentativas_falhas = 0
+        usuario.bloqueado_ate = None
+        await self.session.flush()
 
     async def logout(self, token: Optional[str]) -> None:
         """Apaga a sessão correspondente, se existir. Nunca falha por token ausente/inválido."""

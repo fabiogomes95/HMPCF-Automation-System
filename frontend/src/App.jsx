@@ -2,14 +2,29 @@ import { useEffect, useState } from "react";
 import Recepcao from "./pages/Recepcao";
 import Historico from "./pages/Historico";
 import PlanilhaAtendimentos from "./pages/PlanilhaAtendimentos";
+import Auditoria from "./pages/Auditoria";
+import GerenciarUsuarios from "./pages/GerenciarUsuarios";
+import Correcao from "./pages/Correcao";
+import AlterarSenha from "./pages/AlterarSenha";
 import Login from "./pages/Login";
 import { getMe, logout } from "./services/auth";
 import { setOnUnauthorized } from "./services/api";
 import "./App.css";
 
 export default function App() {
-  const [tela, setTela]     = useState("recepcao");
+  const [tela, setTelaState] = useState(() => {
+    const salva = sessionStorage.getItem("hmpcf_tela");
+    return ["recepcao", "historico", "planilha", "auditoria", "usuarios", "correcao", "senha"].includes(salva) ? salva : "recepcao";
+  });
   const [edicao, setEdicao] = useState(null);
+  // Atendimento manual vindo da Correção (TI): A4 completa, atendimento NOVO,
+  // com data/hora escolhidas lá. Ver Recepcao `manual`.
+  const [manual, setManual] = useState(null);
+
+  function setTela(novaTela) {
+    sessionStorage.setItem("hmpcf_tela", novaTela);
+    setTelaState(novaTela);
+  }
 
   // null = ainda verificando sessão · undefined-like "sem usuário" = false
   const [usuario, setUsuario]     = useState(null);
@@ -55,6 +70,7 @@ export default function App() {
 
   function navRecepcao() {
     setEdicao(null);
+    setManual(null);
     setTela("recepcao");
   }
 
@@ -66,6 +82,22 @@ export default function App() {
     setTela("planilha");
   }
 
+  function navAuditoria() {
+    setTela("auditoria");
+  }
+
+  function navUsuarios() {
+    setTela("usuarios");
+  }
+
+  function navCorrecao() {
+    setTela("correcao");
+  }
+
+  function navSenha() {
+    setTela("senha");
+  }
+
   function abrirEdicao(dadosEdicao) {
     setEdicao(dadosEdicao);
     setTela("recepcao");
@@ -74,6 +106,17 @@ export default function App() {
   function fecharEdicao() {
     setEdicao(null);
     setTela("historico");
+  }
+
+  function abrirManual(dados) {
+    setEdicao(null);
+    setManual(dados);
+    setTela("recepcao");
+  }
+
+  function fecharManual() {
+    setManual(null);
+    setTela("correcao");
   }
 
   if (verificando) {
@@ -111,18 +154,60 @@ export default function App() {
         >
           Planilha
         </button>
+        {usuario.role === "ti" && (
+          <button
+            className={`app-nav-btn${tela === "auditoria" ? " ativo" : ""}`}
+            onClick={navAuditoria}
+          >
+            Auditoria
+          </button>
+        )}
+        {usuario.role === "ti" && (
+          <button
+            className={`app-nav-btn${tela === "usuarios" ? " ativo" : ""}`}
+            onClick={navUsuarios}
+          >
+            Usuários
+          </button>
+        )}
+        {usuario.role === "ti" && (
+          <button
+            className={`app-nav-btn${tela === "correcao" ? " ativo" : ""}`}
+            onClick={navCorrecao}
+          >
+            Correção
+          </button>
+        )}
+        {usuario.role === "ti" && (
+          <button
+            className={`app-nav-btn${tela === "senha" ? " ativo" : ""}`}
+            onClick={navSenha}
+          >
+            Senha
+          </button>
+        )}
         <button className="app-nav-btn app-nav-sair" onClick={handleSair}>
           Sair ({usuario.username})
         </button>
       </nav>
 
       {tela === "recepcao" && (
-        <Recepcao edicao={edicao} onVoltar={fecharEdicao} />
+        <Recepcao
+          // key: trocar de modo (normal/edição/manual) remonta a tela do zero
+          key={manual ? "manual" : edicao ? `edicao-${edicao.atendimentoId}` : "normal"}
+          edicao={edicao}
+          manual={manual}
+          onVoltar={manual ? fecharManual : fecharEdicao}
+        />
       )}
       {tela === "historico" && (
         <Historico onNavigate={setTela} onEditar={abrirEdicao} />
       )}
       {tela === "planilha" && <PlanilhaAtendimentos />}
+      {tela === "auditoria" && usuario.role === "ti" && <Auditoria />}
+      {tela === "usuarios" && usuario.role === "ti" && <GerenciarUsuarios />}
+      {tela === "correcao" && usuario.role === "ti" && <Correcao onAbrirA4={abrirManual} />}
+      {tela === "senha" && <AlterarSenha />}
     </>
   );
 }

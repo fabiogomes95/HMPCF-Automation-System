@@ -5,6 +5,9 @@
   padding: 6px 16px;
   background: #1e293b;
   border-bottom: 2px solid #0f172a;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .app-nav-brand {
