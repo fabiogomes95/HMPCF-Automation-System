@@ -160,12 +160,18 @@ para o usuário postgres" — ou seja, **senha errada** em `POSTGRES_PASSWORD`
 senha no `.env` pra bater com a senha atual do usuário `postgres` no servidor
 (peça ao usuário, não adivinhe/reuse uma senha antiga).
 
-**Atualização (2026-08-03):** a senha do usuário `postgres` no servidor
-mudou de novo — trocada para `***REMOVIDO***` em `bpa/.env`. Já testado com
-`psycopg2.connect(...)` (script do passo 5) e confirmado `PostgreSQL 16.14`
-respondendo. Se a migração voltar a falhar com o mesmo erro de decode, é
-sinal de que a senha mudou outra vez — não é a mesma senha do `dashboard/.env`
-(Firebird), então não reusar uma nem outra por engano.
+**Atualização (2026-09-23):** os notebooks do BPA não usam mais o usuário
+`postgres` — o servidor só aceita `postgres` localmente. Pela rede entra
+apenas `bpa_leitura` (só leitura de `pacientes` e `recepcao_atendimentos`,
+tudo o que a migração precisa). No `bpa/.env`:
+
+```env
+POSTGRES_USER=bpa_leitura
+POSTGRES_PASSWORD=<peça ao responsável pela TI — nunca escreva senha neste repositório, ele é público>
+```
+
+Se a migração falhar com o erro de decode/autenticação, confira essas duas
+linhas e reinicie o BPA (ele só lê o `.env` ao iniciar).
 
 ---
 
