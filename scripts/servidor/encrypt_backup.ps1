@@ -1,5 +1,5 @@
 # Criptografa um arquivo (ex: dump do backup) com AES-256-CBC. Senha lida de
-# um arquivo local nao versionado (scripts/windows/.backup_passphrase),
+# um arquivo local nao versionado (scripts/servidor/.backup_passphrase),
 # mesmo padrao usado para backend/.env.
 #
 # Formato do .enc gerado: [salt 16 bytes][iv 16 bytes][ciphertext]

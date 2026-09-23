@@ -20,7 +20,7 @@ import os
 import sys
 from datetime import datetime
 
-_BPA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "bpa"))
+_BPA_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), ".."))  # bpa/
 sys.path.insert(0, _BPA_DIR)
 
 import bpa_gerador as bpa  # noqa: E402

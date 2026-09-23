@@ -1,5 +1,10 @@
 # Deploy HMPCF — Guia de Implantação Hospitalar
 
+> **Atualização 23/09/2026:** o instalador em uso é
+> `scripts/servidor/DEPLOY_HMPCF_REMOTO.ps1` (serviço `HMPCF-Backend-Svc` via
+> nssm). `INICIAR.bat` e `instalar_servico.bat`, citados abaixo, foram para
+> `legado/lancadores_antigos/`. Operação do dia a dia: ver `README.pt-BR.md`.
+
 **Sistema:** HMPCF — Hospital Municipal Pres. Café Filho  
 **Ambiente:** Windows 10/11 — PC da Recepção — Uso 24h/dia — Rede LAN interna  
 **Stack:** FastAPI + PostgreSQL 16 + React/Vite (build estático)  

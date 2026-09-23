@@ -1,5 +1,5 @@
 # Descriptografa um backup gerado por encrypt_backup.ps1.
-# Le a senha de scripts/windows/.backup_passphrase se existir (mesma maquina
+# Le a senha de scripts/servidor/.backup_passphrase se existir (mesma maquina
 # que gerou o backup); senao pede interativamente (nao aparece na tela).
 #
 # Uso: powershell -File decrypt_backup.ps1 -Path "C:\HMPCF\backups\hmpcf_2026-07-02.sql.enc"

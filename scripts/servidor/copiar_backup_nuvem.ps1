@@ -1,13 +1,13 @@
 # Copia o backup criptografado do dia para uma pasta sincronizada com a
 # nuvem (Google Drive para computador, montado como G:, por padrão) e aplica
 # a mesma retenção lá também — protege contra falha de disco/incêndio/roubo
-# na máquina de produção, já que scripts/windows/backup_postgres.bat só
+# na máquina de produção, já que scripts/servidor/backup_postgres.bat só
 # guarda em C:\HMPCF\backups\ (mesma máquina do Postgres).
 #
 # O G: do Google Drive só existe com o usuário logado — por isso a tarefa
 # agendada roda como o usuário da máquina (ver agendar_backup.ps1).
 #
-# NUNCA copiar scripts/windows/.backup_passphrase para esta pasta —
+# NUNCA copiar scripts/servidor/.backup_passphrase para esta pasta —
 # guardar a senha de criptografia ao lado do dado criptografado anula a
 # proteção (ver docs/DEPLOY_HOSPITAL.md, seção 9.6).
 #

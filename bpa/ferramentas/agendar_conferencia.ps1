@@ -4,7 +4,7 @@
 #   powershell -ExecutionPolicy Bypass -File agendar_conferencia.ps1
 
 $ScriptDir      = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ConferenciaBat = Join-Path $ScriptDir "..\..\bpa\conferencia_semanal.bat"
+$ConferenciaBat = Join-Path $ScriptDir "..\conferencia_semanal.bat"
 $TaskName       = "HMPCF-Conferencia-Semanal"
 $HorarioStr     = "18:00"
 

@@ -15,7 +15,7 @@ frontend-teste/
 # Segredos — nunca commitar
 .env
 **/.env
-scripts/windows/.backup_passphrase
+scripts/servidor/.backup_passphrase
 DEPLOY_LOGIN_PRODUCAO.md
 RODAR__NO_PC_PRODUÇÃO.MD
 
@@ -44,7 +44,7 @@ bpa/bpa_lotes/*.txt
 !bpa/bpa_lotes/.gitkeep
 
 # Saida de inspecao do Firebird (dados reais de pacientes — nunca commitar)
-scripts/bpa/inspecao.txt
+bpa/ferramentas/inspecao.txt
 
 # Relatorios da conferencia semanal (CPF mascarado, mas ainda assim dado de
 # paciente — nunca commitar, mesma regra dos lotes BPA)

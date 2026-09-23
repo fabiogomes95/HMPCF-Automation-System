@@ -80,9 +80,9 @@ segundos) — só dar F5 depois de uns 5 segundos.
 
 - **Log de inicialização**: `bpa\start_bpa.log` — mostra se o script achou
   a porta já em uso ou se iniciou o servidor agora.
-- **Nada abre / navegador não conecta**: confira se
-  `dashboard\.venv\Scripts\pythonw.exe` existe (ambiente virtual precisa
-  estar montado — ver `docs/INSTALACAO_BPA_MIGRACAO.md`).
+- **Nada abre / navegador não conecta**: rode de novo
+  `powershell -ExecutionPolicy Bypass -File bpa\instalar.ps1` (cria/atualiza
+  `bpa\.venv` e a tarefa `HMPCF-BPA` que liga o BPA com o Windows).
 - **Ícone não aparece / aparece em branco**: confirme que o caminho do
   `legado\assets\robo-icon.ico` está correto e que a pasta `legado/` não
   foi removida (o ícone é reaproveitado de lá, não foi duplicado).
