@@ -13,9 +13,14 @@ echo.
 echo  Para encerrar: feche esta janela ou Ctrl+C
 echo.
 
-REM Python do BPA: bpa\.venv (instalar.ps1); enquanto nao instalado, o antigo dashboard\.venv.
+REM Com bpa\.venv (instalar.ps1): BPA novo em FastAPI (executar.py).
+REM Sem ele: o app antigo (app.py) no dashboard\.venv -- nenhum notebook fica sem BPA na troca.
 set "PY=%~dp0.venv\Scripts\python.exe"
-if not exist "%PY%" set "PY=%~dp0..\dashboard\.venv\Scripts\python.exe"
-"%PY%" app.py
+set "APP=executar.py"
+if not exist "%PY%" (
+    set "PY=%~dp0..\dashboard\.venv\Scripts\python.exe"
+    set "APP=app.py"
+)
+"%PY%" %APP%
 
 pause

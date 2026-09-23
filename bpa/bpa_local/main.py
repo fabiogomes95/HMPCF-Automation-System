@@ -1,0 +1,84 @@
+"""App FastAPI do BPA local (porta 8503, só 127.0.0.1)."""
+import json
+from contextlib import asynccontextmanager
+from datetime import date
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+from bpa_local import config, postgres
+from bpa_local.api.rotas import router
+from bpa_local.cache import cache
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    cache.carregar_tudo()
+    yield
+
+
+app = FastAPI(
+    title="BPA local HMPCF",
+    lifespan=lifespan,
+    docs_url=None, redoc_url=None, openapi_url=None,
+)
+
+
+# ── Quem pode chamar ──────────────────────────────────────────────────────────
+@app.middleware("http")
+async def origem_autorizada(request: Request, call_next):
+    """Aceita só o sistema do hospital e a própria página local; responde o
+    preflight do navegador e devolve os cabeçalhos de CORS / Private Network
+    Access que o Chrome exige pra uma página da rede chamar o próprio PC."""
+    origem = (request.headers.get("origin") or "").rstrip("/")
+    do_sistema = origem in config.ORIGENS_SISTEMA
+    if origem and not do_sistema and origem not in config.ORIGENS_LOCAIS:
+        return JSONResponse({"ok": False, "erro": "Origem não autorizada"}, status_code=403)
+
+    resp = Response(status_code=204) if request.method == "OPTIONS" else await call_next(request)
+    if do_sistema:
+        resp.headers["Access-Control-Allow-Origin"] = origem
+        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        resp.headers["Access-Control-Allow-Private-Network"] = "true"
+        resp.headers["Access-Control-Max-Age"] = "600"
+        resp.headers["Vary"] = "Origin"
+    return resp
+
+
+app.include_router(router)
+
+
+# ── Estado (pra aba BPA do sistema saber se o BPA local está vivo) ────────────
+@app.get("/api/status")
+def status():
+    return {
+        "ok": not cache.erro,
+        "pacientes": len(cache.pacientes),
+        "profissionais": len(cache.profissionais),
+        "erro_firebird": cache.erro,
+    }
+
+
+# ── Página atual (Bootstrap) — sai quando a aba BPA do sistema estiver pronta ─
+if config.ASSETS.exists():
+    app.mount("/assets", StaticFiles(directory=config.ASSETS), name="assets")
+
+_templates = Jinja2Templates(directory=str(config.TEMPLATES))
+
+
+@app.get("/", include_in_schema=False)
+def index(request: Request):
+    competencias = postgres.competencias_disponiveis() or [{
+        "value": date.today().strftime("%Y%m"),
+        "label": postgres.nome_mes(date.today().month, date.today().year),
+    }]
+    return _templates.TemplateResponse(request, "index.html", {
+        "total": len(cache.pacientes),
+        "erro_firebird": cache.erro,
+        "profissionais_json": json.dumps(cache.profissionais, ensure_ascii=False),
+        "competencias": competencias,
+        "mes_atual": competencias[0]["value"],
+    })

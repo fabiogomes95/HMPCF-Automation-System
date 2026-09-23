@@ -49,7 +49,7 @@ if ($faltando -and (Test-Path $envDash)) {
 
 # 3. Ligar com o Windows -------------------------------------------------------
 Passo "Iniciar com o Windows (tarefa $tarefa)"
-$acao = New-ScheduledTaskAction -Execute (Join-Path $venv "Scripts\pythonw.exe") -Argument "app.py" -WorkingDirectory $bpa
+$acao = New-ScheduledTaskAction -Execute (Join-Path $venv "Scripts\pythonw.exe") -Argument "executar.py" -WorkingDirectory $bpa
 $gatilho = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
 # Espera o Firebird subir depois do logon antes de carregar os pacientes.
 $gatilho.Delay = "PT30S"
@@ -59,11 +59,21 @@ Register-ScheduledTask -TaskName $tarefa -Action $acao -Trigger $gatilho -Settin
     -Description "BPA HMPCF local (porta 8503) - Firebird/BPA Magnetico deste notebook" -Force | Out-Null
 Write-Host "[OK] Tarefa registrada para o usuario $env:USERNAME"
 
-# Liga agora, se ainda nao estiver rodando
+# Liga agora. Se o BPA antigo (app.py, Flask) estiver rodando, fecha ele antes
+# -- a versao nova (executar.py) usa a mesma porta 8503.
 $rodando = Get-NetTCPConnection -LocalPort 8503 -State Listen -ErrorAction SilentlyContinue
 if ($rodando) {
-    Write-Host "[OK] BPA ja estava rodando na porta 8503 (reinicie o Windows ou feche o BPA para usar o Python novo)"
-} else {
+    $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($rodando[0].OwningProcess)"
+    if ($proc.CommandLine -match "app\.py") {
+        Stop-Process -Id $proc.ProcessId -Force
+        Start-Sleep -Seconds 2
+        Write-Host "[OK] BPA antigo (app.py) fechado"
+        $rodando = $null
+    } else {
+        Write-Host "[OK] BPA novo ja estava rodando na porta 8503"
+    }
+}
+if (-not $rodando) {
     Start-ScheduledTask -TaskName $tarefa
     Write-Host "[OK] BPA iniciado -- abra http://localhost:8503 em alguns segundos"
 }
