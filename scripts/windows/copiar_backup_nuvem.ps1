@@ -1,16 +1,19 @@
-# Copia o backup criptografado do dia para uma pasta local sincronizada
-# (OneDrive por padrão) e aplica a mesma retenção lá também — protege
-# contra falha de disco/incêndio/roubo na máquina de produção, já que
-# scripts/windows/backup_postgres.bat só guarda em C:\HMPCF\backups\
-# (mesma máquina do Postgres).
+# Copia o backup criptografado do dia para uma pasta sincronizada com a
+# nuvem (Google Drive para computador, montado como G:, por padrão) e aplica
+# a mesma retenção lá também — protege contra falha de disco/incêndio/roubo
+# na máquina de produção, já que scripts/windows/backup_postgres.bat só
+# guarda em C:\HMPCF\backups\ (mesma máquina do Postgres).
+#
+# O G: do Google Drive só existe com o usuário logado — por isso a tarefa
+# agendada roda como o usuário da máquina (ver agendar_backup.ps1).
 #
 # NUNCA copiar scripts/windows/.backup_passphrase para esta pasta —
 # guardar a senha de criptografia ao lado do dado criptografado anula a
 # proteção (ver docs/DEPLOY_HOSPITAL.md, seção 9.6).
 #
 # Uso:
-#   powershell -File copiar_backup_onedrive.ps1 -Path "C:\HMPCF\backups\hmpcf_2026-07-02.sql.enc"
-#   powershell -File copiar_backup_onedrive.ps1 -Path "..." -DestinoPasta "D:\outro\lugar"
+#   powershell -File copiar_backup_nuvem.ps1 -Path "C:\HMPCF\backups\hmpcf_2026-07-02.sql.enc"
+#   powershell -File copiar_backup_nuvem.ps1 -Path "..." -DestinoPasta "D:\outro\lugar"
 #
 # Falha aqui NUNCA deve derrubar o backup inteiro — quem chama (
 # backup_postgres.bat) só avisa e segue; o backup local já está feito e
@@ -20,7 +23,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Path,
 
-    [string]$DestinoPasta = (Join-Path $env:USERPROFILE "OneDrive\HMPCF-Backups"),
+    [string]$DestinoPasta = "G:\Meu Drive\HMPCF-Backups",
 
     [int]$RetencaoDias = 30
 )
@@ -36,6 +39,10 @@ if (-not (Test-Path $Path)) {
 }
 
 try {
+    $raiz = Split-Path -Qualifier $DestinoPasta
+    if ($raiz -and -not (Test-Path "$raiz\")) {
+        throw "unidade $raiz nao encontrada (Google Drive aberto e logado?)"
+    }
     if (-not (Test-Path $DestinoPasta)) {
         New-Item -ItemType Directory -Path $DestinoPasta -Force | Out-Null
     }

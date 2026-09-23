@@ -44,7 +44,9 @@ try {
     $decryptor  = $aes.CreateDecryptor()
     $plainBytes = $decryptor.TransformFinalBlock($cipherBytes, 0, $cipherBytes.Length)
 } catch {
-    Write-Error "Falha ao descriptografar — senha incorreta ou arquivo corrompido."
+    # So ASCII em strings: o Windows PowerShell 5.1 le .ps1 sem BOM como ANSI
+    # e um travessao aqui virava aspas -- o script inteiro nem abria.
+    Write-Error "Falha ao descriptografar -- senha incorreta ou arquivo corrompido."
     exit 1
 }
 
