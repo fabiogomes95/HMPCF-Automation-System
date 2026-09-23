@@ -17,7 +17,7 @@ from app.services.painel_service import Periodo, montar_painel
 
 router = APIRouter()
 
-ROLES_VALIDOS = ("recepcao", "ti")
+ROLES_VALIDOS = ("recepcao", "faturamento", "ti")
 SENHA_MIN = 4
 
 
@@ -29,7 +29,7 @@ def _checar_senha(senha: str) -> None:
 class CriarUsuarioInput(BaseModel):
     username: str
     password: str
-    role: str  # "recepcao" | "ti"
+    role: str  # "recepcao" | "faturamento" | "ti"
 
 
 class ResetarSenhaInput(BaseModel):

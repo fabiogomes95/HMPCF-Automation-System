@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { listarUsuarios, criarUsuario, resetarSenhaUsuario, toggleAtivoUsuario, mensagemErro } from "../services/api";
 import "./GerenciarUsuarios.css";
 
-const ROLES = ["recepcao", "ti"];
+const ROLES = ["recepcao", "faturamento", "ti"];
 
 function formatDataHora(iso) {
   if (!iso) return "—";

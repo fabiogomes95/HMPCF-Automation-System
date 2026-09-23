@@ -12,10 +12,25 @@ import { getMe, logout } from "./services/auth";
 import { setOnUnauthorized } from "./services/api";
 import "./App.css";
 
+// Abas do menu e quais papéis enxergam cada uma. O backend também bloqueia
+// o que é só da TI (TIUser) -- esconder aqui é conveniência, não segurança.
+const TELAS = [
+  { id: "recepcao",  rotulo: "Recepção",  papeis: ["recepcao", "ti", "faturamento"] },
+  { id: "historico", rotulo: "Histórico", papeis: ["recepcao", "ti"] },
+  { id: "planilha",  rotulo: "Planilha",  papeis: ["recepcao", "ti"] },
+  { id: "painel",    rotulo: "Painel",    papeis: ["ti"] },
+  { id: "auditoria", rotulo: "Auditoria", papeis: ["ti"] },
+  { id: "usuarios",  rotulo: "Usuários",  papeis: ["ti"] },
+  { id: "correcao",  rotulo: "Correção",  papeis: ["ti", "faturamento"] },
+  { id: "senha",     rotulo: "Senha",     papeis: ["ti", "faturamento"] },
+];
+// BPA roda local em cada notebook do faturamento (Firebird/BPA Magnético offline).
+const URL_BPA_LOCAL = "http://localhost:8503";
+
 export default function App() {
   const [tela, setTelaState] = useState(() => {
     const salva = sessionStorage.getItem("hmpcf_tela");
-    return ["recepcao", "historico", "planilha", "painel", "auditoria", "usuarios", "correcao", "senha"].includes(salva) ? salva : "recepcao";
+    return TELAS.some((t) => t.id === salva) ? salva : "recepcao";
   });
   const [edicao, setEdicao] = useState(null);
   // Atendimento manual vindo da Correção (TI): A4 completa, atendimento NOVO,
@@ -75,33 +90,12 @@ export default function App() {
     setTela("recepcao");
   }
 
-  function navHistorico() {
-    setTela("historico");
-  }
 
-  function navPlanilha() {
-    setTela("planilha");
-  }
 
-  function navPainel() {
-    setTela("painel");
-  }
 
-  function navAuditoria() {
-    setTela("auditoria");
-  }
 
-  function navUsuarios() {
-    setTela("usuarios");
-  }
 
-  function navCorrecao() {
-    setTela("correcao");
-  }
 
-  function navSenha() {
-    setTela("senha");
-  }
 
   function abrirEdicao(dadosEdicao) {
     setEdicao(dadosEdicao);
@@ -132,6 +126,11 @@ export default function App() {
     return <Login onLogin={setUsuario} />;
   }
 
+  // Tela salva de outro login (ex.: TI -> faturamento no mesmo navegador) cai
+  // na primeira aba permitida em vez de abrir algo que esse papel não vê.
+  const telasPermitidas = TELAS.filter((t) => t.papeis.includes(usuario.role));
+  const telaAtual = telasPermitidas.some((t) => t.id === tela) ? tela : telasPermitidas[0]?.id;
+
   return (
     <>
       {avisoRelogin && (
@@ -141,70 +140,26 @@ export default function App() {
       )}
       <nav className="app-nav no-print">
         <span className="app-nav-brand">HMPCF</span>
-        <button
-          className={`app-nav-btn${tela === "recepcao" ? " ativo" : ""}`}
-          onClick={navRecepcao}
-        >
-          Recepção
-        </button>
-        <button
-          className={`app-nav-btn${tela === "historico" ? " ativo" : ""}`}
-          onClick={navHistorico}
-        >
-          Histórico
-        </button>
-        <button
-          className={`app-nav-btn${tela === "planilha" ? " ativo" : ""}`}
-          onClick={navPlanilha}
-        >
-          Planilha
-        </button>
-        {usuario.role === "ti" && (
+        {telasPermitidas.map((t) => (
           <button
-            className={`app-nav-btn${tela === "painel" ? " ativo" : ""}`}
-            onClick={navPainel}
+            key={t.id}
+            className={`app-nav-btn${telaAtual === t.id ? " ativo" : ""}`}
+            onClick={t.id === "recepcao" ? navRecepcao : () => setTela(t.id)}
           >
-            Painel
+            {t.rotulo}
           </button>
-        )}
-        {usuario.role === "ti" && (
-          <button
-            className={`app-nav-btn${tela === "auditoria" ? " ativo" : ""}`}
-            onClick={navAuditoria}
-          >
-            Auditoria
-          </button>
-        )}
-        {usuario.role === "ti" && (
-          <button
-            className={`app-nav-btn${tela === "usuarios" ? " ativo" : ""}`}
-            onClick={navUsuarios}
-          >
-            Usuários
-          </button>
-        )}
-        {usuario.role === "ti" && (
-          <button
-            className={`app-nav-btn${tela === "correcao" ? " ativo" : ""}`}
-            onClick={navCorrecao}
-          >
-            Correção
-          </button>
-        )}
-        {usuario.role === "ti" && (
-          <button
-            className={`app-nav-btn${tela === "senha" ? " ativo" : ""}`}
-            onClick={navSenha}
-          >
-            Senha
-          </button>
+        ))}
+        {usuario.role === "faturamento" && (
+          <a className="app-nav-btn app-nav-link" href={URL_BPA_LOCAL} target="_blank" rel="noreferrer">
+            BPA ↗
+          </a>
         )}
         <button className="app-nav-btn app-nav-sair" onClick={handleSair}>
           Sair ({usuario.username})
         </button>
       </nav>
 
-      {tela === "recepcao" && (
+      {telaAtual === "recepcao" && (
         <Recepcao
           // key: trocar de modo (normal/edição/manual) remonta a tela do zero
           key={manual ? "manual" : edicao ? `edicao-${edicao.atendimentoId}` : "normal"}
@@ -213,15 +168,17 @@ export default function App() {
           onVoltar={manual ? fecharManual : fecharEdicao}
         />
       )}
-      {tela === "historico" && (
+      {telaAtual === "historico" && (
         <Historico onNavigate={setTela} onEditar={abrirEdicao} />
       )}
-      {tela === "planilha" && <PlanilhaAtendimentos />}
-      {tela === "painel" && usuario.role === "ti" && <Painel />}
-      {tela === "auditoria" && usuario.role === "ti" && <Auditoria />}
-      {tela === "usuarios" && usuario.role === "ti" && <GerenciarUsuarios />}
-      {tela === "correcao" && usuario.role === "ti" && <Correcao onAbrirA4={abrirManual} />}
-      {tela === "senha" && <AlterarSenha />}
+      {telaAtual === "planilha" && <PlanilhaAtendimentos />}
+      {telaAtual === "painel" && <Painel />}
+      {telaAtual === "auditoria" && <Auditoria />}
+      {telaAtual === "usuarios" && <GerenciarUsuarios />}
+      {telaAtual === "correcao" && (
+        <Correcao onAbrirA4={abrirManual} podeExcluir={usuario.role === "ti"} />
+      )}
+      {telaAtual === "senha" && <AlterarSenha />}
     </>
   );
 }

@@ -51,7 +51,9 @@ function formatarDataHora(iso) {
 
 const VAZIO_ATD = () => ({ data: hoje(), hora: hojeHora(), registro: "", procedencia: "NORMAL" });
 
-export default function Correcao({ onAbrirA4 = null }) {
+// podeExcluir: só a TI. Faturamento adiciona e edita, mas não exclui (o backend
+// também recusa: DELETE /ti/atendimentos exige perfil TI).
+export default function Correcao({ onAbrirA4 = null, podeExcluir = false }) {
   // ── Modo de busca ────────────────────────────────────────────────────────────
   const [modoBusca, setModoBusca]           = useState("doc"); // "doc" | "nome"
 
@@ -404,7 +406,9 @@ export default function Correcao({ onAbrirA4 = null }) {
                       <td>{at.procedencia || "—"}</td>
                       <td>
                         <button onClick={() => iniciarEdicao(at)}>Editar</button>
-                        <button className="btn-excluir" onClick={() => handleExcluirAtendimento(at)}>Excluir</button>
+                        {podeExcluir && (
+                          <button className="btn-excluir" onClick={() => handleExcluirAtendimento(at)}>Excluir</button>
+                        )}
                       </td>
                     </>
                   )}
@@ -419,7 +423,7 @@ export default function Correcao({ onAbrirA4 = null }) {
         <p className="cor-vazio">Nenhum atendimento registrado para este paciente.</p>
       )}
 
-      <RepetidosMes />
+      {podeExcluir && <RepetidosMes />}
     </div>
   );
 }

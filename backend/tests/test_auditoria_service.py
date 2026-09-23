@@ -158,3 +158,25 @@ async def test_gestao_de_usuarios_gera_log_sem_senha(session: AsyncSession):
     ]
     assert all(l.usuario_username == "teste_ti_auditoria" for l in logs)
     assert "senha-secreta" not in repr([(l.acao, l.campos_alterados) for l in logs])
+
+
+@pytest.mark.asyncio
+async def test_faturamento_criado_mas_barrado_nas_rotas_da_ti(session: AsyncSession):
+    # Faturamento registra/edita atendimentos (rotas CurrentUser), mas excluir,
+    # usuários, auditoria e painel exigem TI -- o servidor recusa, não só a tela.
+    from app.api.deps import get_ti_user
+    from app.api.v1.endpoints.ti import CriarUsuarioInput, criar_usuario
+    from app.core.exceptions import ForbiddenError
+
+    ti = await _criar_usuario_teste(session, "teste_ti_fat")
+    ti.role = "ti"
+    fat = await criar_usuario(
+        CriarUsuarioInput(username="teste_faturamento", password="senha-fat-1", role="faturamento"),
+        session, ti,
+    )
+    assert fat.role == "faturamento"
+
+    usuario_fat = await session.get(Usuario, fat.id)
+    with pytest.raises(ForbiddenError):
+        await get_ti_user(usuario_fat)
+    assert await get_ti_user(ti) is ti
