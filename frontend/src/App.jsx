@@ -28,10 +28,13 @@ const TELAS = [
   { id: "senha",     rotulo: "Senha",     papeis: ["ti"] },
 ];
 
+// Primeira aba (e a que abre ao entrar) de cada papel -- o faturamento trabalha no BPA.
+const PRIMEIRA = { faturamento: "bpa" };
+
 export default function App() {
   const [tela, setTelaState] = useState(() => {
     const salva = sessionStorage.getItem("hmpcf_tela");
-    return TELAS.some((t) => t.id === salva) ? salva : "recepcao";
+    return TELAS.some((t) => t.id === salva) ? salva : null; // null = primeira aba do papel
   });
   const [edicao, setEdicao] = useState(null);
   // Atendimento manual vindo da Correção (TI): A4 completa, atendimento NOVO,
@@ -124,12 +127,22 @@ export default function App() {
   }
 
   if (!usuario) {
-    return <Login onLogin={setUsuario} />;
+    return (
+      <Login
+        onLogin={(u) => {
+          sessionStorage.removeItem("hmpcf_tela"); // login novo abre na primeira aba do papel
+          setTelaState(null);
+          setUsuario(u);
+        }}
+      />
+    );
   }
 
   // Tela salva de outro login (ex.: TI -> faturamento no mesmo navegador) cai
   // na primeira aba permitida em vez de abrir algo que esse papel não vê.
-  const telasPermitidas = TELAS.filter((t) => t.papeis.includes(usuario.role));
+  const primeira = PRIMEIRA[usuario.role];
+  const telasPermitidas = TELAS.filter((t) => t.papeis.includes(usuario.role))
+    .sort((a, b) => (b.id === primeira) - (a.id === primeira));
   const telaAtual = telasPermitidas.some((t) => t.id === tela) ? tela : telasPermitidas[0]?.id;
 
   return (
