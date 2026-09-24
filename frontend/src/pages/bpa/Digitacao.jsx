@@ -42,7 +42,7 @@ function SituacaoDia({ s, carregando, aoAtualizar }) {
   }
   return (
     <div className="bp-linha" style={{ marginTop: 10, alignItems: "center", fontSize: 13, color: "var(--bp-texto-2)" }}>
-      <span style={{ flex: 1 }}>{carregando && !s ? "Conferindo o BPA Magnético…" : texto}</span>
+      <span style={{ flex: 1 }}>{carregando ? "Conferindo o BPA Magnético…" : texto}</span>
       {tag}
       <button className="bp-btn-sec" style={{ padding: "2px 8px" }} onClick={aoAtualizar} disabled={carregando}
               title="Conferir de novo (depois de importar no BPA Magnético)">⟳</button>
@@ -106,8 +106,9 @@ export default function Digitacao({ profissionais }) {
     setConferindoDia(true);
     try {
       setSituacao(await bpaLocal.situacaoDia(dataBR));
-    } catch {
-      setSituacao(null);
+    } catch (e) {
+      // antes ficava null e a tela mostrava "Conferindo…" pra sempre
+      setSituacao({ ok: false, erro: e.message || "Não consegui conferir o BPA Magnético." });
     } finally {
       setConferindoDia(false);
     }
