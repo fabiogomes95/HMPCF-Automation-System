@@ -257,8 +257,14 @@ export default function Digitacao({ profissionais }) {
                 <button className="bp-btn-sec" onClick={trocar}>Trocar</button>
               </div>
               <div className="bp-contadores">
-                <div><strong>{fmtNum(gravados.length)}</strong><span>deste médico no dia</span></div>
-                <div><strong>{fmtNum(totalLote)}</strong><span>no lote do dia</span></div>
+                <div>
+                  <strong>{fmtNum(gravados.length)}</strong>
+                  <span>
+                    paciente(s) deste médico em {sessao.data}
+                    {/* total do dia só quando outros médicos também digitaram */}
+                    {totalLote !== gravados.length && ` · ${fmtNum(totalLote)} no dia, somando todos`}
+                  </span>
+                </div>
               </div>
             </>
           ) : (
