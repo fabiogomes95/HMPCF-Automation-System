@@ -30,57 +30,31 @@ def _dtnasc(valor) -> str | None:
     return v if len(v) == 8 else None
 
 
-def _cns_valido(cns: str) -> bool:
-    return len(cns) == 15
-
-
 def chave_nome_nasc(nome, dtnasc) -> tuple[str, str]:
     """Identidade de paciente SEM CPF: nome (como vai pro Firebird, 30 letras) + nascimento."""
     return (re.sub(r"\s+", " ", str(nome or "").strip().upper())[:30].strip(), _dtnasc(dtnasc) or "")
 
 
-def _carregar_existentes_fb(cur) -> tuple[dict, set, set]:
-    """Carrega todos os CNS/CPF já cadastrados no Firebird de uma vez (1 consulta),
-    para checar existência em memória em vez de 1 SELECT por paciente (CADCNS não
-    tem índice em NUM_CPF — em memória evita a varredura completa da tabela repetida
-    milhares de vezes, sem precisar mexer no schema do banco).
+def _carregar_existentes_fb(cur) -> tuple[set, set]:
+    """Carrega de uma vez (1 consulta) o que já está no Firebird, pra checar em
+    memória em vez de 1 SELECT por paciente (CADCNS não tem índice em NUM_CPF).
 
-    Retorna (por_cns, cpf_set, nome_nasc):
-      por_cns   — {CNS: (ID_CADCNS, NUM_CPF atual)}, para achar cadastros antigos
-                  (só CNS, sem CPF) e completar o CPF sem duplicar o registro.
-      cpf_set   — conjunto de CPFs já gravados em algum registro.
+    Retorna (cpf_set, nome_nasc):
+      cpf_set   — CPFs já gravados.
       nome_nasc — (nome, nascimento) de todos os cadastros: paciente SEM CPF
                   só entra se ninguém com o mesmo nome e nascimento existir.
-    """
-    cur.execute("SELECT ID_CADCNS, CNS, NUM_CPF, NOME, DTNASC FROM CADCNS")
-    por_cns: dict = {}
+
+    Desde 24/09/2026 não existe mais "completar CPF" em cadastro antigo só com
+    SUS: o Firebird foi migrado de novo só com CPF (ninguém tem SUS lá)."""
+    cur.execute("SELECT NUM_CPF, NOME, DTNASC FROM CADCNS")
     cpf_set: set = set()
     nome_nasc: set = set()
-    for id_cadcns, cns, cpf, nome, dtnasc in cur.fetchall():
+    for cpf, nome, dtnasc in cur.fetchall():
         nome_nasc.add(chave_nome_nasc(nome, dtnasc))
-        cns = (cns or "").strip()
         cpf = (cpf or "").strip()
-        if cns:
-            por_cns[cns] = (id_cadcns, cpf)
         if cpf:
             cpf_set.add(cpf)
-    return por_cns, cpf_set, nome_nasc
-
-
-def _status_paciente(por_cns: dict, cpf_set: set, cns: str, cpf: str):
-    """Decide o que fazer com um paciente do Postgres:
-      "duplicata" — CPF já gravado em algum registro, nada a fazer.
-      "atualizar" — já existe cadastro pelo CNS, mas sem CPF; (status, ID_CADCNS).
-      "novo"      — não existe cadastro nenhum; precisa inserir.
-    """
-    if cpf in cpf_set:
-        return ("duplicata", None)
-    if cns and cns in por_cns:
-        id_existente, cpf_atual = por_cns[cns]
-        if not cpf_atual:
-            return ("atualizar", id_existente)
-        return ("duplicata", None)
-    return ("novo", None)
+    return cpf_set, nome_nasc
 
 
 _COLUNAS = [
@@ -113,26 +87,23 @@ def preview(d: dict) -> dict:
 
         fb = bpa.conectar()
         fb_cur = fb.cursor()
-        por_cns, cpf_set, nome_nasc = _carregar_existentes_fb(fb_cur)
+        cpf_set, nome_nasc = _carregar_existentes_fb(fb_cur)
         fb.close()
 
-        novos = atualizar = ja_existem = novos_sem_doc = 0
+        novos = ja_existem = novos_sem_doc = 0
         for r in sem_doc:
             if chave_nome_nasc(r[2], r[3]) in nome_nasc:
                 ja_existem += 1
             elif _dtnasc(r[3]) and str(r[2] or "").strip():
                 novos_sem_doc += 1
         for r in validos:
-            status, _ = _status_paciente(por_cns, cpf_set, limpar(r[0]), limpar(r[1]))
-            if status == "novo":
-                novos += 1
-            elif status == "atualizar":
-                atualizar += 1
-            else:
+            if limpar(r[1]) in cpf_set:
                 ja_existem += 1
+            else:
+                novos += 1
 
         return {
-            "ok": True, "total": total, "novos": novos + novos_sem_doc, "atualizar": atualizar,
+            "ok": True, "total": total, "novos": novos + novos_sem_doc,
             "ja_existem": ja_existem, "cpf_invalido": cpf_invalido, "sem_documento": novos_sem_doc,
         }
     except Exception as e:
@@ -189,7 +160,7 @@ def migrar(query: str) -> Iterator[dict]:
 
     if total == 0:
         yield {
-            "tipo": "fim", "inseridos": 0, "atualizados": 0, "duplicatas": 0,
+            "tipo": "fim", "inseridos": 0, "duplicatas": 0,
             "erros": 0, "cpf_invalidos": 0, "sem_documento": 0,
         }
         pg.close()
@@ -208,16 +179,15 @@ def migrar(query: str) -> Iterator[dict]:
     fb_cur.execute("SELECT MAX(ID_CADCNS) FROM CADCNS")
     max_id = fb_cur.fetchone()[0] or 0
 
-    por_cns, cpf_set, nome_nasc = _carregar_existentes_fb(fb_cur)
+    cpf_set, nome_nasc = _carregar_existentes_fb(fb_cur)
     yield {"tipo": "log", "msg": f"{len(cpf_set)} CPF(s) já cadastrados carregados em memória."}
 
-    inseridos = atualizados = duplicatas = erros = cpf_invalidos = sem_documento = 0
+    inseridos = duplicatas = erros = cpf_invalidos = sem_documento = 0
     LOTE = 50
 
     for i, row in enumerate(rows, 1):
         cns_r, cpf_r, nome_r, dn_r, sexo_r, raca_r, mae_r, \
             log_r, num_r, bairro_r, cep_r, ibge_r, nac_r, ddd_r, tel_r = row
-        cns = limpar(cns_r)
         cpf = limpar(cpf_r)
 
         if not cpf:
@@ -264,33 +234,15 @@ def migrar(query: str) -> Iterator[dict]:
             yield {"tipo": "log", "msg": f"CPF ausente/inválido, paciente pulado: {nome_r} ({cpf_r!r})"}
             continue
 
-        if cns and not _cns_valido(cns):
-            cns = ""  # CNS não é mais obrigatório — descarta se mal formatado, mas mantém o CPF
-
-        status, id_existente = _status_paciente(por_cns, cpf_set, cns, cpf)
-
-        if status == "duplicata":
+        if cpf in cpf_set:
             duplicatas += 1
 
-        elif status == "atualizar":
-            try:
-                fb_cur.execute("UPDATE CADCNS SET NUM_CPF = ? WHERE ID_CADCNS = ?", [cpf, id_existente])
-                atualizados += 1
-                cpf_set.add(cpf)
-                por_cns[cns] = (id_existente, cpf)
-            except Exception as e:
-                erros += 1
-                yield {"tipo": "log", "msg": f"Erro ao atualizar CPF de {nome_r} (CNS {cns}): {e}"}
-
-        else:  # "novo"
+        else:  # novo
             max_id += 1
             try:
                 # SUS deixado de lado a partir de 10/07/2026 (decisão do
                 # usuário) — cadastro novo migra CPF e todos os outros dados
-                # normalmente, mas nunca grava o CNS vindo do Postgres. O CNS
-                # acima (`cns`) continua sendo usado só pra achar cadastro
-                # EXISTENTE no Firebird e completar o CPF nele (branch
-                # "atualizar"), nunca para popular um cadastro novo.
+                # normalmente, mas nunca grava o CNS vindo do Postgres.
                 fb_cur.execute(_SQL_INSERT, [
                     max_id, "", cpf,
                     _texto(nome_r, 30) or "SEM NOME",
@@ -323,9 +275,9 @@ def migrar(query: str) -> Iterator[dict]:
             fb.commit()
             yield {
                 "tipo": "progresso",
-                "msg": f"{i}/{total} — inseridos: {inseridos} | atualizados: {atualizados} | duplicatas: {duplicatas}",
+                "msg": f"{i}/{total} — inseridos: {inseridos} | duplicatas: {duplicatas}",
                 "i": i, "total": total,
-                "inseridos": inseridos, "atualizados": atualizados, "duplicatas": duplicatas,
+                "inseridos": inseridos, "duplicatas": duplicatas,
             }
 
     try:
@@ -339,8 +291,8 @@ def migrar(query: str) -> Iterator[dict]:
 
     yield {
         "tipo": "fim",
-        "msg": f"Concluído! Inseridos: {inseridos} (sem CPF: {sem_documento}) | Atualizados (CPF): {atualizados} | "
+        "msg": f"Concluído! Inseridos: {inseridos} (sem CPF: {sem_documento}) | "
                f"Duplicatas: {duplicatas} | CPF inválido: {cpf_invalidos} | Erros: {erros}",
-        "inseridos": inseridos, "atualizados": atualizados, "duplicatas": duplicatas, "erros": erros,
+        "inseridos": inseridos, "duplicatas": duplicatas, "erros": erros,
         "cpf_invalidos": cpf_invalidos, "sem_documento": sem_documento,
     }

@@ -1,17 +1,12 @@
 """Produção no Firebird do BPA Magnético: conferência (digitado x S_PRD),
-reenvio dos faltantes, completar CPF de paciente e fechamento do mês.
+situação do dia e reenvio dos faltantes.
 
-Escreve no Firebird (S_PRD / CADCNS) — lógica portada sem mudança do antigo
-app Flask; a numeração de folha/sequência vem do bpa_gerador."""
-import re
+Escreve no Firebird (S_PRD) — a numeração de folha/sequência vem do
+bpa_gerador."""
 from datetime import datetime
 
 import bpa_gerador as bpa
 import conferencia
-import fechamento_mes
-
-from bpa_local.cache import cache
-from bpa_local.services import limpar
 
 
 def _periodo(data_ini_str: str, data_fim_str: str):
@@ -33,76 +28,6 @@ def conferir(data_ini_str: str, data_fim_str: str) -> dict:
     except Exception as e:
         return {"sucesso": False, "erro": f"Firebird indisponível: {e}"}
     return {"sucesso": True, **resultado}
-
-
-def completar_paciente(d: dict) -> dict:
-    """Paciente sem CPF: completa o CPF na CADCNS e (opcional) já lança na produção."""
-    cns = limpar(d.get("cns") or "")
-    cpf = limpar(d.get("cpf") or "")
-    data = (d.get("data") or "").strip()
-    profissionais = d.get("profissionais") or []
-
-    if len(cns) != 15:
-        return {"ok": False, "erro": "CNS inválido."}
-    if not bpa.valida_cpf(cpf):
-        return {"ok": False, "erro": "CPF inválido."}
-    if profissionais and len(data) < 10:
-        return {"ok": False, "erro": "Informe a data (DD/MM/AAAA) para lançar na produção."}
-
-    try:
-        con = bpa.conectar()
-    except Exception as e:
-        return {"ok": False, "erro": f"Firebird indisponível: {e}"}
-
-    try:
-        cur = con.cursor()
-        cur.execute("SELECT NOME, NUM_CPF FROM CADCNS WHERE CNS = ?", (cns,))
-        row = cur.fetchone()
-        if not row:
-            return {"ok": False, "erro": "Paciente não encontrado na CADCNS."}
-        nome, cpf_atual = row
-        cpf_atual = (cpf_atual or "").strip()
-        if cpf_atual and cpf_atual != cpf:
-            return {"ok": False, "erro": f"Paciente já tem outro CPF cadastrado ({cpf_atual})."}
-
-        if cpf_atual != cpf:
-            cur.execute("UPDATE CADCNS SET NUM_CPF = ? WHERE CNS = ?", (cpf, cns))
-
-        inseridos = []
-        if profissionais:
-            data_aten = datetime.strptime(data, "%d/%m/%Y").strftime("%Y%m%d")
-            pacientes, _nao_encontrados, _invalidos = bpa.buscar_pacientes(con, [cns])
-            if not pacientes:
-                con.commit()
-                return {
-                    "ok": False,
-                    "erro": "CPF gravado, mas não consegui recarregar os dados do paciente pra lançar na produção.",
-                }
-            pac = pacientes[0]
-
-            for prof in profissionais:
-                cns_prof = limpar(prof.get("cns") or "")
-                nome_prof = (prof.get("nome") or "").strip()
-                if not cns_prof:
-                    continue
-                categoria, auto = bpa.detectar_categoria(con, cns_prof)
-                if not auto or not categoria:
-                    inseridos.append({"profissional": nome_prof, "erro": "categoria não detectada automaticamente"})
-                    continue
-                registros = bpa.calcular_atendimentos_producao(con, cns_prof, categoria, data_aten, [pac])
-                inseridos.append({
-                    "profissional": nome_prof, "categoria": categoria,
-                    "folha": registros[0]["folha"], "seq": registros[0]["seq"],
-                })
-
-        con.commit()
-        cache.carregar_pacientes()
-        return {"ok": True, "paciente": nome.strip(), "cpf": cpf, "inseridos": inseridos}
-    except Exception as e:
-        con.rollback()
-        return {"ok": False, "erro": str(e)}
-    finally:
-        con.close()
 
 
 def reenviar_faltantes(d: dict) -> dict:
@@ -201,14 +126,3 @@ def situacao_dia(data_br: str) -> dict:
     faltando = sum(len(p["faltando_no_banco"]) for p in d["profissionais"])
     return {"ok": True, "data": data_br, "digitados": d["total_digitado"], "no_bpa": d["total_banco"],
             "faltando": faltando, "tem_lote": True}
-
-
-def fechamento(competencia: str) -> dict:
-    """4 checagens automáticas do mês, só leitura."""
-    competencia = competencia.strip()
-    if not re.fullmatch(r"\d{6}", competencia):
-        return {"sucesso": False, "erro": "Competência inválida (esperado AAAAMM)."}
-    try:
-        return {"sucesso": True, **fechamento_mes.rodar(competencia)}
-    except Exception as e:
-        return {"sucesso": False, "erro": f"Firebird indisponível: {e}"}

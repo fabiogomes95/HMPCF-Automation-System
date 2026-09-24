@@ -80,13 +80,13 @@ def test_rodar_grava_resultado(cliente, monkeypatch):
         consultas.append(query)
         yield {"tipo": "log", "msg": "x", "total": 120}
         yield {"tipo": "progresso", "i": 50, "total": 120, "msg": ""}
-        yield {"tipo": "fim", "inseridos": 7, "atualizados": 2, "duplicatas": 111, "erros": 0, "cpf_invalidos": 0}
+        yield {"tipo": "fim", "inseridos": 7, "duplicatas": 113, "erros": 0, "cpf_invalidos": 0}
 
     monkeypatch.setattr(migracao, "migrar", falso_migrar)
     _estado(situacao="rodando")
     migracao_auto._rodar()
     e = migracao_auto.estado()
-    assert e["situacao"] == "ok" and e["inseridos"] == 7 and e["atualizados"] == 2 and e["total"] == 120
+    assert e["situacao"] == "ok" and e["inseridos"] == 7 and e["duplicatas"] == 113 and e["total"] == 120
     assert "INNER JOIN recepcao_atendimentos" in consultas[0]
     assert migracao_auto.ARQUIVO.exists()                         # sobrevive a reinício do BPA
     assert not migracao.TRAVA.locked()

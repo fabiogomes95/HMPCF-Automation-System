@@ -1,14 +1,10 @@
 fastapi>=0.115.0
 uvicorn>=0.30.0
-jinja2>=3.1.0
-# flask: so pro teste de paridade com o app antigo -- sai junto com o app.py
-flask>=3.0.0
 psycopg2-binary>=2.9.9
 python-dotenv>=1.0.1
 firebirdsql>=1.4.6
 # passlib: o firebirdsql precisa dele pro login Legacy_Auth do Firebird do BPA Magnetico
 passlib>=1.7.4
-pandas>=2.0.0
 openpyxl>=3.1.0
 pytest>=8.3.0
 httpx>=0.27.0

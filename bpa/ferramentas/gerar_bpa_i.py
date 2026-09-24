@@ -1,9 +1,9 @@
 """
 CLI fino para gerar o arquivo BPA-I a partir de um lote, sem precisar do
-app Flask (bpa/app.py) rodando — útil pra testes manuais rápidos.
+BPA local rodando — útil pra testes manuais rápidos.
 
 A lógica de verdade (layout, checksum, busca de pacientes, etc.) mora em
-bpa/bpa_gerador.py — fonte única, usada também pelo bpa/app.py (Flask).
+bpa/bpa_gerador.py — fonte única, a mesma do BPA local.
 Este script só cuida da parte interativa de terminal (perguntar
 profissional/categoria quando ambíguo), que no Flask é resolvida por uma
 tela de confirmação.

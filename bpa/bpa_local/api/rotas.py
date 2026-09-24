@@ -95,19 +95,9 @@ def situacao_dia(data: str = ""):
     return producao.situacao_dia(data)
 
 
-@router.post("/pacientes/completar")
-def pacientes_completar(d: Corpo = Body(None)):
-    return producao.completar_paciente(_corpo(d))
-
-
 @router.post("/conferencia/reenviar")
 def conferencia_reenviar(d: Corpo = Body(None)):
     return producao.reenviar_faltantes(_corpo(d))
-
-
-@router.get("/fechamento")
-def fechamento(competencia: str = ""):
-    return producao.fechamento(competencia)
 
 
 # ── Geração do BPA-I ──────────────────────────────────────────────────────────

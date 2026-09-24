@@ -1,14 +1,12 @@
 """App FastAPI do BPA local (porta 8503, só 127.0.0.1)."""
-import json
+import os
 from contextlib import asynccontextmanager
-from datetime import date
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
-from bpa_local import config, postgres
+from bpa_local import config
 from bpa_local.api.rotas import router
 from bpa_local.cache import cache
 from bpa_local.services import backup_lotes, migracao_auto
@@ -67,6 +65,7 @@ def status():
         "erro_firebird": cache.erro,
         "migracao_auto": migracao_auto.estado(),
         "backup_lotes": backup_lotes.estado(),
+        "pasta_lotes": os.environ.get("BPA_LOTES_DIR", ""),
     }
 
 
@@ -88,23 +87,6 @@ def ui():
     return FileResponse(_UI / "bpa-local.html", headers={"Cache-Control": "no-cache"})
 
 
-# ── Página atual (Bootstrap) — sai quando a aba BPA do sistema estiver pronta ─
-if config.ASSETS.exists():
-    app.mount("/assets", StaticFiles(directory=config.ASSETS), name="assets")
-
-_templates = Jinja2Templates(directory=str(config.TEMPLATES))
-
-
 @app.get("/", include_in_schema=False)
-def index(request: Request):
-    competencias = postgres.competencias_disponiveis() or [{
-        "value": date.today().strftime("%Y%m"),
-        "label": postgres.nome_mes(date.today().month, date.today().year),
-    }]
-    return _templates.TemplateResponse(request, "index.html", {
-        "total": len(cache.pacientes),
-        "erro_firebird": cache.erro,
-        "profissionais_json": json.dumps(cache.profissionais, ensure_ascii=False),
-        "competencias": competencias,
-        "mes_atual": competencias[0]["value"],
-    })
+def raiz():
+    return RedirectResponse("/ui/")

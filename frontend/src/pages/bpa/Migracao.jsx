@@ -51,7 +51,6 @@ function CartaoAutomatica({ m }) {
           {m.situacao === "ok" && (
             <div className="bp-kpis">
               <div className="bp-kpi"><strong>{fmtNum(m.inseridos)}</strong><span>novos</span></div>
-              <div className="bp-kpi"><strong>{fmtNum(m.atualizados)}</strong><span>CPF completado</span></div>
               <div className="bp-kpi"><strong>{fmtNum(m.duplicatas)}</strong><span>já estavam</span></div>
               <div className="bp-kpi">
                 <strong className={m.erros || m.cpf_invalidos ? "alerta" : ""}>{fmtNum((m.erros || 0) + (m.cpf_invalidos || 0))}</strong>
@@ -139,7 +138,7 @@ export default function Migracao({ migracaoAuto, aoTerminar }) {
     };
   }
 
-  const aFazer = resumo ? resumo.novos + resumo.atualizar : 0;
+  const aFazer = resumo ? resumo.novos : 0;
   const pct = progresso?.total ? Math.round((progresso.i / progresso.total) * 100) : 0;
 
   return (
@@ -171,7 +170,6 @@ export default function Migracao({ migracaoAuto, aoTerminar }) {
           {resumo && (
             <div className="bp-kpis">
               <div className="bp-kpi"><strong>{fmtNum(resumo.novos)}</strong><span>novos</span></div>
-              <div className="bp-kpi"><strong>{fmtNum(resumo.atualizar)}</strong><span>completar CPF</span></div>
               <div className="bp-kpi"><strong>{fmtNum(resumo.ja_existem)}</strong><span>já no Firebird</span></div>
               <div className="bp-kpi"><strong className={resumo.cpf_invalido ? "alerta" : ""}>{fmtNum(resumo.cpf_invalido)}</strong><span>CPF inválido</span></div>
             </div>
@@ -194,7 +192,7 @@ export default function Migracao({ migracaoAuto, aoTerminar }) {
             </div>
             {fim && (
               <div className={`bp-aviso ${fim.erros ? "alerta" : "ok"}`}>
-                <b>Migração concluída:</b> {fmtNum(fim.inseridos)} novos · {fmtNum(fim.atualizados)} CPFs completados ·
+                <b>Migração concluída:</b> {fmtNum(fim.inseridos)} novos ·
                 {" "}{fmtNum(fim.duplicatas)} já estavam · {fmtNum(fim.cpf_invalidos)} CPF inválido · {fmtNum(fim.erros)} erro(s)
               </div>
             )}

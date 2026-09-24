@@ -52,7 +52,7 @@ function LinhaMigracaoAuto({ m }) {
   if (m.situacao === "ok" && m.data === hojeISO) {
     return (
       <p className="bp-sub ok">
-        ✓ Migração automática de hoje ({hora(m.fim)}): {fmtNum(m.inseridos)} pacientes novos · {fmtNum(m.atualizados)} CPFs completados
+        ✓ Migração automática de hoje ({hora(m.fim)}): {fmtNum(m.inseridos)} pacientes novos
         {m.erros ? ` · ${m.erros} erro(s) — veja a aba Migração` : ""}
       </p>
     );
@@ -155,6 +155,10 @@ export default function Bpa() {
               <span className="sep">·</span>
               <span>{fmtNum(status.profissionais)} profissionais</span>
               <SeloBackup b={status.backup_lotes} />
+              {status.pasta_lotes && (
+                <span className="sep" title="Onde este notebook grava os lotes de digitação">·</span>
+              )}
+              {status.pasta_lotes && <span title="Onde este notebook grava os lotes de digitação">lotes em {status.pasta_lotes}</span>}
               <button className="bp-btn-sec" onClick={recarregar} disabled={recarregando}>
                 {recarregando ? "Recarregando…" : "Recarregar"}
               </button>

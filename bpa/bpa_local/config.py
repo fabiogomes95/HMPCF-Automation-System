@@ -19,8 +19,12 @@ load_dotenv(BASE / ".env")
 load_dotenv(RAIZ / "dashboard" / ".env", override=False)
 load_dotenv(RAIZ / "backend" / ".env", override=False)
 
+# Pasta dos lotes: nos 2 notebooks é C:\BPA\bpa_lotes (ao lado do BPA Magnético).
+# Sem BPA_LOTES_DIR em nenhum .env, usa ela se o C:\BPA existir -- nunca a pasta do
+# sistema por engano (o dashboard\.env antigo é que tinha essa configuração).
 if not os.getenv("BPA_LOTES_DIR"):
-    os.environ["BPA_LOTES_DIR"] = str(BASE / "bpa_lotes")
+    _padrao = Path(r"C:\BPA\bpa_lotes")
+    os.environ["BPA_LOTES_DIR"] = str(_padrao if _padrao.parent.is_dir() else BASE / "bpa_lotes")
 
 PORTA = int(os.getenv("BPA_DIGITACAO_PORT", "8503"))
 
@@ -44,6 +48,4 @@ POSTGRES = {
     "password": os.getenv("POSTGRES_PASSWORD", ""),
 }
 
-TEMPLATES = BASE / "templates"
 # Bootstrap offline da página atual (reaproveitado do sistema antigo)
-ASSETS = RAIZ / "legado" / "web_recepcao" / "assets"
