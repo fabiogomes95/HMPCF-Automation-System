@@ -209,7 +209,7 @@ pacientes atendidos nos últimos 40 dias (resultado em `bpa/migracao_auto.json`)
 Os lotes de digitação (`bpa_lotes/DD-MM-AAAA.txt`) são copiados sozinhos
 para o servidor (tabela `bpa_lotes_backup`) a cada alteração e entram no
 backup diário que vai pro Google Drive. Restaurar os de um notebook:
-`bpa\.venv\Scripts\python bpaerramentasestaurar_lotes.py <NOTEBOOK>`.
+`bpa\.venv\Scripts\python bpa\ferramentas\restaurar_lotes.py <NOTEBOOK>`.
 Manual: `bpa\iniciar.bat` (com console) ou o atalho `bpa\start_bpa.vbs`.
 
 ---
