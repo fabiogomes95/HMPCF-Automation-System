@@ -118,8 +118,8 @@ def ler_aba(conteudo: bytes, aba: str, nutricionistas: list[dict]) -> dict:
     comecou = False
     for n_linha, row in enumerate(ws.iter_rows(values_only=True), start=1):
         a, nome, nasc, cpf = (tuple(row) + (None,) * 4)[:4]
-        if not comecou:  # pula o título até a linha de cabeçalho "NOME:"
-            comecou = str(nome or "").strip().upper().startswith("NOME")
+        if not comecou:  # pula o título até o cabeçalho (coluna A "DATA"; B varia: "NOME:", "DADOS DOS PACIENTES"...)
+            comecou = str(a or "").strip().upper() == "DATA" or str(nome or "").strip().upper().startswith("NOME")
             continue
 
         # ── coluna A: começo de dia, nutricionista ou anotação

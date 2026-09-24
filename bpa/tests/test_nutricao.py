@@ -197,3 +197,18 @@ def test_gerar_recusa_dia_sem_nutri_e_fora_do_mes(firebird):
     assert not r["ok"] and "nutricionista" in r["erro"]
     r = nutricao.gerar({"competencia": "202608", "dias": [{"data": "03/07/2026", "nutricionistas": [NUTRIS[0][0]], "docs": ["X"]}]})
     assert not r["ok"] and "mês" in r["erro"]
+
+
+def test_cabecalho_com_outro_texto_na_coluna_b():
+    """Set/2026: a planilha trocou "NOME:" por "DADOS DOS PACIENTES" no cabeçalho."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "SET - 26"
+    ws.append([None, "DADOS DOS PACIENTES JANEIRO DE 2026", None, None])
+    ws.append(["DATA", "DADOS DOS PACIENTES ", "DATA NTO:", "CPF"])
+    ws.append([datetime(2026, 9, 1), "FULANO", datetime(1980, 1, 1), "529.982.247-25"])
+    ws.append(["BARBARA", "CICLANO", datetime(1981, 1, 1), "111.444.777-35"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    r = planilha.ler_aba(buf.getvalue(), "SET - 26", _nutris())
+    assert [p["nome"] for d in r["dias"] for p in d["pacientes"]] == ["FULANO", "CICLANO"]
