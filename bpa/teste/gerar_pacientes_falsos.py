@@ -82,14 +82,24 @@ def main() -> None:
         }
         pacientes.append(pac)
 
-    # Casos difíceis, de propósito (inclui 6 pacientes sem CPF nem SUS)
+    # Casos difíceis, de propósito
     pacientes[0]["num_cpf"] = "12345678900"   # CPF inválido: a migração tem que pular
     pacientes[1]["num_cpf"] = "11111111111"   # CPF inválido (todos iguais)
     pacientes[2]["dtnasc"] = ""                # sem data de nascimento
     pacientes[3]["atendimentos"] = [hoje.isoformat()]  # atendido hoje
-    for pac in pacientes[4:10]:                # 6 SEM DOCUMENTO: sem CPF e sem SUS
-        pac["num_cpf"] = ""
-        pac["cns"] = ""
+
+    # 6 SEM DOCUMENTO (sem CPF e sem SUS), com nomes próprios: nunca existiram
+    # com CPF, então não batem com cadastro já migrado no Firebird de teste.
+    for n, (nome, nasc) in enumerate([
+        ("TESTE SEMDOC MARIA DAS DORES", "19581203"), ("TESTE SEMDOC JOAO BATISTA", "19620417"),
+        ("TESTE SEMDOC ANA CLARA", "20190822"), ("TESTE SEMDOC RAIMUNDO NONATO", "19450109"),
+        ("TESTE SEMDOC FRANCISCA CHAGAS", "19771030"), ("TESTE SEMDOC PEDRO HENRIQUE", "20210605"),
+    ]):
+        pacientes.append({
+            **pacientes[20 + n], "nome": nome, "dtnasc": nasc, "num_cpf": "", "cns": "",
+            "maepcn": "TESTE MAE SEMDOC",
+            "atendimentos": [(inicio + timedelta(days=d)).isoformat() for d in (10 + n, 40 + n, dias - 3 - n)],
+        })
 
     SAIDA.write_text(json.dumps({"gerado_em": hoje.isoformat(), "pacientes": pacientes},
                                 ensure_ascii=False, indent=1), encoding="utf-8")
