@@ -128,3 +128,30 @@ def test_desfazer_so_o_ultimo(cliente):
     cliente.post("/api/cabecalho", json={"medico": "OUTRO", "cns": "", "data": "06/09/2026"})
     r = cliente.post("/api/desfazer", json={"arquivo": "06-09-2026.txt", "cpf": "12345678909"}).json()
     assert r["ok"] is False and "12345678909" in arq.read_text(encoding="utf-8")
+
+
+def test_gerar_com_arquivo_aberto_da_mensagem_clara(cliente, monkeypatch):
+    # Simula o Windows recusando sobrescrever (arquivo aberto no BPA Magnético etc.)
+    Path(bpa.BPA_LOTES_DIR, "07-09-2026.txt").write_text(
+        "PROFISSIONAL: DR MEDICO | CNS: 111111111111111 | DATA: 07/09/2026\n12345678909\n", encoding="utf-8")
+
+    class Con:
+        def close(self): pass
+    monkeypatch.setattr(bpa, "conectar", lambda: Con())
+    monkeypatch.setattr(bpa, "detectar_categoria", lambda con, cns: ("medico", True))
+    monkeypatch.setattr(bpa, "buscar_pacientes", lambda con, docs: ([{"cpf": d} for d in docs], [], []))
+    monkeypatch.setattr(bpa, "contar_producao_real", lambda *a, **k: 0)
+    monkeypatch.setattr(bpa, "montar_linhas", lambda *a: (["X" * 350], 1))
+    monkeypatch.setattr(bpa, "montar_cabecalho", lambda *a: "C" * 130)
+    import builtins
+    abrir_original = builtins.open
+
+    def abrir(caminho, modo="r", *a, **k):
+        if "BPA_MEDICOS_" in str(caminho) and "w" in modo:
+            raise PermissionError(13, "Permission denied")
+        return abrir_original(caminho, modo, *a, **k)
+    monkeypatch.setattr(builtins, "open", abrir)
+
+    r = cliente.post("/api/gerar", json={"arquivo": "07-09-2026.txt", "categoria": "medico"}).json()
+    assert r["ok"] is False
+    assert "BPA_MEDICOS_07092026.txt" in r["erro"] and "aberto em outro programa" in r["erro"]

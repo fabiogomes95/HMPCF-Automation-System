@@ -115,10 +115,18 @@ def gerar(d: dict) -> dict:
 
             nome_arquivo = nomes_arquivo[categoria]
             caminho_gerado = os.path.join(pasta, nome_arquivo)
-            with open(caminho_gerado, "w", encoding="latin-1", newline="") as f:
-                f.write(cabecalho + "\r\n")
-                for linha in dados["linhas"]:
-                    f.write(linha + "\r\n")
+            try:
+                with open(caminho_gerado, "w", encoding="latin-1", newline="") as f:
+                    f.write(cabecalho + "\r\n")
+                    for linha in dados["linhas"]:
+                        f.write(linha + "\r\n")
+            except PermissionError:
+                # Windows não deixa sobrescrever arquivo aberto em outro programa
+                return {"ok": False, "erro": (
+                    f"Não consegui salvar {nome_arquivo}: o arquivo está aberto em outro programa "
+                    "(BPA Magnético, Bloco de Notas ou Excel) ou está marcado como somente leitura. "
+                    "Feche-o e clique em gerar de novo."
+                )}
 
             arquivos_gerados[categoria] = {
                 "arquivo": nome_arquivo,
