@@ -159,7 +159,7 @@ export default function Nutricao() {
           <h2>1. Planilha do mês</h2>
           <p className="bp-desc">
             Escolha a planilha da nutrição (.xlsx) e o mês. Cada dia vai para a nutricionista escrita nele;
-            dia com mais de uma (ou "TODAS NUT") é dividido igualmente entre elas.
+            dia com mais de uma é dividido igualmente entre elas. Dia sem nome ou "TODAS NUT": você escolhe.
           </p>
           <label className="bp-btn contorno largo" style={{ textAlign: "center", cursor: "pointer" }}>
             {arquivo ? "Trocar planilha" : "Escolher planilha…"}

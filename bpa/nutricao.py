@@ -13,7 +13,8 @@ Regras (confirmadas com o usuário em 24/09/2026):
      dia no mês da aba, com aviso.
   2. O dia INTEIRO é da nutricionista escrita nele — inclusive o 1º paciente,
      que fica na linha da data, antes do nome.
-  3. Dia com 2+ nomes ou "TODAS NUT": pacientes divididos igualmente entre elas.
+  3. Dia com 2+ nomes: pacientes divididos igualmente entre elas. "TODAS NUT":
+     fica sem nutricionista e a tela pergunta (decisão de 24/09/2026).
   4. Dia sem nome: fica pendente — a tela pergunta de quem é. Paciente acima
      da 1ª data da aba: a tela pergunta o dia.
   5. CPF errado/ausente: procura o paciente no Firebird por nome + nascimento
@@ -114,7 +115,7 @@ def _qual_nutri(texto: str, nutricionistas: list[dict]) -> list[dict] | None:
     MARIA que também tenha o CBO de nutrição."""
     s = sem_acento(texto).upper()
     if "TODAS" in s:
-        return list(nutricionistas)  # ler_aba troca depois pelas que aparecem na aba
+        return list(nutricionistas)
     primeiros = [(n, _chave_nome(n["nome"].split()[0])) for n in nutricionistas if n["nome"].split()]
     achadas = []
     for palavra in re.sub(r"[^A-Z ]", " ", s).split():
@@ -188,8 +189,11 @@ def ler_aba(conteudo: bytes, aba: str, nutricionistas: list[dict]) -> dict:
                 _chave_nome(w) == _chave_nome(nutris[0]["nome"].split()[0]) for w in re.sub(r"[^A-Z ]", " ", sem_acento(texto_a).upper()).split()
             ) and "TODAS" not in sem_acento(texto_a).upper():
                 avisos.append(f"Linha {n_linha}: '{texto_a}' entendido como {nutris[0]['nome']} — confira.")
-            if nutris and "TODAS" in sem_acento(texto_a).upper():
-                dia["todas"] = True
+            if "TODAS" in sem_acento(texto_a).upper():
+                # Decisão do usuário (24/09/2026): dia "TODAS NUT" fica sem
+                # nutricionista e ele escolhe na tela, como dia sem nome.
+                avisos.append(f"Linha {n_linha}: '{texto_a}' — escolha as nutricionistas do dia na tela.")
+                nutris = None
             if nutris:
                 for n in nutris:
                     if n not in dia["nutricionistas"]:
@@ -210,13 +214,6 @@ def ler_aba(conteudo: bytes, aba: str, nutricionistas: list[dict]) -> dict:
                 "cpf_planilha": str(cpf or "").strip(),
                 "cpf": limpar_cpf(cpf),
             })
-
-    # "TODAS NUT" = as nutricionistas que trabalham no mês (citadas na aba),
-    # não todo mundo com o CBO de nutrição no cadastro.
-    citadas = [n for n in nutricionistas if any(n in d["nutricionistas"] for d in dias if not d.get("todas"))]
-    for d in dias:
-        if d.pop("todas", False) and citadas:
-            d["nutricionistas"] = list(citadas)
 
     dias = [d for d in dias if d["pacientes"]]
     dias.sort(key=lambda d: (d["data"] is not None, d["data"] or date.min))

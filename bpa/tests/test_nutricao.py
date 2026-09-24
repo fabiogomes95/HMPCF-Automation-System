@@ -77,7 +77,7 @@ def test_regras_da_planilha():
 
     assert len(por_data[d(2).date()]["nutricionistas"]) == 2                    # MARIANE + NAÍLLA
     assert por_data[d(3).date()]["nutricionistas"] == []                        # pendente
-    assert len(por_data[d(20).date()]["nutricionistas"]) == 3                   # TODAS NUT
+    assert por_data[d(20).date()]["nutricionistas"] == []                      # TODAS NUT: escolhe na tela
     assert [n["nome"] for n in por_data[d(5).date()]["nutricionistas"]] == ["NAILLA PEREIRA"]
     assert any("05/07/2026" in a for a in r["avisos"])
 
@@ -228,10 +228,8 @@ def test_nome_da_nutricionista_nao_confunde_com_outra_do_cadastro():
     assert cns("FDS") == [] and cns("FINAL DE S") == []
 
 
-def test_todas_nut_divide_so_entre_as_que_aparecem_na_aba():
-    nutris = _nutris() + [{"cns": "X", "nome": "MARIA DAS GRACAS"}]
-    linhas = [(d(1), "A", "", ""), ("MARIANE", "B", "", ""), (d(2), "C", "", ""), ("BARBARA", "D", "", ""),
-              (d(3), "E", "", ""), ("TODAS NUT", "F", "", "")]
-    r = planilha.ler_aba(_xlsx(linhas), "AGO-26", nutris)
+def test_todas_nut_fica_para_escolher_na_tela():
+    linhas = [(d(1), "A", "", ""), ("MARIANE", "B", "", ""), (d(3), "E", "", ""), ("TODAS NUT", "F", "", "")]
+    r = planilha.ler_aba(_xlsx(linhas), "AGO-26", _nutris())
     todas = next(x for x in r["dias"] if x["data"] == d(3).date())
-    assert sorted(n["nome"] for n in todas["nutricionistas"]) == ["BARBARA COSTA", "MARIANE SOUZA LIMA"]
+    assert todas["nutricionistas"] == [] and any("TODAS NUT" in a for a in r["avisos"])
