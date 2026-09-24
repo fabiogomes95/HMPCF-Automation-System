@@ -260,10 +260,20 @@ Prefixo base: `/api/v1`. Documentação interativa só fora de produção
 ## Banco de Dados
 
 PostgreSQL 16 como única fonte de verdade (banco `hmpcf`, fuso
-`America/Sao_Paulo`). Hoje as tabelas novas são criadas por scripts em
-`backend/scripts/` (`criar_tabelas_auth.py`, `criar_tabela_auditoria.py`,
-`adicionar_coluna_sem_documento.py`) — migrações versionadas (Alembic) estão
-no plano de organização.
+`America/Sao_Paulo`). Mudanças nas tabelas são versionadas com **Alembic**
+(`backend/migrations/`). A versão `0001` é o esquema como estava em produção em
+24/09/2026 (o banco foi só marcado nela). Na pasta `backend`:
+
+```
+.venv\Scripts\python -m alembic current                                   # versão do banco
+.venv\Scripts\python -m alembic revision --autogenerate -m "o que mudou"  # depois de mudar um modelo
+.venv\Scripts\python -m alembic upgrade head                             # aplica no banco
+.venv\Scripts\python -m alembic check                                    # banco == modelos?
+```
+
+Confira o arquivo gerado antes do `upgrade` e faça backup antes de aplicar em
+produção. Os scripts antigos que criavam tabela à mão estão em
+`legado/scripts_uso_unico/`.
 
 ---
 

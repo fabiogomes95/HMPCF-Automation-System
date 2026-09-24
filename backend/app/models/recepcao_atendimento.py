@@ -31,7 +31,7 @@ class RecepcaoAtendimento(Base):
 
     paciente_id: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("pacientes.id", ondelete="RESTRICT"),
+        ForeignKey("pacientes.id", ondelete="RESTRICT", onupdate="CASCADE"),
         nullable=False,
     )
 
@@ -68,8 +68,9 @@ class RecepcaoAtendimento(Base):
     )
 
     __table_args__ = (
-        Index("idx_rec_paciente_id",        "paciente_id"),
-        Index("idx_rec_data_atendimento",   "data_atendimento"),
+        # Nomes iguais aos do banco de produção (conferido com o Alembic em 24/09/2026)
+        Index("idx_atd_pac",  "paciente_id"),
+        Index("idx_atd_data", "data_atendimento"),
     )
 
     def __repr__(self) -> str:

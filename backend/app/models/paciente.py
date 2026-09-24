@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, DateTime, Index, Integer, String, UniqueConstraint, func
+from sqlalchemy import CHAR, Boolean, DateTime, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -20,7 +20,7 @@ class Paciente(Base):
     num_cpf:      Mapped[Optional[str]] = mapped_column(String(11), nullable=True)
     nome:         Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     dtnasc:       Mapped[Optional[str]] = mapped_column(String(8),   nullable=True)
-    sexo:         Mapped[Optional[str]] = mapped_column(String(1),   nullable=True)
+    sexo:         Mapped[Optional[str]] = mapped_column(CHAR(1),     nullable=True)
     raca:         Mapped[Optional[str]] = mapped_column(String(2),   nullable=True)
     maepcn:       Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     logpcn:       Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
@@ -59,8 +59,10 @@ class Paciente(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("num_cpf", name="uq_pac_cpf"),
+        # Nomes iguais aos do banco de produção (conferido com o Alembic em 24/09/2026)
+        UniqueConstraint("num_cpf", name="pacientes_num_cpf_key"),
         Index("idx_pac_cns",  "cns"),
+        Index("idx_pac_cpf",  "num_cpf"),
         Index("idx_pac_nome", "nome"),
     )
 

@@ -1006,7 +1006,7 @@ Execute este checklist após a implantação e a cada atualização importante.
 - [ ] OneDrive instalado e logado na máquina; cópia externa do backup
       aparece em `%USERPROFILE%\OneDrive\HMPCF-Backups` depois de rodar
       o backup manual (ver seção 9.6)
-- [ ] `scripts\criar_tabelas_auth.py` rodado — tabelas `usuarios`/`sessoes` existem
+- [ ] `.venv\Scripts\python -m alembic upgrade head` rodado na pasta `backend` — `alembic current` mostra a última versão (antes: `scripts\criar_tabelas_auth.py`, hoje no legado)
 - [ ] Contas `recepcao`/`coordenacao`/`bpa` criadas (`scripts\gerenciar_usuarios.py listar`)
 
 ### 11.3 Backend
