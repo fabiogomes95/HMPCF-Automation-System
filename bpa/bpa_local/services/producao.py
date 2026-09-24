@@ -184,6 +184,25 @@ def reenviar_faltantes(d: dict) -> dict:
         con.close()
 
 
+def situacao_dia(data_br: str) -> dict:
+    """Digitados no lote do dia x já no BPA Magnético (S_PRD) -- a Conferência
+    de um dia só, resumida pra aparecer na Digitação."""
+    try:
+        dia = datetime.strptime((data_br or "").strip(), "%d/%m/%Y").date()
+    except ValueError:
+        return {"ok": False, "erro": "Data inválida (use DD/MM/AAAA)."}
+    try:
+        r = conferencia.conferir_periodo(dia, dia)
+    except Exception as e:
+        return {"ok": False, "erro": f"Firebird indisponível: {e}"}
+    if not r["dias"]:
+        return {"ok": True, "data": data_br, "digitados": 0, "no_bpa": 0, "faltando": 0, "tem_lote": False}
+    d = r["dias"][0]
+    faltando = sum(len(p["faltando_no_banco"]) for p in d["profissionais"])
+    return {"ok": True, "data": data_br, "digitados": d["total_digitado"], "no_bpa": d["total_banco"],
+            "faltando": faltando, "tem_lote": True}
+
+
 def fechamento(competencia: str) -> dict:
     """4 checagens automáticas do mês, só leitura."""
     competencia = competencia.strip()

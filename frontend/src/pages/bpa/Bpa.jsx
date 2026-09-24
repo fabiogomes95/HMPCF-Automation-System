@@ -18,6 +18,20 @@ const GRUPOS = [
 ];
 const ATUALIZA_STATUS_MS = 30000;
 
+// Selo do backup dos lotes (bpa_local/services/backup_lotes.py)
+function SeloBackup({ b }) {
+  if (!b || b.situacao === "desligado" || b.situacao === "nunca") return null;
+  if (b.situacao === "ok") {
+    const quando = b.ultimo_envio ? ` · último envio ${hora(b.ultimo_envio)}` : "";
+    return <span className="bp-tag ok" title={`Lotes de digitação copiados no servidor e no backup diário${quando}`}>backup ok</span>;
+  }
+  return (
+    <span className="bp-tag alerta" title={b.erro || "Lotes ainda não copiados no servidor"}>
+      backup pendente{b.pendentes ? ` (${b.pendentes})` : ""}
+    </span>
+  );
+}
+
 function hora(iso) {
   return iso ? new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
 }
@@ -143,6 +157,7 @@ export default function Bpa() {
               <span>{fmtNum(status.pacientes)} pacientes</span>
               <span className="sep">·</span>
               <span>{fmtNum(status.profissionais)} profissionais</span>
+              <SeloBackup b={status.backup_lotes} />
               <button className="bp-btn-sec" onClick={recarregar} disabled={recarregando}>
                 {recarregando ? "Recarregando…" : "Recarregar"}
               </button>

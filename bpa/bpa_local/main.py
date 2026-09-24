@@ -11,13 +11,14 @@ from fastapi.templating import Jinja2Templates
 from bpa_local import config, postgres
 from bpa_local.api.rotas import router
 from bpa_local.cache import cache
-from bpa_local.services import migracao_auto
+from bpa_local.services import backup_lotes, migracao_auto
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cache.carregar_tudo()
     migracao_auto.executar_se_preciso()  # 1ª abertura do dia: migra em segundo plano
+    backup_lotes.iniciar()               # lotes de digitação -> servidor (e dali pro Google Drive)
     yield
 
 
@@ -66,6 +67,7 @@ def status():
         "erro_firebird": cache.erro,
         "migracao_auto": migracao_auto.estado(),
         "modo_teste": bool(config.POSTGRES_FALSO),  # pacientes falsos no lugar do Postgres
+        "backup_lotes": backup_lotes.estado(),
     }
 
 

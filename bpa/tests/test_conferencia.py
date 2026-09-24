@@ -50,3 +50,19 @@ def test_conferencia_so_com_cpf_continua_igual(monkeypatch, tmp_path):
     s_prd = [("111111111111111", "12345678909", "X", "19700101"), ("111111111111111", "98765432100", "Y", "19700101")]
     p = conferencia.conferir_dia(date(2026, 9, 9), "09-09-2026.txt", _Con(s_prd, []), [])["profissionais"][0]
     assert p["ok"] and p["faltando_no_banco"] == [] and p["sobrando_no_banco"] == ["98765432100"]
+
+
+def test_situacao_do_dia(monkeypatch, tmp_path):
+    from bpa_local.services import producao
+    monkeypatch.setattr(bpa, "BPA_LOTES_DIR", str(tmp_path))
+    Path(tmp_path, "11-09-2026.txt").write_text(
+        "PROFISSIONAL: DR MEDICO | CNS: 111111111111111 | DATA: 11/09/2026\n12345678909\n98765432100\n",
+        encoding="utf-8")
+    con = _Con([("111111111111111", "12345678909", "X", "19700101")], [])
+    con.close = lambda: None
+    monkeypatch.setattr(bpa, "conectar", lambda: con)
+    monkeypatch.setattr(bpa, "listar_profissionais", lambda c: [])
+    assert producao.situacao_dia("11/09/2026") == {
+        "ok": True, "data": "11/09/2026", "digitados": 2, "no_bpa": 1, "faltando": 1, "tem_lote": True}
+    assert producao.situacao_dia("12/09/2026")["tem_lote"] is False
+    assert producao.situacao_dia("x")["ok"] is False

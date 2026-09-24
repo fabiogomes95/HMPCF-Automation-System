@@ -31,6 +31,7 @@ os itens vão sendo feitos ou entrando na lista.
 | 21 | Organização das pastas: `scripts/servidor/` (só o que roda no servidor), `bpa/ferramentas/`, `legado/scripts_uso_unico/`; README em português vira a documentação única | `README.pt-BR.md` |
 | 22 | Perfil faturamento + BPA etapa 1 (instalador, liga com o Windows, só aceita o sistema do hospital) | `frontend/src/App.jsx`, `bpa/instalar.ps1` |
 | 23 | BPA em FastAPI (mesmo padrão do backend, paridade byte a byte com o antigo) + aba BPA no sistema (Digitação, Enfermeiros, Migração, Conferência com reenviar, Prontuário) + migração automática do dia | `bpa/bpa_local/`, `frontend/src/pages/bpa/` |
+| 24 | Paciente sem documento no BPA (sem CPF/SUS, `prd_possui_cpf_cns = s`); SUS nunca vai no BPA-I; backup dos lotes de digitação no servidor; situação do dia na Digitação | `bpa/bpa_gerador.py`, `bpa/bpa_local/services/backup_lotes.py` |
 
 ## Deploy em produção — em andamento
 

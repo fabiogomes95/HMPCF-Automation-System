@@ -59,6 +59,8 @@ export const bpaLocal = {
   migracaoPreview: (mes) => req("/api/migracao/preview", { metodo: "POST", corpo: { mes }, timeout: LONGO }),
   migracaoStreamUrl: (mes) => `${URL_BPA_LOCAL}/api/migracao/stream?mes=${encodeURIComponent(mes)}`,
 
+  situacaoDia: (data) => req("/api/situacao_dia", { params: { data }, timeout: LONGO }),
+
   // Conferência
   conferencia: (dataIni, dataFim) =>
     req("/api/conferencia", { params: { data_ini: dataIni, data_fim: dataFim }, timeout: LONGO }),

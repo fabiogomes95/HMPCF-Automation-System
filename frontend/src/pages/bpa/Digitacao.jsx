@@ -26,6 +26,30 @@ function ResultadoGeracao({ r }) {
   );
 }
 
+// "Já importou esse dia?" -- digitados no lote x o que já entrou no BPA Magnético
+function SituacaoDia({ s, carregando, aoAtualizar }) {
+  let tag = null;
+  let texto = "Conferindo o BPA Magnético…";
+  if (s && !s.ok) {
+    texto = s.erro;
+    tag = <span className="bp-tag erro">erro</span>;
+  } else if (s) {
+    texto = `BPA Magnético: ${fmtNum(s.no_bpa)} de ${fmtNum(s.digitados)}`;
+    if (!s.digitados) tag = <span className="bp-tag neutro">nada digitado</span>;
+    else if (!s.faltando) tag = <span className="bp-tag ok">tudo importado</span>;
+    else if (!s.no_bpa) tag = <span className="bp-tag alerta">ainda não importado</span>;
+    else tag = <span className="bp-tag erro">faltam {fmtNum(s.faltando)}</span>;
+  }
+  return (
+    <div className="bp-linha" style={{ marginTop: 10, alignItems: "center", fontSize: 13, color: "var(--bp-texto-2)" }}>
+      <span style={{ flex: 1 }}>{carregando && !s ? "Conferindo o BPA Magnético…" : texto}</span>
+      {tag}
+      <button className="bp-btn-sec" style={{ padding: "2px 8px" }} onClick={aoAtualizar} disabled={carregando}
+              title="Conferir de novo (depois de importar no BPA Magnético)">⟳</button>
+    </div>
+  );
+}
+
 export default function Digitacao({ profissionais }) {
   // ── 1. dia e médico
   const [data, setData] = useState(""); // sem data padrão: digitam o mês seguinte, pulando dias entre os 2 notebooks
@@ -33,6 +57,8 @@ export default function Digitacao({ profissionais }) {
   const [medico, setMedico] = useState(null);
   const [sessao, setSessao] = useState(null); // {arquivo, nome, cns, data}
   const [totalLote, setTotalLote] = useState(0);
+  const [situacao, setSituacao] = useState(null); // digitados x já no BPA Magnético, do dia
+  const [conferindoDia, setConferindoDia] = useState(false);
   const [erroCab, setErroCab] = useState("");
 
   // ── 2. pacientes
@@ -75,6 +101,18 @@ export default function Digitacao({ profissionais }) {
       setLotes([]);
     }
   }
+  async function carregarSituacao(dataBR) {
+    if (!dataBR) return;
+    setConferindoDia(true);
+    try {
+      setSituacao(await bpaLocal.situacaoDia(dataBR));
+    } catch {
+      setSituacao(null);
+    } finally {
+      setConferindoDia(false);
+    }
+  }
+
   // O que esse médico já tem no dia (inclusive de antes de um F5)
   async function carregarDoLote(arquivo, nome) {
     try {
@@ -101,6 +139,7 @@ export default function Digitacao({ profissionais }) {
     setMsg(null);
     await carregarDoLote(r.arquivo, nome);
     carregarLotes(r.arquivo);
+    carregarSituacao(dataBR);
     setTimeout(() => buscaRef.current?.focus(), 0);
   }
 
@@ -249,6 +288,7 @@ export default function Digitacao({ profissionais }) {
     try {
       setResGeracao(await bpaLocal.gerar(loteSel, "medico"));
       carregarLotes(loteSel);
+      if (sessao) carregarSituacao(sessao.data);
     } catch (e) {
       setResGeracao({ ok: false, erro: e.message });
     } finally {
@@ -276,6 +316,7 @@ export default function Digitacao({ profissionais }) {
                 <div><strong>{fmtNum(gravados.length)}</strong><span>Deste médico</span></div>
                 <div><strong>{fmtNum(totalLote)}</strong><span>Total do dia</span></div>
               </div>
+              <SituacaoDia s={situacao} carregando={conferindoDia} aoAtualizar={() => carregarSituacao(sessao.data)} />
             </>
           ) : (
             <>

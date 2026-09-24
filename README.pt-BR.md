@@ -206,6 +206,10 @@ o trabalho é o BPA local do notebook, que liga sozinho no logon (tarefa
 `HMPCF-BPA`) em `http://localhost:8503` e só aceita chamadas do sistema do
 hospital. Na primeira abertura do dia ele migra sozinho pro Firebird os
 pacientes atendidos nos últimos 40 dias (resultado em `bpa/migracao_auto.json`).
+Os lotes de digitação (`bpa_lotes/DD-MM-AAAA.txt`) são copiados sozinhos
+para o servidor (tabela `bpa_lotes_backup`) a cada alteração e entram no
+backup diário que vai pro Google Drive. Restaurar os de um notebook:
+`bpa\.venv\Scripts\python bpaerramentasestaurar_lotes.py <NOTEBOOK>`.
 Manual: `bpa\iniciar.bat` (com console) ou o atalho `bpa\start_bpa.vbs`.
 
 ---
