@@ -4,7 +4,7 @@ import re
 
 import psycopg2
 
-from bpa_local.config import POSTGRES
+from bpa_local.config import POSTGRES, POSTGRES_FALSO
 
 NOMES_MES = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
              "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
@@ -15,6 +15,9 @@ def nome_mes(m: int, a: int) -> str:
 
 
 def conectar():
+    if POSTGRES_FALSO:  # modo de teste: pacientes falsos do JSON
+        from bpa_local.postgres_falso import ConexaoFalsa
+        return ConexaoFalsa(POSTGRES_FALSO)
     try:
         return psycopg2.connect(**POSTGRES, connect_timeout=5, options="-c client_encoding=LATIN1")
     except UnicodeDecodeError as e:

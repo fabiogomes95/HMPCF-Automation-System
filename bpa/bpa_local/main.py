@@ -65,6 +65,7 @@ def status():
         "profissionais": len(cache.profissionais),
         "erro_firebird": cache.erro,
         "migracao_auto": migracao_auto.estado(),
+        "modo_teste": bool(config.POSTGRES_FALSO),  # pacientes falsos no lugar do Postgres
     }
 
 

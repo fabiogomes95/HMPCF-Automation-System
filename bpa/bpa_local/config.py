@@ -44,6 +44,12 @@ POSTGRES = {
     "password": os.getenv("POSTGRES_PASSWORD", ""),
 }
 
+# MODO DE TESTE: pacientes falsos no lugar do PostgreSQL do hospital (ver postgres_falso.py)
+_falso = os.getenv("BPA_POSTGRES_FALSO", "").strip()
+POSTGRES_FALSO = None
+if _falso:
+    POSTGRES_FALSO = Path(_falso) if os.path.isabs(_falso) else BASE / _falso
+
 TEMPLATES = BASE / "templates"
 # Bootstrap offline da página atual (reaproveitado do sistema antigo)
 ASSETS = RAIZ / "legado" / "web_recepcao" / "assets"

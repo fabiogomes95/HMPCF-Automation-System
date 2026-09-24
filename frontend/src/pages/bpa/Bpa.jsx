@@ -132,6 +132,11 @@ export default function Bpa() {
             <>
               <span className={`bp-pontinho${status.ok ? "" : " aviso"}`} />
               <b>BPA deste notebook ligado</b>
+              {status.modo_teste && (
+                <span className="bp-tag alerta" title="Pacientes falsos no lugar do servidor do hospital (BPA_POSTGRES_FALSO)">
+                  MODO TESTE
+                </span>
+              )}
               <span className="sep">·</span>
               {status.ok ? <span>Firebird OK</span> : <span style={{ color: "var(--bp-erro)" }}>Firebird com erro</span>}
               <span className="sep">·</span>
