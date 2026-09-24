@@ -40,20 +40,11 @@ os itens vão sendo feitos ou entrando na lista.
 | 27 | Faturamento abre direto na aba BPA; instalador do BPA cria o atalho "HMPCF - BPA" e fixa a pasta dos lotes (`C:\BPA\bpa_lotes`) | `frontend/src/App.jsx`, `bpa/instalar.ps1` |
 | 28 | Limpeza: BPA Flask, "completar CPF", fechamento do mês, conferência semanal, ferramentas de montagem do BPA e guias antigos → `legado/` e `docs/historico/`; dumps `.sql` sem criptografia e bancos/senhas antigos apagados do servidor | `legado/`, `docs/historico/` |
 | 30 | Pasta `dashboard` apagada de todos os PCs; o BPA não lê mais o `dashboard\.env` | `bpa/bpa_local/config.py`, `bpa/instalar.ps1` |
+| 31 | Senha de criptografia do backup guardada fora do servidor; `C:\HMPCF\backups_nuvem` sincronizada no Google Drive (24/09/2026) | `docs/RECUPERACAO_SERVIDOR.md` |
+| 32 | Firewall do servidor só com o necessário: 8001 (sistema) e 5432 (BPA); WinRM (5985) e a regra do Streamlit (8502) fechados | firewall do Windows |
 | 29 | Guia de recuperação do servidor (montar tudo do zero a partir do backup) | `docs/RECUPERACAO_SERVIDOR.md` |
 
 ## Pendente
-
-### Guardar a senha de criptografia do backup fora do servidor
-
-Sem ela, nenhum backup abre. Tem que existir fora do PC da recepção (papel no
-cofre ou gerenciador de senhas) — ver `docs/RECUPERACAO_SERVIDOR.md`.
-
-### Pasta `backups_nuvem` no Google Drive
-
-Adicionar `C:\HMPCF\backups_nuvem` em *Google Drive → Configurações → Meu
-computador*. Até isso, o backup do serviço fica só no disco do servidor (a
-faixa do Painel mostra).
 
 ### Reiniciar o servidor numa janela calma
 
