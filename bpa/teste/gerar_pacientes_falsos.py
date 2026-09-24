@@ -82,11 +82,14 @@ def main() -> None:
         }
         pacientes.append(pac)
 
-    # Casos difíceis, de propósito
+    # Casos difíceis, de propósito (inclui 6 pacientes sem CPF nem SUS)
     pacientes[0]["num_cpf"] = "12345678900"   # CPF inválido: a migração tem que pular
     pacientes[1]["num_cpf"] = "11111111111"   # CPF inválido (todos iguais)
     pacientes[2]["dtnasc"] = ""                # sem data de nascimento
     pacientes[3]["atendimentos"] = [hoje.isoformat()]  # atendido hoje
+    for pac in pacientes[4:10]:                # 6 SEM DOCUMENTO: sem CPF e sem SUS
+        pac["num_cpf"] = ""
+        pac["cns"] = ""
 
     SAIDA.write_text(json.dumps({"gerado_em": hoje.isoformat(), "pacientes": pacientes},
                                 ensure_ascii=False, indent=1), encoding="utf-8")

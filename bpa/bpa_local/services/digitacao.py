@@ -72,6 +72,8 @@ def prontuario_buscar(q: str) -> dict:
     docs_por_candidato: list[set[str]] = []
     for c in candidatos:
         docs = {d for d in (c.get("cpf"), c.get("sus")) if d}
+        if c.get("id") is not None:  # paciente sem CPF é digitado pelo cadastro
+            docs.add(bpa.doc_por_id(c["id"]))
         docs_por_candidato.append(docs)
         todos_documentos |= docs
 
@@ -176,6 +178,8 @@ def lote(arquivo: str) -> dict:
             nomes[p["cpf"]] = p["nome"]
         if p.get("sus"):
             nomes.setdefault(p["sus"], p["nome"])
+        if p.get("id") is not None:
+            nomes[bpa.doc_por_id(p["id"])] = p["nome"]
     categorias = {p["cns"]: p["categoria"] for p in cache.profissionais}
 
     blocos = []

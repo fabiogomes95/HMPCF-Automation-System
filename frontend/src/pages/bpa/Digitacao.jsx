@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { bpaLocal, arquivoGerado, arquivoParaData, fmtCpf, fmtNum, mascaraData } from "../../services/bpaLocal";
+import { bpaLocal, arquivoGerado, arquivoParaData, fmtCpf, fmtDoc, fmtNum, mascaraData } from "../../services/bpaLocal";
 
 // Digitação = MÉDICOS. Enfermeiros ficam na aba Enfermeiros (dividem os CPFs
 // digitados aqui). Cada "Confirmar" abre um bloco no lote do dia
@@ -163,16 +163,19 @@ export default function Digitacao({ profissionais }) {
 
   async function gravar(p) {
     if (!sessao || !p || gravando) return;
-    if (!p.cpf) {
-      setMsg({ tipo: "erro", texto: `${p.nome} está sem CPF no Firebird — não é possível gravar.` });
+    // Sem CPF: grava pelo número do cadastro no Firebird ("ID:n"); no arquivo do
+    // BPA sai sem CPF/SUS e com "sem CPF = s" (quem tem SUS antigo sai com o SUS).
+    const doc = p.cpf || (p.id != null ? `ID:${p.id}` : "");
+    if (!doc) {
+      setMsg({ tipo: "erro", texto: `${p.nome} não tem CPF nem cadastro no Firebird — não é possível gravar.` });
       return;
     }
     setGravando(true);
     try {
-      const r = await bpaLocal.gravar(sessao.arquivo, p.cpf, p.nome);
+      const r = await bpaLocal.gravar(sessao.arquivo, doc, p.nome);
       if (r.ok) {
         const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-        setGravados((g) => [{ doc: p.cpf, nome: p.nome, hora, daSessao: true }, ...g]);
+        setGravados((g) => [{ doc, nome: p.nome, hora, daSessao: true }, ...g]);
         setTotalLote((t) => t + 1);
         setMsg({ tipo: "ok", texto: `✓ Gravado: ${p.nome}` });
         setQ("");
@@ -213,14 +216,14 @@ export default function Digitacao({ profissionais }) {
   }
 
   async function desfazer(g) {
-    if (!window.confirm(`Tirar ${g.nome || fmtCpf(g.doc)} do lote?`)) return;
+    if (!window.confirm(`Tirar ${g.nome || fmtDoc(g.doc)} do lote?`)) return;
     setDesfazendo(true);
     try {
       const r = await bpaLocal.desfazer(sessao.arquivo, g.doc);
       if (r.ok) {
         setGravados((lista) => lista.slice(1));
         setTotalLote((t) => t - 1);
-        setMsg({ tipo: "ok", texto: `Desfeito: ${g.nome || fmtCpf(g.doc)} saiu do lote.` });
+        setMsg({ tipo: "ok", texto: `Desfeito: ${g.nome || fmtDoc(g.doc)} saiu do lote.` });
       } else {
         setMsg({ tipo: "erro", texto: r.erro });
       }
@@ -340,12 +343,14 @@ export default function Digitacao({ profissionais }) {
           resultados.length === 0 ? <p className="bp-vazio">Nenhum paciente encontrado no Firebird deste notebook.</p> : (
             <div className="bp-opcoes">
               {resultados.map((p, i) => (
-                <div key={`${p.cpf}-${p.sus}-${i}`} className={`bp-opcao${i === sel ? " sel" : ""}${p.cpf ? "" : " bloq"}`}
+                <div key={`${p.cpf}-${p.sus}-${p.id}-${i}`} className={`bp-opcao${i === sel ? " sel" : ""}`}
                      onMouseEnter={() => setSel(i)} onClick={() => gravar(p)}>
                   <span><b>{p.nome}</b><br /><small>nasc. {p.dtnasc || "—"}</small></span>
                   <span>{p.cpf ? fmtCpf(p.cpf) : <span style={{ color: "var(--bp-texto-3)" }}>sem CPF</span>}</span>
-                  {p.cpf ? <span className="bp-tag ok">CPF ok</span> : <span className="bp-tag erro">não grava</span>}
-                  <span style={{ justifySelf: "end" }}>{i === sel && p.cpf ? <span className="bp-tecla">Enter ↵</span> : ""}</span>
+                  {p.cpf ? <span className="bp-tag ok">CPF ok</span>
+                    : p.sus ? <span className="bp-tag neutro" title="Cadastro antigo: vai com o SUS">vai com SUS</span>
+                    : <span className="bp-tag alerta" title="Vai no BPA sem CPF/SUS, com 'sem CPF = Sim'">sem documento</span>}
+                  <span style={{ justifySelf: "end" }}>{i === sel ? <span className="bp-tecla">Enter ↵</span> : ""}</span>
                 </div>
               ))}
             </div>
@@ -363,7 +368,7 @@ export default function Digitacao({ profissionais }) {
                 <tr key={`${g.doc}-${gravados.length - i}`}>
                   <td>{gravados.length - i}</td>
                   <td>{g.nome || <span style={{ color: "var(--bp-texto-3)" }}>fora do Firebird</span>}</td>
-                  <td>{fmtCpf(g.doc)}</td>
+                  <td>{fmtDoc(g.doc)}</td>
                   <td className="num">{g.hora || "—"}</td>
                   <td className="num">
                     {i === 0 && g.daSessao && (

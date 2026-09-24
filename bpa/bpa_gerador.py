@@ -55,6 +55,15 @@ PROCEDIMENTOS = {
 CBO_PARA_CATEGORIA = {info["cbo"]: categoria for categoria, info in PROCEDIMENTOS.items()}
 
 
+# Paciente SEM CPF entra no lote pelo número do cadastro no Firebird
+# (ID_CADCNS), já que não tem documento: linha "ID:12345".
+PREFIXO_ID = "ID:"
+
+
+def doc_por_id(id_cadcns) -> str:
+    return f"{PREFIXO_ID}{int(id_cadcns)}"
+
+
 class LoteError(Exception):
     """Erro de domínio ao processar um lote BPA (arquivo ausente/vazio/inválido)."""
 
@@ -179,9 +188,9 @@ def carregar_pacientes_cadcns() -> list[dict]:
     con = conectar()
     try:
         cur = con.cursor()
-        cur.execute("SELECT CNS, NOME, DTNASC, NUM_CPF FROM CADCNS")
+        cur.execute("SELECT CNS, NOME, DTNASC, NUM_CPF, ID_CADCNS FROM CADCNS")
         pacientes = []
-        for cns, nome, dtnasc, cpf in cur.fetchall():
+        for cns, nome, dtnasc, cpf, id_cadcns in cur.fetchall():
             dn_raw = str(dtnasc or "").strip()
             dtnasc_fmt = f"{dn_raw[6:8]}/{dn_raw[4:6]}/{dn_raw[0:4]}" if len(dn_raw) == 8 else ""
             pacientes.append({
@@ -189,6 +198,7 @@ def carregar_pacientes_cadcns() -> list[dict]:
                 "nome": str(nome or "").strip().upper(),
                 "dtnasc": dtnasc_fmt,
                 "cpf": str(cpf or "").strip(),
+                "id": id_cadcns,
             })
         return pacientes
     finally:
@@ -204,23 +214,24 @@ def buscar_paciente_cadcns_live(con, termo: str, limite: int = 30) -> list[dict]
     doc = "".join(c for c in termo if c.isdigit())
     cur = con.cursor()
     if len(doc) == 11:
-        cur.execute("SELECT FIRST ? CNS, NOME, DTNASC, NUM_CPF FROM CADCNS WHERE NUM_CPF = ?", (limite, doc))
+        cur.execute("SELECT FIRST ? CNS, NOME, DTNASC, NUM_CPF, ID_CADCNS FROM CADCNS WHERE NUM_CPF = ?", (limite, doc))
     elif len(doc) == 15:
-        cur.execute("SELECT FIRST ? CNS, NOME, DTNASC, NUM_CPF FROM CADCNS WHERE CNS = ?", (limite, doc))
+        cur.execute("SELECT FIRST ? CNS, NOME, DTNASC, NUM_CPF, ID_CADCNS FROM CADCNS WHERE CNS = ?", (limite, doc))
     else:
         cur.execute(
-            "SELECT FIRST ? CNS, NOME, DTNASC, NUM_CPF FROM CADCNS WHERE UPPER(NOME) LIKE ?",
+            "SELECT FIRST ? CNS, NOME, DTNASC, NUM_CPF, ID_CADCNS FROM CADCNS WHERE UPPER(NOME) LIKE ?",
             (limite, f"%{termo.upper()}%"),
         )
 
     resultado = []
-    for cns, nome, dtnasc, cpf in cur.fetchall():
+    for cns, nome, dtnasc, cpf, id_cadcns in cur.fetchall():
         dn_raw = str(dtnasc or "").strip()
         resultado.append({
             "sus": str(cns or "").strip(),
             "nome": str(nome or "").strip().upper(),
             "dtnasc": f"{dn_raw[6:8]}/{dn_raw[4:6]}/{dn_raw[0:4]}" if len(dn_raw) == 8 else "",
             "cpf": str(cpf or "").strip(),
+            "id": id_cadcns,
         })
     return resultado
 
@@ -391,10 +402,13 @@ def _normalizar_dtnasc(valor) -> str:
     return s[:8] if len(s) >= 8 else "19000101"
 
 
-def _buscar_dados_pacientes(con, cns_list: list[str], cpf_list: list[str]) -> dict[str, dict]:
-    """Consulta a CADCNS e retorna {documento: dados} para CNS e CPF buscados."""
+def _buscar_dados_pacientes(con, cns_list: list[str], cpf_list: list[str], id_list: list[str] = ()) -> dict[str, dict]:
+    """Consulta a CADCNS e retorna {documento: dados} para CNS, CPF e "ID:n" buscados.
+    Paciente sem CPF e sem CNS sai com "sem_doc" = True (vai com "s" no
+    campo prd_possui_cpf_cns do BPA-I)."""
     cns_unicos = list(set(cns_list))
     cpf_unicos = list(set(cpf_list))
+    ids_unicos = list({int(v[len(PREFIXO_ID):]) for v in id_list})
 
     condicoes = []
     params    = []
@@ -404,6 +418,9 @@ def _buscar_dados_pacientes(con, cns_list: list[str], cpf_list: list[str]) -> di
     if cpf_unicos:
         condicoes.append(f"(NUM_CPF IN ({','.join('?' * len(cpf_unicos))}) AND NUM_CPF <> '')")
         params.extend(cpf_unicos)
+    if ids_unicos:
+        condicoes.append(f"(ID_CADCNS IN ({','.join('?' * len(ids_unicos))}))")
+        params.extend(ids_unicos)
 
     if not condicoes:
         return {}
@@ -412,7 +429,7 @@ def _buscar_dados_pacientes(con, cns_list: list[str], cpf_list: list[str]) -> di
     cur.execute(f"""
         SELECT CNS, NOME, DTNASC, SEXO, IBGE, RACA, ETNIA, NACIONALIDADE,
                CO_LOGRAD, CEPPCN, LOGPCN, NUMPCN, CPLPCN, BAIRRO_PCNTE,
-               DDTEL_PCNTE, TEL_PCNTE, EMAIL_PCNTE, NUM_CPF
+               DDTEL_PCNTE, TEL_PCNTE, EMAIL_PCNTE, NUM_CPF, ID_CADCNS
         FROM CADCNS
         WHERE {' OR '.join(condicoes)}
     """, params)
@@ -449,10 +466,14 @@ def _buscar_dados_pacientes(con, cns_list: list[str], cpf_list: list[str]) -> di
             "lograd": lograd, "cep": cep, "end": end_,
             "compl": compl, "num": num, "bairro": bairro,
             "ddd": ddd, "tel": tel, "email": email, "cpf": cpf,
+            "sem_doc": not cpf and not cns_raw,
         }
-        por_documento[str(row[0]).strip()] = dados
+        if cns_raw:
+            por_documento[cns_raw] = dados
         if cpf:
             por_documento[cpf] = dados
+        if row[18] is not None:
+            por_documento[doc_por_id(row[18])] = dados
 
     return por_documento
 
@@ -469,11 +490,12 @@ def buscar_pacientes(con, lista_valores: list[str]) -> tuple[list[dict], list[st
       - nao_encontrados: documentos válidos (CNS-15/CPF-11) não achados na CADCNS.
       - invalidos: valores com tamanho que não é nem CNS nem CPF.
     """
-    cns_list  = [v for v in lista_valores if len(v) == 15]
-    cpf_list  = [v for v in lista_valores if len(v) == 11]
-    invalidos = [v for v in lista_valores if v not in cns_list and v not in cpf_list]
+    id_list   = [v for v in lista_valores if v.startswith(PREFIXO_ID) and v[len(PREFIXO_ID):].isdigit()]
+    cns_list  = [v for v in lista_valores if len(v) == 15 and v.isdigit()]
+    cpf_list  = [v for v in lista_valores if len(v) == 11 and v.isdigit()]
+    invalidos = [v for v in lista_valores if v not in cns_list and v not in cpf_list and v not in id_list]
 
-    por_documento = _buscar_dados_pacientes(con, cns_list, cpf_list)
+    por_documento = _buscar_dados_pacientes(con, cns_list, cpf_list, id_list)
 
     pacientes       = []
     nao_encontrados = []
@@ -544,7 +566,7 @@ def _linha_detalhe(pac, proc, cbo, cns_prof, data_aten, competencia, folha, seq)
         + " " * 10                                   # 010 | prd_ine
         + cpf                                        # 011 | prd_cpf_pcnte
         + "n"                                        # 001 | prd_situacao_rua
-        + "n"                                        # 001 | prd_possui_cpf_cns
+        + ("s" if pac.get("sem_doc") else "n")       # 001 | prd_possui_cpf_cns (s = sem CPF/CNS)
     )
 
 
@@ -617,7 +639,7 @@ def montar_row_prd(pac, proc, cbo, cns_prof, data_aten, competencia, folha, seq)
         pac["raca"], "   ", "   ", None, etnia, pac["nac"], "0", "", "", "",
         pac["lograd"], pac["cep"], pac["end"], pac["compl"], pac["num"], pac["bairro"],
         pac["ddd"], pac["tel"], pac["email"], "", None,
-        pac["cpf"].zfill(11) if pac["cpf"] else "", "n",
+        pac["cpf"].zfill(11) if pac["cpf"] else "", "s" if pac.get("sem_doc") else "n",
     ]
 
 

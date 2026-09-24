@@ -100,7 +100,7 @@ def _rodar() -> None:
             _atualizar(situacao="erro", fim=fim, erro=(final or {}).get("msg", "Migração não terminou"))
         else:
             _atualizar(situacao="ok", fim=fim, erro="", **{
-                k: final[k] for k in ("inseridos", "atualizados", "duplicatas", "erros", "cpf_invalidos")
+                k: final.get(k, 0) for k in ("inseridos", "atualizados", "duplicatas", "erros", "cpf_invalidos", "sem_documento")
             })
         print(f"[BPA] migração automática: {estado()}")
     except Exception as e:  # nunca derrubar o BPA por causa da automática

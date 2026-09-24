@@ -34,28 +34,37 @@ def _cns_valido(cns: str) -> bool:
     return len(cns) == 15
 
 
-def _carregar_existentes_fb(cur) -> tuple[dict, set]:
+def chave_nome_nasc(nome, dtnasc) -> tuple[str, str]:
+    """Identidade de paciente SEM CPF: nome (como vai pro Firebird, 30 letras) + nascimento."""
+    return (re.sub(r"\s+", " ", str(nome or "").strip().upper())[:30].strip(), _dtnasc(dtnasc) or "")
+
+
+def _carregar_existentes_fb(cur) -> tuple[dict, set, set]:
     """Carrega todos os CNS/CPF já cadastrados no Firebird de uma vez (1 consulta),
     para checar existência em memória em vez de 1 SELECT por paciente (CADCNS não
     tem índice em NUM_CPF — em memória evita a varredura completa da tabela repetida
     milhares de vezes, sem precisar mexer no schema do banco).
 
-    Retorna (por_cns, cpf_set):
-      por_cns  — {CNS: (ID_CADCNS, NUM_CPF atual)}, para achar cadastros antigos
-                 (só CNS, sem CPF) e completar o CPF sem duplicar o registro.
-      cpf_set  — conjunto de CPFs já gravados em algum registro.
+    Retorna (por_cns, cpf_set, nome_nasc):
+      por_cns   — {CNS: (ID_CADCNS, NUM_CPF atual)}, para achar cadastros antigos
+                  (só CNS, sem CPF) e completar o CPF sem duplicar o registro.
+      cpf_set   — conjunto de CPFs já gravados em algum registro.
+      nome_nasc — (nome, nascimento) de todos os cadastros: paciente SEM CPF
+                  só entra se ninguém com o mesmo nome e nascimento existir.
     """
-    cur.execute("SELECT ID_CADCNS, CNS, NUM_CPF FROM CADCNS")
+    cur.execute("SELECT ID_CADCNS, CNS, NUM_CPF, NOME, DTNASC FROM CADCNS")
     por_cns: dict = {}
     cpf_set: set = set()
-    for id_cadcns, cns, cpf in cur.fetchall():
+    nome_nasc: set = set()
+    for id_cadcns, cns, cpf, nome, dtnasc in cur.fetchall():
+        nome_nasc.add(chave_nome_nasc(nome, dtnasc))
         cns = (cns or "").strip()
         cpf = (cpf or "").strip()
         if cns:
             por_cns[cns] = (id_cadcns, cpf)
         if cpf:
             cpf_set.add(cpf)
-    return por_cns, cpf_set
+    return por_cns, cpf_set, nome_nasc
 
 
 def _status_paciente(por_cns: dict, cpf_set: set, cns: str, cpf: str):
@@ -98,15 +107,21 @@ def preview(d: dict) -> dict:
         rows = cur.fetchall()
         total = len(rows)
 
+        sem_doc = [r for r in rows if not limpar(r[1])]
         validos = [r for r in rows if bpa.valida_cpf(limpar(r[1]))]
-        cpf_invalido = total - len(validos)
+        cpf_invalido = total - len(validos) - len(sem_doc)
 
         fb = bpa.conectar()
         fb_cur = fb.cursor()
-        por_cns, cpf_set = _carregar_existentes_fb(fb_cur)
+        por_cns, cpf_set, nome_nasc = _carregar_existentes_fb(fb_cur)
         fb.close()
 
-        novos = atualizar = ja_existem = 0
+        novos = atualizar = ja_existem = novos_sem_doc = 0
+        for r in sem_doc:
+            if chave_nome_nasc(r[2], r[3]) in nome_nasc:
+                ja_existem += 1
+            elif _dtnasc(r[3]) and str(r[2] or "").strip():
+                novos_sem_doc += 1
         for r in validos:
             status, _ = _status_paciente(por_cns, cpf_set, limpar(r[0]), limpar(r[1]))
             if status == "novo":
@@ -117,8 +132,8 @@ def preview(d: dict) -> dict:
                 ja_existem += 1
 
         return {
-            "ok": True, "total": total, "novos": novos, "atualizar": atualizar,
-            "ja_existem": ja_existem, "cpf_invalido": cpf_invalido,
+            "ok": True, "total": total, "novos": novos + novos_sem_doc, "atualizar": atualizar,
+            "ja_existem": ja_existem, "cpf_invalido": cpf_invalido, "sem_documento": novos_sem_doc,
         }
     except Exception as e:
         return {"ok": False, "erro": str(e)}
@@ -170,12 +185,12 @@ def migrar(query: str) -> Iterator[dict]:
         return
 
     total = len(rows)
-    yield {"tipo": "log", "msg": f"{total} paciente(s) com CPF no período.", "total": total}
+    yield {"tipo": "log", "msg": f"{total} paciente(s) atendido(s) no período.", "total": total}
 
     if total == 0:
         yield {
             "tipo": "fim", "inseridos": 0, "atualizados": 0, "duplicatas": 0,
-            "erros": 0, "cpf_invalidos": 0,
+            "erros": 0, "cpf_invalidos": 0, "sem_documento": 0,
         }
         pg.close()
         return
@@ -193,10 +208,10 @@ def migrar(query: str) -> Iterator[dict]:
     fb_cur.execute("SELECT MAX(ID_CADCNS) FROM CADCNS")
     max_id = fb_cur.fetchone()[0] or 0
 
-    por_cns, cpf_set = _carregar_existentes_fb(fb_cur)
+    por_cns, cpf_set, nome_nasc = _carregar_existentes_fb(fb_cur)
     yield {"tipo": "log", "msg": f"{len(cpf_set)} CPF(s) já cadastrados carregados em memória."}
 
-    inseridos = atualizados = duplicatas = erros = cpf_invalidos = 0
+    inseridos = atualizados = duplicatas = erros = cpf_invalidos = sem_documento = 0
     LOTE = 50
 
     for i, row in enumerate(rows, 1):
@@ -204,6 +219,45 @@ def migrar(query: str) -> Iterator[dict]:
             log_r, num_r, bairro_r, cep_r, ibge_r, nac_r, ddd_r, tel_r = row
         cns = limpar(cns_r)
         cpf = limpar(cpf_r)
+
+        if not cpf:
+            # Paciente SEM documento (cadastrado sem CPF na recepção): entra sem
+            # CPF e sem CNS -- no BPA-I sai com prd_possui_cpf_cns = "s".
+            chave = chave_nome_nasc(nome_r, dn_r)
+            if not chave[0] or not chave[1]:
+                erros += 1
+                yield {"tipo": "log", "msg": f"Sem CPF e sem nome/nascimento completos, pulado: {nome_r!r}"}
+            elif chave in nome_nasc:
+                duplicatas += 1
+            else:
+                max_id += 1
+                try:
+                    fb_cur.execute(_SQL_INSERT, [
+                        max_id, "", "",
+                        _texto(nome_r, 30) or "SEM NOME",
+                        _dtnasc(dn_r),
+                        _sexo(sexo_r),
+                        _texto(raca_r, 2) or "03",
+                        _texto(mae_r, 30),
+                        _texto(log_r, 30) or "PRINCIPAL",
+                        _texto(num_r, 5) or "S/N",
+                        _texto(bairro_r, 30) or "CENTRO",
+                        limpar(cep_r)[:8] or "59575000",
+                        limpar(ibge_r)[:6] or "240360",
+                        "081", "",
+                        _texto(nac_r, 3) or "010",
+                        _texto(ddd_r, 2),
+                        _texto(tel_r, 9),
+                    ])
+                    inseridos += 1
+                    sem_documento += 1
+                    nome_nasc.add(chave)
+                except Exception as e:
+                    erros += 1
+                    yield {"tipo": "log", "msg": f"Erro ao inserir {nome_r} (sem CPF): {e}"}
+            if i % LOTE == 0:
+                fb.commit()
+            continue
 
         if not bpa.valida_cpf(cpf):
             cpf_invalidos += 1
@@ -260,6 +314,7 @@ def migrar(query: str) -> Iterator[dict]:
                 # seriam inseridos duas vezes no Firebird. Cadastro novo não
                 # grava CNS (ver acima), então só o CPF entra no cache.
                 cpf_set.add(cpf)
+                nome_nasc.add(chave_nome_nasc(nome_r, dn_r))
             except Exception as e:
                 erros += 1
                 yield {"tipo": "log", "msg": f"Erro CPF {cpf}: {e}"}
@@ -284,8 +339,8 @@ def migrar(query: str) -> Iterator[dict]:
 
     yield {
         "tipo": "fim",
-        "msg": f"Concluído! Inseridos: {inseridos} | Atualizados (CPF): {atualizados} | "
+        "msg": f"Concluído! Inseridos: {inseridos} (sem CPF: {sem_documento}) | Atualizados (CPF): {atualizados} | "
                f"Duplicatas: {duplicatas} | CPF inválido: {cpf_invalidos} | Erros: {erros}",
         "inseridos": inseridos, "atualizados": atualizados, "duplicatas": duplicatas, "erros": erros,
-        "cpf_invalidos": cpf_invalidos,
+        "cpf_invalidos": cpf_invalidos, "sem_documento": sem_documento,
     }

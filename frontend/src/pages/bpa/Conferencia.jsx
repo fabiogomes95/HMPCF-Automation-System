@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
-import { bpaLocal, fmtCpf, fmtNum, mascaraData } from "../../services/bpaLocal";
+import { bpaLocal, fmtCpf, fmtDoc, fmtNum, mascaraData } from "../../services/bpaLocal";
 
 // Conferência: lotes digitados × produção que já entrou no BPA Magnético
 // (Firebird S_PRD). "Reenviar faltantes" sempre SIMULA primeiro e só grava
@@ -64,7 +64,7 @@ function Reenvio({ dia, aoConcluir, aoFechar }) {
                   <td>
                     {p.erro && <span className="bp-tag erro">{p.erro}</span>}
                     {p.nao_encontrados?.length > 0 && (
-                      <div className="bp-docs">fora do Firebird: {p.nao_encontrados.map(fmtCpf).join(", ")}</div>
+                      <div className="bp-docs">fora do Firebird: {p.nao_encontrados.map(fmtDoc).join(", ")}</div>
                     )}
                   </td>
                 </tr>
@@ -194,7 +194,7 @@ export default function Conferencia() {
                             <tr>
                               <td></td>
                               <td colSpan={5}>
-                                {falt > 0 && <div className="bp-docs">faltando no BPA: {p.faltando_no_banco.map(fmtCpf).join(", ")}</div>}
+                                {falt > 0 && <div className="bp-docs">faltando no BPA: {p.faltando_no_banco.map((d) => p.rotulos?.[d] || fmtCpf(d)).join(", ")}</div>}
                                 {sobr > 0 && <div className="bp-docs">no BPA sem estar digitado: {p.sobrando_no_banco.map(fmtCpf).join(", ")}</div>}
                               </td>
                             </tr>

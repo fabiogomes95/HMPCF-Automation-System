@@ -27,15 +27,17 @@ def test_competencias_e_filtro_por_periodo():
     cur.execute(postgres.query_pacientes_mes(mes))
     linhas = cur.fetchall()
     esperados = {p["num_cpf"] for p in PACIENTES if any(a.replace("-", "")[:6] == mes for a in p["atendimentos"])}
-    assert {l[1] for l in linhas} == esperados
+    assert {l[1] or "" for l in linhas} == esperados  # inclui os sem CPF (vazio)
     assert len(linhas[0]) == 15  # mesmas colunas da consulta real
 
 
 class _FbFalso:
-    """Firebird em memória: CADCNS com 1 paciente que já existe e 1 só com CNS."""
+    """Firebird em memória: 1 paciente que já tem CPF, 1 só com CNS e 1 sem
+    documento (mesmo nome + nascimento de um paciente sem CPF do arquivo)."""
 
-    def __init__(self, ja_tem_cpf: str, so_cns: str):
-        self.cadcns = [(1, "", ja_tem_cpf), (2, so_cns, "")]
+    def __init__(self, ja_tem_cpf: str, so_cns: str, sem_doc: dict):
+        self.cadcns = [(1, "", ja_tem_cpf, "FULANO", "19900101"), (2, so_cns, "", "CICLANO", "19800101"),
+                       (3, "", "", sem_doc["nome"][:30], sem_doc["dtnasc"])]
         self.inseridos, self.atualizados = [], []
 
     def cursor(self):
@@ -44,7 +46,7 @@ class _FbFalso:
         class C:
             def execute(self, sql, params=None):
                 if sql.startswith("SELECT MAX"):
-                    self._r = [(max(i for i, _, _ in fb.cadcns),)]
+                    self._r = [(max(linha[0] for linha in fb.cadcns),)]
                 elif sql.startswith("SELECT ID_CADCNS"):
                     self._r = list(fb.cadcns)
                 elif sql.startswith("INSERT"):
@@ -67,21 +69,39 @@ def test_migracao_inteira_com_pacientes_falsos(monkeypatch):
     monkeypatch.setattr(postgres, "POSTGRES_FALSO", JSON)
     monkeypatch.setattr(bpa, "carregar_pacientes_cadcns", lambda: [])
     validos = [p for p in PACIENTES if bpa.valida_cpf(p["num_cpf"])]
+    sem_doc = [p for p in PACIENTES if not p["num_cpf"]]
+    assert len(sem_doc) == 6
     ja_tem = validos[5]
     so_cns = next(p for p in validos[6:] if p["cns"])
-    fb = _FbFalso(ja_tem["num_cpf"], so_cns["cns"])
+    fb = _FbFalso(ja_tem["num_cpf"], so_cns["cns"], sem_doc[0])
     monkeypatch.setattr(bpa, "conectar", lambda: fb)
 
     hoje = date.today()
-    inicio = date(2000, 1, 1)  # todos os atendimentos do arquivo
-    eventos = list(migracao.migrar(postgres.query_pacientes_periodo(inicio, hoje.replace(year=hoje.year + 1))))
+    eventos = list(migracao.migrar(postgres.query_pacientes_periodo(date(2000, 1, 1), hoje.replace(year=hoje.year + 1))))
     fim = eventos[-1]
     assert fim["tipo"] == "fim"
 
-    total = len({p["num_cpf"] for p in PACIENTES})
     assert fim["cpf_invalidos"] == 2                     # os 2 CPFs inválidos de propósito
-    assert fim["duplicatas"] == 1                        # quem já estava no Firebird
+    assert fim["duplicatas"] == 2                        # 1 com CPF + 1 sem documento já no Firebird
     assert fim["atualizados"] == 1 and fb.atualizados[0][0] == so_cns["num_cpf"]  # completou CPF pelo SUS
-    assert fim["inseridos"] == total - 2 - 1 - 1
-    assert all(linha[2] and linha[3].startswith("TESTE") for linha in fb.inseridos)  # CPF + nome
+    assert fim["sem_documento"] == len(sem_doc) - 1      # sem CPF: entram (menos o que já existia)
+    assert fim["inseridos"] == (len(validos) - 2) + (len(sem_doc) - 1)
+    assert all(linha[3].startswith("TESTE") for linha in fb.inseridos)
+    sem_cpf = [linha for linha in fb.inseridos if linha[2] == ""]
+    assert len(sem_cpf) == len(sem_doc) - 1 and all(linha[1] == "" for linha in sem_cpf)  # sem CPF e sem CNS
     assert len({linha[0] for linha in fb.inseridos}) == len(fb.inseridos)            # IDs sem repetir
+
+
+def test_preview_conta_sem_documento(monkeypatch):
+    monkeypatch.setattr(postgres, "POSTGRES_FALSO", JSON)
+    sem_doc = [p for p in PACIENTES if not p["num_cpf"]]
+    validos = [p for p in PACIENTES if bpa.valida_cpf(p["num_cpf"])]
+    fb = _FbFalso(validos[5]["num_cpf"], "", sem_doc[0])
+    monkeypatch.setattr(bpa, "conectar", lambda: fb)
+    meses = sorted({a[:7].replace("-", "") for p in PACIENTES for a in p["atendimentos"]})
+    total_sem_doc = 0
+    for mes in meses:
+        r = migracao.preview({"mes": mes})
+        assert r["ok"]
+        total_sem_doc += r["sem_documento"]
+    assert total_sem_doc >= len(sem_doc) - 1

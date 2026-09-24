@@ -321,3 +321,49 @@ def test_dividir_por_profissionais_sem_profissionais():
 
 def test_nome_arquivo_lote():
     assert bpa.nome_arquivo_lote("16/04/2026") == "16-04-2026.txt"
+
+
+# ── Paciente sem CPF/CNS (prd_possui_cpf_cns = "s") ──────────────────────────
+def test_linha_sem_documento_leva_s_e_campos_em_branco():
+    pac = _pac_exemplo(cns=" " * 15, cpf="", sem_doc=True)
+    linha = bpa._linha_detalhe(pac, PROC_MEDICO, CBO_MEDICO, "111111111111111", "20260801", "202608", 1, 1)
+    assert len(linha) == 351
+    assert linha[-1] == "s"
+    assert linha[-13:-2] == " " * 11          # prd_cpf_pcnte em branco
+    assert linha[-2] == "n"                    # prd_situacao_rua continua "n"
+
+
+def test_linha_com_cpf_continua_n():
+    linha = bpa._linha_detalhe(_pac_exemplo(), PROC_MEDICO, CBO_MEDICO, "111111111111111", "20260801", "202608", 1, 1)
+    assert linha[-1] == "n"
+    assert linha[-13:-2] == "12345678909"
+
+
+def test_row_prd_sem_documento():
+    row = bpa.montar_row_prd(_pac_exemplo(cns=" " * 15, cpf="", sem_doc=True),
+                             PROC_MEDICO, CBO_MEDICO, "111111111111111", "20260801", "202608", 1, 1)
+    assert row[-1] == "s" and row[-2] == ""
+    assert bpa.montar_row_prd(_pac_exemplo(), PROC_MEDICO, CBO_MEDICO, "111111111111111",
+                              "20260801", "202608", 1, 1)[-1] == "n"
+
+
+def test_buscar_pacientes_por_id_do_cadastro():
+    # CADCNS: 1 sem nenhum documento, 1 só com SUS (cadastro antigo), 1 com CPF
+    linhas = [
+        ("", "SEM DOC", "19900101", "F", "240360", "03", "", "010", "081", "59575000",
+         "RUA", "1", "", "CENTRO", "84", "999999999", "", "", 501),
+        ("700000000000001", "SO SUS", "19800101", "M", "240360", "03", "", "010", "081", "59575000",
+         "RUA", "1", "", "CENTRO", "84", "999999999", "", "", 502),
+        ("", "COM CPF", "19700101", "M", "240360", "03", "", "010", "081", "59575000",
+         "RUA", "1", "", "CENTRO", "84", "999999999", "", "12345678909", 503),
+    ]
+    con = MagicMock()
+    con.cursor.return_value.fetchall.return_value = linhas
+    docs = ["ID:501", "ID:502", "12345678909", "ID:501", "ID:999", "123"]
+    pacientes, nao_enc, invalidos = bpa.buscar_pacientes(con, docs)
+    assert [p["nome"].strip() for p in pacientes] == ["SEM DOC", "SO SUS", "COM CPF", "SEM DOC"]
+    assert [p["sem_doc"] for p in pacientes] == [True, False, False, True]  # só SUS: tem documento
+    assert pacientes[1]["cns"] == "700000000000001"
+    assert nao_enc == ["ID:999"] and invalidos == ["123"]
+    sql, params = con.cursor.return_value.execute.call_args[0]
+    assert "ID_CADCNS IN" in sql and 501 in params and 999 in params

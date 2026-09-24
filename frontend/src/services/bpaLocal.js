@@ -73,6 +73,8 @@ export const bpaLocal = {
 export const fmtCpf = (c) => (c && c.length === 11 ? c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") : c || "");
 export const fmtSus = (s) => (s && s.length === 15 ? s.replace(/(\d{3})(\d{4})(\d{4})(\d{4})/, "$1 $2 $3 $4") : s || "");
 export const fmtNum = (n) => (n ?? 0).toLocaleString("pt-BR");
+// Documento como foi gravado no lote: CPF, ou "ID:n" (paciente sem CPF, digitado pelo cadastro)
+export const fmtDoc = (d) => (d && d.startsWith("ID:") ? "sem documento" : fmtCpf(d));
 
 export function hojeBR() {
   const d = new Date();

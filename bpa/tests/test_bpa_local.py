@@ -155,3 +155,42 @@ def test_gerar_com_arquivo_aberto_da_mensagem_clara(cliente, monkeypatch):
     r = cliente.post("/api/gerar", json={"arquivo": "07-09-2026.txt", "categoria": "medico"}).json()
     assert r["ok"] is False
     assert "BPA_MEDICOS_07092026.txt" in r["erro"] and "aberto em outro programa" in r["erro"]
+
+
+def test_gerar_arquivo_com_paciente_sem_documento(cliente, monkeypatch):
+    """Ponta a ponta com a geração REAL (só o Firebird simulado): paciente com
+    CPF sai com 'n'; paciente digitado pelo cadastro sem CPF/SUS sai em branco e com 's'."""
+    Path(bpa.BPA_LOTES_DIR, "10-09-2026.txt").write_text(
+        "PROFISSIONAL: DR MEDICO | CNS: 111111111111111 | DATA: 10/09/2026\n12345678909\nID:777\n", encoding="utf-8")
+    cadcns = [
+        ("", "TESTE COM CPF", "19900101", "F", "240360", "03", "", "010", "081", "59575000",
+         "RUA A", "1", "", "CENTRO", "84", "999999999", "", "12345678909", 776),
+        ("", "TESTE SEM DOCUMENTO", "19850505", "M", "240360", "03", "", "010", "081", "59575000",
+         "RUA B", "2", "", "CENTRO", "84", "988888888", "", "", 777),
+    ]
+
+    class Cur:
+        def execute(self, sql, params=None):
+            self._r = cadcns if "FROM CADCNS" in sql else []
+
+        def fetchall(self):
+            return self._r
+
+    class Con:
+        def cursor(self): return Cur()
+        def close(self): pass
+
+    monkeypatch.setattr(bpa, "conectar", lambda: Con())
+    monkeypatch.setattr(bpa, "detectar_categoria", lambda con, cns: ("medico", True))
+    monkeypatch.setattr(bpa, "contar_producao_real", lambda *a, **k: 0)
+
+    r = cliente.post("/api/gerar", json={"arquivo": "10-09-2026.txt", "categoria": "medico"}).json()
+    assert r["ok"], r
+    assert r["arquivos"]["medico"]["registros"] == 2
+    linhas = Path(r["arquivos"]["medico"]["caminho"]).read_bytes().decode("latin-1").split("\r\n")
+    com_cpf, sem_doc = linhas[1], linhas[2]
+    assert com_cpf.endswith("12345678909nn")                   # CPF, rua "n", possui "n"
+    assert sem_doc.endswith(" " * 11 + "ns")                    # CPF em branco, rua "n", sem documento "s"
+    assert "TESTE SEM DOCUMENTO" in sem_doc
+    # prd-cnspac: logo depois de ident(2)+cnes(7)+cmp(6)+cnsmed(15)+cbo(6)+dtaten(8)+flh(3)+seq(2)+pa(10)
+    assert sem_doc[59:74] == " " * 15                           # sem CNS

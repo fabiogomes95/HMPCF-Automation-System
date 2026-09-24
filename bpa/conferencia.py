@@ -66,27 +66,60 @@ def _resolver_cns(con, profs_raw: list[tuple[str, str]], grupo: dict) -> str:
     return res["cns"] if res["status"] == "auto" else ""
 
 
+def _chave_sem_doc(nome, dtnasc) -> str:
+    """Paciente SEM CPF (sem documento) não tem CPF pra comparar: usa nome
+    (30 letras, como vai no BPA) + nascimento."""
+    nome = " ".join(str(nome or "").upper().split())[:30].strip()
+    return f"SD|{nome}|{str(dtnasc or '').strip()}"
+
+
+def _rotulo_sem_doc(chave: str) -> str:
+    _, nome, nasc = chave.split("|", 2)
+    nasc_br = f"{nasc[6:8]}/{nasc[4:6]}/{nasc[:4]}" if len(nasc) == 8 else "?"
+    return f"sem CPF: {nome} ({nasc_br})"
+
+
+def _chaves_dos_ids(con, tokens: set[str]) -> dict[str, str]:
+    """{"ID:n": chave nome+nascimento} dos pacientes digitados pelo cadastro."""
+    ids = [int(t[len(bpa.PREFIXO_ID):]) for t in tokens]
+    if not ids:
+        return {}
+    cur = con.cursor()
+    cur.execute(f"SELECT ID_CADCNS, NOME, DTNASC FROM CADCNS WHERE ID_CADCNS IN ({','.join('?' * len(ids))})", ids)
+    return {bpa.doc_por_id(i): _chave_sem_doc(nome, nasc) for i, nome, nasc in cur.fetchall()}
+
+
 def conferir_dia(dt: date, nome_arquivo: str, con, profs_raw: list[tuple[str, str]]) -> dict:
     """Compara um dia: digitado (já deduplicado) x banco (S_PRD)."""
     caminho = bpa.caminho_lote(nome_arquivo)
     grupos = bpa.ler_arquivo_lote(caminho)
 
+    # Paciente sem CPF foi digitado pelo cadastro ("ID:n") e entrou no S_PRD
+    # sem CPF: os dois lados viram "nome + nascimento" pra comparar.
+    tokens_id = {d for g in grupos for d in g["documentos"] if d.startswith(bpa.PREFIXO_ID)}
+    chave_do_id = _chaves_dos_ids(con, tokens_id)
+
     cur = con.cursor()
     dtaten = dt.strftime("%Y%m%d")
-    cur.execute("SELECT PRD_CNSMED, PRD_CPF_PCNTE FROM S_PRD WHERE PRD_DTATEN = ?", (dtaten,))
+    cur.execute("SELECT PRD_CNSMED, PRD_CPF_PCNTE, PRD_NMPAC, PRD_DTNASC FROM S_PRD WHERE PRD_DTATEN = ?", (dtaten,))
     banco_por_cns: dict[str, list[str]] = {}
-    for cns, cpf in cur.fetchall():
-        banco_por_cns.setdefault((cns or "").strip(), []).append((cpf or "").strip())
+    for cns, cpf, nome, nasc in cur.fetchall():
+        cpf = (cpf or "").strip()
+        banco_por_cns.setdefault((cns or "").strip(), []).append(cpf or _chave_sem_doc(nome, nasc))
 
     profissionais = []
     total_digitado = total_banco = 0
     for g in grupos:
         cns = _resolver_cns(con, profs_raw, g)
         digitado = g["documentos"]
+        token_da_chave = {chave_do_id.get(d, d): d for d in digitado}
+        chaves = [chave_do_id.get(d, d) for d in digitado]
         no_banco = banco_por_cns.get(cns, [])
-        c_dig, c_bd = Counter(digitado), Counter(no_banco)
-        faltando = sorted((c_dig - c_bd).elements())
-        sobrando = sorted((c_bd - c_dig).elements())
+        c_dig, c_bd = Counter(chaves), Counter(no_banco)
+        # faltando volta como foi digitado ("ID:n" inclusive) -- o reenviar usa isso
+        faltando = sorted(token_da_chave[k] for k in (c_dig - c_bd).elements())
+        sobrando = sorted(_rotulo_sem_doc(k) if k.startswith("SD|") else k for k in (c_bd - c_dig).elements())
+        rotulos = {t: _rotulo_sem_doc(chave_do_id[t]) for t in faltando if t in chave_do_id}
         total_digitado += len(digitado)
         total_banco += len(no_banco)
         profissionais.append({
@@ -100,6 +133,7 @@ def conferir_dia(dt: date, nome_arquivo: str, con, profs_raw: list[tuple[str, st
             "ok": not faltando,
             "faltando_no_banco": faltando,
             "sobrando_no_banco": sobrando,
+            "rotulos": rotulos,  # "ID:n" -> "sem CPF: NOME (nasc)", pra tela mostrar o nome
         })
 
     return {

@@ -62,8 +62,8 @@ def query_pacientes_mes(mes_aaaamm: str) -> str:
             p.nacionalidade, p.ddtel_pcnte, p.tel_pcnte
         FROM pacientes p
         INNER JOIN recepcao_atendimentos ra ON ra.paciente_id = p.id
-        WHERE p.num_cpf IS NOT NULL AND p.num_cpf <> ''
-          AND ra.data_atendimento >= '{inicio}'
+        -- inclui paciente sem CPF (sem documento): vai pro Firebird identificado por nome + nascimento
+        WHERE ra.data_atendimento >= '{inicio}'
           AND ra.data_atendimento <  '{fim}'
         ORDER BY p.nome
     """
@@ -78,8 +78,8 @@ def query_pacientes_periodo(inicio, fim) -> str:
             p.nacionalidade, p.ddtel_pcnte, p.tel_pcnte
         FROM pacientes p
         INNER JOIN recepcao_atendimentos ra ON ra.paciente_id = p.id
-        WHERE p.num_cpf IS NOT NULL AND p.num_cpf <> ''
-          AND ra.data_atendimento >= '{inicio.isoformat()}'
+        -- inclui paciente sem CPF (sem documento): vai pro Firebird identificado por nome + nascimento
+        WHERE ra.data_atendimento >= '{inicio.isoformat()}'
           AND ra.data_atendimento <  '{fim.isoformat()}'
         ORDER BY p.nome
     """
