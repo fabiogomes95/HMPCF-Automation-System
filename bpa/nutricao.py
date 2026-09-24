@@ -87,17 +87,50 @@ def listar_abas(conteudo: bytes) -> list[str]:
     return [ws.title for ws in wb.worksheets if competencia_da_aba(ws.title)]
 
 
+def _chave_nome(s: str) -> str:
+    """Primeiro nome comparável: sem acento, maiúsculo, sem letra dobrada
+    (NAÍLLA / NAILLA / NAILA -> NAILA)."""
+    return re.sub(r"(.)\1+", r"\1", sem_acento(s).upper())
+
+
+def _distancia(a: str, b: str) -> int:
+    """Quantas letras trocar/incluir/tirar pra ir de a até b (Levenshtein)."""
+    anterior = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        atual = [i]
+        for j, cb in enumerate(b, 1):
+            atual.append(min(anterior[j] + 1, atual[j - 1] + 1, anterior[j - 1] + (ca != cb)))
+        anterior = atual
+    return anterior[-1]
+
+
 def _qual_nutri(texto: str, nutricionistas: list[dict]) -> list[dict] | None:
-    """Nutricionista(s) citada(s) na célula (3 primeiras letras do 1º nome, que
-    cobre NAILA/NAILLA/NAÍLLA e 'Mariane'), 'TODAS' = todas."""
+    """Nutricionista(s) citada(s) na célula da coluna A; 'TODAS' = todas.
+
+    O 1º nome do cadastro tem que ser IGUAL à palavra da planilha (ignorando
+    acento e letra dobrada). Só se nenhuma bater exatamente, vale o começo do
+    nome (4+ letras) ou um nome quase igual (erro de digitação) — e
+    só quando aponta pra UMA nutricionista, pra não juntar MARIANE com uma
+    MARIA que também tenha o CBO de nutrição."""
     s = sem_acento(texto).upper()
     if "TODAS" in s:
-        return list(nutricionistas)
-    letras = re.sub(r"[^A-Z ]", " ", s).split()
+        return list(nutricionistas)  # ler_aba troca depois pelas que aparecem na aba
+    primeiros = [(n, _chave_nome(n["nome"].split()[0])) for n in nutricionistas if n["nome"].split()]
     achadas = []
-    for palavra in letras:
-        for n in nutricionistas:
-            if len(palavra) >= 4 and palavra[:3] == sem_acento(n["nome"]).upper()[:3] and n not in achadas:
+    for palavra in re.sub(r"[^A-Z ]", " ", s).split():
+        chave = _chave_nome(palavra)
+        if len(chave) < 3:
+            continue
+        iguais = [n for n, p in primeiros if p == chave]
+        if not iguais and len(chave) >= 4:
+            # erro de digitação ("Barabara", "Mariana"): no máx. 1 letra (2 em nome longo)
+            limite = 2 if len(chave) >= 8 else 1
+            parecidas = [n for n, p in primeiros if _distancia(chave, p) <= limite]
+            if not parecidas:  # nome abreviado ("MARI")
+                parecidas = [n for n, p in primeiros if p.startswith(chave)]
+            iguais = parecidas if len(parecidas) == 1 else []  # só se apontar pra UMA
+        for n in iguais:
+            if n not in achadas:
                 achadas.append(n)
     return achadas or None
 
@@ -148,6 +181,15 @@ def ler_aba(conteudo: bytes, aba: str, nutricionistas: list[dict]) -> dict:
 
         if texto_a and dia is not None:
             nutris = _qual_nutri(texto_a, nutricionistas)
+            if nutris and len(nutris) > 1 and "TODAS" not in sem_acento(texto_a).upper() and len(texto_a.split()) == 1:
+                avisos.append(f"Linha {n_linha}: '{texto_a}' serve para mais de uma nutricionista cadastrada "
+                              f"({', '.join(n['nome'] for n in nutris)}) — confira o dia.")
+            if nutris and len(nutris) == 1 and not any(
+                _chave_nome(w) == _chave_nome(nutris[0]["nome"].split()[0]) for w in re.sub(r"[^A-Z ]", " ", sem_acento(texto_a).upper()).split()
+            ) and "TODAS" not in sem_acento(texto_a).upper():
+                avisos.append(f"Linha {n_linha}: '{texto_a}' entendido como {nutris[0]['nome']} — confira.")
+            if nutris and "TODAS" in sem_acento(texto_a).upper():
+                dia["todas"] = True
             if nutris:
                 for n in nutris:
                     if n not in dia["nutricionistas"]:
@@ -168,6 +210,13 @@ def ler_aba(conteudo: bytes, aba: str, nutricionistas: list[dict]) -> dict:
                 "cpf_planilha": str(cpf or "").strip(),
                 "cpf": limpar_cpf(cpf),
             })
+
+    # "TODAS NUT" = as nutricionistas que trabalham no mês (citadas na aba),
+    # não todo mundo com o CBO de nutrição no cadastro.
+    citadas = [n for n in nutricionistas if any(n in d["nutricionistas"] for d in dias if not d.get("todas"))]
+    for d in dias:
+        if d.pop("todas", False) and citadas:
+            d["nutricionistas"] = list(citadas)
 
     dias = [d for d in dias if d["pacientes"]]
     dias.sort(key=lambda d: (d["data"] is not None, d["data"] or date.min))

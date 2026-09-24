@@ -212,3 +212,26 @@ def test_cabecalho_com_outro_texto_na_coluna_b():
     wb.save(buf)
     r = planilha.ler_aba(buf.getvalue(), "SET - 26", _nutris())
     assert [p["nome"] for d in r["dias"] for p in d["pacientes"]] == ["FULANO", "CICLANO"]
+
+
+def test_nome_da_nutricionista_nao_confunde_com_outra_do_cadastro():
+    """Cadastro real (set/2026) + outras pessoas com o CBO de nutrição."""
+    nutris = [{"cns": "B", "nome": "BARBARA BORDOGNA"},
+              {"cns": "M", "nome": "MARIANE CRISTINE MEDEIROS DE L"},
+              {"cns": "N", "nome": "NAILLA TEIXEIRA DE ARAUJO"},
+              {"cns": "X", "nome": "MARIA DAS GRACAS"},
+              {"cns": "Y", "nome": "NAIARA SOUZA"}]
+    cns = lambda t: [n["cns"] for n in (planilha._qual_nutri(t, nutris) or [])]  # noqa: E731
+    assert cns("MARIANE ") == ["M"] and cns("Mariane") == ["M"] and cns("MARIANA") == ["M"]
+    assert cns("NAÍLLA") == ["N"] and cns("NAILA") == ["N"] and cns("Nailla") == ["N"]
+    assert cns("Barabara ") == ["B"] and cns("barbara") == ["B"]
+    assert cns("FDS") == [] and cns("FINAL DE S") == []
+
+
+def test_todas_nut_divide_so_entre_as_que_aparecem_na_aba():
+    nutris = _nutris() + [{"cns": "X", "nome": "MARIA DAS GRACAS"}]
+    linhas = [(d(1), "A", "", ""), ("MARIANE", "B", "", ""), (d(2), "C", "", ""), ("BARBARA", "D", "", ""),
+              (d(3), "E", "", ""), ("TODAS NUT", "F", "", "")]
+    r = planilha.ler_aba(_xlsx(linhas), "AGO-26", nutris)
+    todas = next(x for x in r["dias"] if x["data"] == d(3).date())
+    assert sorted(n["nome"] for n in todas["nutricionistas"]) == ["BARBARA COSTA", "MARIANE SOUZA LIMA"]
