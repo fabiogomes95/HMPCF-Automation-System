@@ -186,7 +186,7 @@ Tudo sobe sozinho com o Windows, sem janela:
 |---|---|
 | Sistema (backend + telas, porta 8001) | serviço `HMPCF-Backend-Svc` (nssm) — religa sozinho se cair |
 | PostgreSQL | serviço `postgresql-x64-16` |
-| Backup diário 23:00 → Google Drive | tarefa `HMPCF-Backup-Diario` (`scripts\servidor\backup_postgres.bat`) |
+| Backup diário 23:00 → Google Drive | serviço `HMPCF-Backup-Svc` (nssm, `scripts\servidor\agendador_backup.py` → `backup_postgres.bat`); backup na hora: criar o arquivo `C:\HMPCF\backups\RODAR_AGORA` |
 
 Acesso: `http://192.168.1.29:8001`. O terminal da recepção entra sozinho
 (auto-login local); os outros PCs usam login e senha.

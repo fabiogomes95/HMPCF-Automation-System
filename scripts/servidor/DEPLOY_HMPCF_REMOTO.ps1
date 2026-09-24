@@ -391,6 +391,8 @@ $backupBat = @(
 $backupBat | Set-Content -Path ($INSTALL_ROOT + "\scripts\backup_postgres.bat") -Encoding ASCII
 Log-Ok "Script de backup criado"
 
+# Desde 24/09/2026 o servidor usa o servico HMPCF-Backup-Svc (instalar_servico_backup.ps1)
+# em vez desta tarefa -- ver scripts/README.md.
 $taskName    = "HMPCF-Backup-Diario"
 $taskAction  = New-ScheduledTaskAction -Execute ($INSTALL_ROOT + "\scripts\backup_postgres.bat")
 $taskTrigger = New-ScheduledTaskTrigger -Daily -At "23:00"

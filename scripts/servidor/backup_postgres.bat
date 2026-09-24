@@ -28,8 +28,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0encrypt_backup.ps1" -P
 if %ERRORLEVEL% NEQ 0 (echo [ERRO] Falha ao criptografar o backup! & exit /b 1)
 
 echo Copiando backup para fora da maquina (Google Drive)...
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0copiar_backup_nuvem.ps1" -Path "%OUTFILE%.enc"
+REM 1) Pasta local que o app do Google Drive sincroniza ("Pastas do computador").
+REM    Funciona tambem pelo servico HMPCF-Backup-Svc (LocalSystem), que nao pode
+REM    gravar no G: -- ver agendador_backup.py.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0copiar_backup_nuvem.ps1" -Path "%OUTFILE%.enc" -DestinoPasta "C:\HMPCF\backups_nuvem"
 if %ERRORLEVEL% NEQ 0 (echo [AVISO] Copia externa falhou -- backup local OK, mas sem copia fora da maquina hoje.)
+REM 2) Rodando como o usuario (dois cliques): copia direto no G: tambem, como antes.
+if /i not "%USERNAME%"=="%COMPUTERNAME%$" (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0copiar_backup_nuvem.ps1" -Path "%OUTFILE%.enc"
+)
 
 REM Expurgo: 30 dias, agora sobre os arquivos .enc (o .sql em claro ja foi apagado)
 powershell -NoProfile -Command "Get-ChildItem '%BACKUP_DIR%' -Filter *.sql.enc | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } | Remove-Item -Force"

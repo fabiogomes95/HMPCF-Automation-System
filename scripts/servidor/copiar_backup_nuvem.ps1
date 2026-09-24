@@ -4,8 +4,9 @@
 # na máquina de produção, já que scripts/servidor/backup_postgres.bat só
 # guarda em C:\HMPCF\backups\ (mesma máquina do Postgres).
 #
-# O G: do Google Drive só existe com o usuário logado — por isso a tarefa
-# agendada roda como o usuário da máquina (ver agendar_backup.ps1).
+# O G: do Google Drive só aceita o usuário logado: o serviço HMPCF-Backup-Svc
+# (LocalSystem) grava em C:\HMPCF\backups_nuvem, que o app do Drive sincroniza
+# (ver backup_postgres.bat e agendador_backup.py).
 #
 # NUNCA copiar scripts/servidor/.backup_passphrase para esta pasta —
 # guardar a senha de criptografia ao lado do dado criptografado anula a

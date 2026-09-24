@@ -820,6 +820,12 @@ ls C:\HMPCF\backups\
 
 ### 9.3 Agendar backup diário automático
 
+> **Desde 24/09/2026 o backup roda pelo serviço `HMPCF-Backup-Svc` (nssm)**, não mais
+> pelo Agendador de Tarefas: `scripts\servidor\instalar_servico_backup.ps1` (como
+> administrador). A cópia na nuvem vai pela pasta `C:\HMPCF\backups_nuvem`, adicionada
+> no app do Google Drive em *Configurações → Meu computador → Adicionar pasta*.
+> O texto abaixo é o procedimento antigo, mantido como histórico.
+
 ```powershell
 # Executar como Administrador
 powershell -ExecutionPolicy Bypass -File C:\HMPCF-Automation-System\scripts\windows\agendar_backup.ps1
