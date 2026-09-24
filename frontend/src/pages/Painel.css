@@ -292,3 +292,17 @@
   .pn-grade, .pn-destaques { grid-template-columns: 1fr; }
   .pn-periodos { width: 100%; overflow-x: auto; }
 }
+
+/* ── Saúde dos backups ─────────────────────────────────────────────────── */
+.pn-saude {
+  display: flex; flex-wrap: wrap; gap: 6px 24px; align-items: center;
+  background: var(--pn-cartao); border: 1px solid var(--pn-borda); border-radius: 10px;
+  padding: 10px 16px; margin-bottom: 16px; font-size: 13.5px; color: var(--pn-texto-2);
+}
+.pn-saude b { color: var(--pn-texto); font-weight: 600; }
+.pn-saude-item { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pn-saude-ponto { width: 9px; height: 9px; border-radius: 50%; background: var(--pn-sobe); flex: none; }
+.pn-saude.ruim { background: #fef2f2; border-color: #fecaca; }
+.pn-saude.ruim b { color: #991b1b; }
+.pn-saude.ruim .pn-saude-ponto { background: var(--pn-desce); }
+.pn-saude-lotes { color: var(--pn-texto-3); }

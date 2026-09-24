@@ -3,6 +3,7 @@
 endereço sai daqui."""
 import re
 import unicodedata
+from pathlib import Path
 from collections import Counter
 from datetime import date, datetime, time, timedelta
 from typing import Literal, Optional
@@ -11,6 +12,8 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
+from app.services.backup_status import lotes_bpa, situacao_backup
 from app.services.recepcao_service import _INICIO_DIURNO, _turno_e_dia_referencia
 
 _FUSO = ZoneInfo("America/Sao_Paulo")
@@ -206,4 +209,6 @@ async def montar_painel(session: AsyncSession, periodo: Periodo) -> dict:
         "cidades": [{"rotulo": k, "total": v} for k, v in top_cidades],
         "procedencias": [{"rotulo": k, "total": v} for k, v in procedencias.most_common()],
         "qualidade": {"sem_cpf": sem_cpf, "sem_telefone": sem_tel, "sem_bairro": sem_bairro},
+        "backup": situacao_backup(Path(settings.BACKUP_DIR), agora),
+        "lotes_bpa": await lotes_bpa(session),
     }

@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     DATABASE_MAX_OVERFLOW: int = 20
     DATABASE_POOL_PRE_PING: bool = True
 
+    # Pasta do backup diário (scripts/servidor/backup_postgres.bat) -- o Painel mostra se está em dia
+    BACKUP_DIR: str = "C:/HMPCF/backups"
+
     # Autenticação (sessão por cookie httpOnly — ver app/services/auth_service.py)
     SESSION_COOKIE_NAME: str = "hmpcf_session"
     SESSION_TTL_HOURS: int = 12

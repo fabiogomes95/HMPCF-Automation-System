@@ -163,6 +163,52 @@ function Medidor({ rotulo, parte, total, dica }) {
 
 // ── Página ───────────────────────────────────────────────────────────────────
 
+// ── Saúde dos backups (topo) ────────────────────────────────────────────────
+function quandoFoi(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const hoje = new Date();
+  const ontem = new Date(hoje); ontem.setDate(hoje.getDate() - 1);
+  const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  if (d.toDateString() === hoje.toDateString()) return `hoje ${hora}`;
+  if (d.toDateString() === ontem.toDateString()) return `ontem ${hora}`;
+  return `${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} ${hora}`;
+}
+
+const BACKUP_TEXTO = {
+  ok: "em dia",
+  atrasado: "ATRASADO",
+  incompleto: "sem cópia na nuvem",
+  sem_backup: "nenhum backup encontrado",
+};
+
+function SaudeBackup({ backup, lotes }) {
+  if (!backup) return null;
+  const ok = backup.situacao === "ok";
+  const ex = backup.execucao;
+  let detalhe = `último ${quandoFoi(backup.ultimo)}`;
+  if (backup.situacao === "atrasado") detalhe += ` · há ${Math.round(backup.horas)} h — o backup das 23:00 não rodou`;
+  else if (ok && ex?.nuvem) detalhe += " · copiado no Google Drive";
+  if (!ok && ex?.problema) detalhe += ` · ${ex.problema}`;
+  return (
+    <div className={`pn-saude ${ok ? "ok" : "ruim"}`} role="status">
+      <span className="pn-saude-item">
+        <span className="pn-saude-ponto" aria-hidden="true" />
+        <b>Backup do banco: {BACKUP_TEXTO[backup.situacao] || backup.situacao}</b>
+        <span className="pn-saude-det">{detalhe}</span>
+      </span>
+      {lotes?.length > 0 && (
+        <span className="pn-saude-item pn-saude-lotes" title="Último lote de digitação que cada notebook do BPA mandou pro servidor">
+          Lotes do BPA:{" "}
+          {lotes.map((l, i) => (
+            <span key={l.notebook}>{i > 0 && " · "}{l.notebook} {quandoFoi(l.ultimo)}</span>
+          ))}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function Painel() {
   const [periodo, setPeriodo] = useState(() => sessionStorage.getItem("hmpcf_painel_periodo") || "30d");
   const [dados, setDados] = useState(null);
@@ -227,6 +273,8 @@ export default function Painel() {
 
       {dados && (
         <>
+          <SaudeBackup backup={dados.backup} lotes={dados.lotes_bpa} />
+
           {/* Destaques: sempre "agora", independentes do período */}
           <div className="pn-destaques">
             <Destaque rotulo="Atendimentos hoje" valor={fmt(d.hoje)}>
