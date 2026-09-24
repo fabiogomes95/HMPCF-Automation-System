@@ -45,6 +45,7 @@ export default function Digitacao({ profissionais }) {
   const [msg, setMsg] = useState(null);
   const [gravando, setGravando] = useState(false);
   const buscaRef = useRef(null);
+  const medicoRef = useRef(null);
   const seqBusca = useRef(0);
 
   // ── 3. gerar
@@ -95,6 +96,7 @@ export default function Digitacao({ profissionais }) {
     if (!r.ok) throw new Error(r.erro);
     const s = { arquivo: r.arquivo, nome, cns, data: dataBR };
     setSessao(s);
+    setData(dataBR); // mantém a data no campo (inclusive quando a sessão volta após F5) pro "Trocar"
     sessionStorage.setItem(CHAVE_SESSAO, JSON.stringify(s));
     setMsg(null);
     await carregarDoLote(r.arquivo, nome);
@@ -133,6 +135,8 @@ export default function Digitacao({ profissionais }) {
     setBuscaMedico("");
     setQ("");
     setResultados([]);
+    // a data continua; o cursor já vai pro médico
+    setTimeout(() => medicoRef.current?.focus(), 0);
   }
 
   // Busca com espera curta; ignora resposta velha se a pessoa continuou digitando
@@ -276,7 +280,7 @@ export default function Digitacao({ profissionais }) {
               <input id="dig-data" className="bp-campo curto" value={data} inputMode="numeric" placeholder="DD/MM/AAAA"
                      onChange={(e) => setData(mascaraData(e.target.value))} />
               <label className="bp-rot" htmlFor="dig-medico">Médico</label>
-              <input id="dig-medico" className="bp-campo" placeholder="Digite o nome…" value={buscaMedico}
+              <input id="dig-medico" ref={medicoRef} className="bp-campo" placeholder="Digite o nome…" value={buscaMedico}
                      onChange={(e) => { setBuscaMedico(e.target.value); setMedico(null); }} autoComplete="off" />
               {medicosFiltrados.length > 0 && !medico && (
                 <div className="bp-opcoes">
