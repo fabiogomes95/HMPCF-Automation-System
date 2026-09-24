@@ -42,6 +42,7 @@ os itens vão sendo feitos ou entrando na lista.
 | 30 | Pasta `dashboard` apagada de todos os PCs; o BPA não lê mais o `dashboard\.env` | `bpa/bpa_local/config.py`, `bpa/instalar.ps1` |
 | 31 | Senha de criptografia do backup guardada fora do servidor; `C:\HMPCF\backups_nuvem` sincronizada no Google Drive (24/09/2026) | `docs/RECUPERACAO_SERVIDOR.md` |
 | 32 | Firewall do servidor só com o necessário: 8001 (sistema) e 5432 (BPA); WinRM (5985) e a regra do Streamlit (8502) fechados | firewall do Windows |
+| 33 | Aba **Entradas** (faturamento/TI): dias e quantidade de entradas do paciente no sistema e nas planilhas manuais desde ago/2021 (311 mil entradas, tabela `atendimentos_planilha`, Alembic `0002`) | `backend/app/services/entradas_service.py`, `backend/scripts/importar_planilhas_recepcao.py` |
 | 29 | Guia de recuperação do servidor (montar tudo do zero a partir do backup) | `docs/RECUPERACAO_SERVIDOR.md` |
 
 ## Pendente

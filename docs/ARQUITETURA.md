@@ -57,6 +57,12 @@ Resposta de erro: `{"error": "ConflictError", "message": "..."}`. Rota
 faixas), nenhum nome/CPF sai; inclui a saúde do backup
 (`services/backup_status.py`, lê `C:\HMPCF\backups`).
 
+**Entradas** (`services/entradas_service.py`): busca por CPF/SUS/nome em
+`recepcao_atendimentos` (sistema) e `atendimentos_planilha` (planilhas manuais
+de 2021→2026, carregadas por `scripts/importar_planilhas_recepcao.py` com o
+leitor `importacao/planilhas_recepcao.py`); o mesmo dia nas duas fontes vira uma
+entrada só. Data = calendário (os boletins são guardados por data).
+
 ### Banco e Alembic
 
 - App: `postgresql+asyncpg://` · Alembic e scripts: `postgresql+psycopg2://`.

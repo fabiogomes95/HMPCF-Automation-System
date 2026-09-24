@@ -68,3 +68,12 @@ async def get_ti_user(usuario: CurrentUser) -> Usuario:
 
 
 TIUser = Annotated[Usuario, Depends(get_ti_user)]
+
+
+async def get_faturamento_user(usuario: CurrentUser) -> Usuario:
+    if usuario.role not in ("faturamento", "ti"):
+        raise ForbiddenError("Acesso restrito ao faturamento e à TI")
+    return usuario
+
+
+FaturamentoUser = Annotated[Usuario, Depends(get_faturamento_user)]

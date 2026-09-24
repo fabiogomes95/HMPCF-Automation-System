@@ -18,10 +18,11 @@ faturamento, ao lado do Firebird e do BPA Magnético (que continuam offline).
 | **Recepção** | cadastro de pacientes, atendimento com boletim A4, histórico, planilha mensal por plantão, correção | servidor (`backend/` + `frontend/`) |
 | **Painel** (TI) | atendimentos do dia/plantão/mês, movimento por hora, perfil, qualidade do cadastro e **saúde do backup** — só números agregados | servidor, `GET /api/v1/ti/painel` |
 | **Auditoria e usuários** (TI) | quem criou/editou/apagou o quê; gestão de contas | servidor |
+| **Entradas** (faturamento, TI) | em que dias o paciente deu entrada e quantas vezes — no sistema e nas **planilhas manuais desde ago/2021** — pra achar o boletim impresso (guardado por data) | servidor, `GET /api/v1/entradas` |
 | **BPA** (faturamento) | Digitação (médicos), Enfermeiros, **Nutrição do mês**, Migração pro Firebird, Conferência, Buscar prontuário → arquivos BPA-I pra importar no BPA Magnético | telas no servidor, trabalho no notebook (`bpa/`) |
 
 Perfis: **recepção** (Recepção, Histórico, Planilha) · **faturamento** (BPA —
-abre nela —, Recepção, Histórico, Planilha, Correção) · **TI** (tudo).
+abre nela —, Entradas, Recepção, Histórico, Planilha, Correção) · **TI** (tudo).
 
 ---
 
@@ -102,6 +103,21 @@ atalho **HMPCF - BPA**. Detalhes: [`bpa/README.md`](bpa/README.md).
   `BPA_ENFERMEIROS_<data>.txt`, `BPA_NUTRICAO_<AAAAMM>.txt`.
 - O **SUS/CNS nunca vai no BPA-I**; paciente sem CPF vai como *sem documento*.
 
+### Planilhas manuais (aba Entradas)
+
+As planilhas da recepção de antes do sistema (ago/2021 em diante) ficam em
+`C:\HMPCF\planilhas_manuais\` no servidor — **fora do repositório** (têm dados
+de pacientes; `*.xlsx` está no `.gitignore`). Chegou planilha nova ou corrigida:
+copie pra essa pasta e rode, na pasta `backend`:
+
+```
+.venv\Scripts\python scripts\importar_planilhas_recepcao.py            # recarrega tudo
+.venv\Scripts\python scripts\importar_planilhas_recepcao.py --simular  # só confere a leitura
+```
+
+Regras de leitura (dia pelas linhas de plantão, CPF em qualquer coluna, erros de
+digitação, cópias): `backend/app/importacao/planilhas_recepcao.py`.
+
 ---
 
 ## Instalação (desenvolvimento)
@@ -162,6 +178,7 @@ perfil TI (403 para os outros).
 | `pacientes` | `GET /pacientes` (`q`) · `GET /pacientes/busca` · `GET/PUT /pacientes/{id}` · `POST /pacientes` · `DELETE /pacientes/{id}` **TI** |
 | `recepcao` | `GET /recepcao` · `/recentes` · `/pacientes/agrupado` · `/paciente/{id}` · `/planilha` · `/planilha/plantao` · `GET/PUT /recepcao/{id}` · `POST /recepcao` · `DELETE /recepcao/{id}/repetido` (duplicata real, até 15 min) · `DELETE /recepcao/{id}` **TI** |
 | `ti` | `GET/POST /ti/usuarios` · `PATCH /ti/usuarios/{id}/senha` · `PATCH /ti/usuarios/{id}/ativo` · `DELETE /ti/atendimentos/{id}` · `GET /ti/painel` — **TI** |
+| `entradas` | `GET /entradas?q=&fonte=ambos\|sistema\|planilhas` · `GET /entradas/planilhas` — faturamento e TI |
 | `auditoria` | `GET /auditoria` **TI** |
 | `terminal` | `POST /terminal/start` · `POST /terminal/ping` |
 | infra | `GET /health` |

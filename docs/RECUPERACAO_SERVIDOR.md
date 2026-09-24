@@ -92,6 +92,10 @@ powershell -ExecutionPolicy Bypass -File scripts\servidor\instalar_servico_backu
 No **Google Drive para computador**: *Configurações → Meu computador →
 Adicionar pasta* → `C:\HMPCF\backups_nuvem` → *Sincronizar com o Google Drive*.
 
+Planilhas manuais da aba Entradas: a tabela `atendimentos_planilha` vem no
+backup; as planilhas originais ficam em `C:\HMPCF\planilhas_manuais\` (guarde
+uma cópia fora do servidor também).
+
 ## 6. Usuários e terminal da recepção
 
 Os usuários (recepção, faturamento, TI) vêm no backup. Para o terminal fixo da

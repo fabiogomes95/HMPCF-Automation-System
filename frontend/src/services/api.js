@@ -151,6 +151,10 @@ export function toggleAtivoUsuario(id, ativo) { return api.patch(`/ti/usuarios/$
 // Painel gerencial (TI) -- só agregados; periodo: hoje | 7d | 30d | mes | tudo
 export function buscarPainel(periodo) { return api.get("/ti/painel", { params: { periodo } }); }
 
+// Aba Entradas (faturamento e TI)
+export function buscarEntradas(q, fonte) { return api.get("/entradas", { params: { q, fonte } }); }
+export function resumoPlanilhas() { return api.get("/entradas/planilhas"); }
+
 // ── Alterar própria senha ─────────────────────────────────────────────────────
 export function alterarSenha(senha_atual, senha_nova) { return api.post("/auth/change-password", { senha_atual, senha_nova }); }
 

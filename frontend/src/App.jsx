@@ -4,6 +4,7 @@ import Historico from "./pages/Historico";
 import PlanilhaAtendimentos from "./pages/PlanilhaAtendimentos";
 import Auditoria from "./pages/Auditoria";
 import Painel from "./pages/Painel";
+import Entradas from "./pages/Entradas";
 import Bpa from "./pages/bpa/Bpa";
 import GerenciarUsuarios from "./pages/GerenciarUsuarios";
 import Correcao from "./pages/Correcao";
@@ -25,11 +26,14 @@ const TELAS = [
   { id: "correcao",  rotulo: "Correção",  papeis: ["ti", "faturamento"] },
   // BPA fala com o BPA local do notebook (Firebird/BPA Magnético) -- em PC sem BPA mostra "desligado"
   { id: "bpa",       rotulo: "BPA",       papeis: ["faturamento", "ti"] },
+  // Em que dias o paciente veio (sistema + planilhas manuais desde 2021) — achar o boletim impresso
+  { id: "entradas",  rotulo: "Entradas",  papeis: ["faturamento", "ti"] },
   { id: "senha",     rotulo: "Senha",     papeis: ["ti"] },
 ];
 
-// Primeira aba (e a que abre ao entrar) de cada papel -- o faturamento trabalha no BPA.
-const PRIMEIRA = { faturamento: "bpa" };
+// Abas que vêm primeiro no menu de cada papel (a 1ª é a que abre ao entrar) --
+// o faturamento trabalha no BPA e nas Entradas.
+const PRIMEIRAS = { faturamento: ["bpa", "entradas"] };
 
 export default function App() {
   const [tela, setTelaState] = useState(() => {
@@ -140,9 +144,10 @@ export default function App() {
 
   // Tela salva de outro login (ex.: TI -> faturamento no mesmo navegador) cai
   // na primeira aba permitida em vez de abrir algo que esse papel não vê.
-  const primeira = PRIMEIRA[usuario.role];
+  const primeiras = PRIMEIRAS[usuario.role] || [];
+  const ordem = (t) => (primeiras.includes(t.id) ? primeiras.indexOf(t.id) : primeiras.length);
   const telasPermitidas = TELAS.filter((t) => t.papeis.includes(usuario.role))
-    .sort((a, b) => (b.id === primeira) - (a.id === primeira));
+    .sort((a, b) => ordem(a) - ordem(b));
   const telaAtual = telasPermitidas.some((t) => t.id === tela) ? tela : telasPermitidas[0]?.id;
 
   return (
@@ -182,6 +187,7 @@ export default function App() {
       )}
       {telaAtual === "planilha" && <PlanilhaAtendimentos />}
       {telaAtual === "painel" && <Painel />}
+      {telaAtual === "entradas" && <Entradas />}
       {telaAtual === "auditoria" && <Auditoria />}
       {telaAtual === "usuarios" && <GerenciarUsuarios />}
       {telaAtual === "correcao" && (
