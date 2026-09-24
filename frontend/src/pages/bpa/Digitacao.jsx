@@ -180,7 +180,8 @@ export default function Digitacao({ profissionais }) {
       setMsg({ tipo: "erro", texto: e.message });
     } finally {
       setGravando(false);
-      buscaRef.current?.focus();
+      // volta o cursor pra busca depois que a tela atualizar -- pronto pro próximo paciente
+      setTimeout(() => buscaRef.current?.focus(), 0);
     }
   }
 
@@ -223,7 +224,7 @@ export default function Digitacao({ profissionais }) {
       setMsg({ tipo: "erro", texto: e.message });
     } finally {
       setDesfazendo(false);
-      buscaRef.current?.focus();
+      setTimeout(() => buscaRef.current?.focus(), 0);
     }
   }
 
@@ -326,7 +327,7 @@ export default function Digitacao({ profissionais }) {
           Digite o CPF ou o nome, escolha com <span className="bp-tecla">↑</span> <span className="bp-tecla">↓</span> ou <span className="bp-tecla">Tab</span> e
           aperte <span className="bp-tecla">Enter</span> para gravar.
         </p>
-        <input ref={buscaRef} className="bp-campo" value={q} disabled={!sessao || gravando} autoComplete="off"
+        <input ref={buscaRef} className="bp-campo" value={q} disabled={!sessao} autoComplete="off"
                placeholder={sessao ? "CPF ou nome do paciente" : "Confirme o dia e o médico primeiro"}
                onChange={(e) => setQ(e.target.value)} onKeyDown={teclaBusca} />
         {msg && <div className={`bp-aviso ${msg.tipo === "ok" ? "ok" : "erro"}`}>{msg.texto}</div>}
