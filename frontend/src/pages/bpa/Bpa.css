@@ -170,6 +170,9 @@
 .bp-kpi .ok { color: var(--bp-ok); }
 .bp-kpi .erro { color: var(--bp-erro); }
 .bp-kpi .alerta { color: var(--bp-alerta); }
+.bp-kpis.estreito { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.bp-kpis.estreito .bp-kpi { padding: 10px; }
+.bp-kpis.estreito .bp-kpi strong { font-size: 20px; }
 
 /* ── Progresso / registro ─────────────────────────────────────────────── */
 .bp-barra { height: 8px; background: var(--bp-grade); border-radius: 4px; overflow: hidden; margin: 14px 0 6px; }

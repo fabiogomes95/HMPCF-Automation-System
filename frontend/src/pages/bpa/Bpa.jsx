@@ -3,6 +3,7 @@ import { bpaLocal, BpaDesligado, fmtNum, URL_BPA_LOCAL } from "../../services/bp
 import { dataLocalISO } from "../../utils";
 import Digitacao from "./Digitacao";
 import Enfermeiros from "./Enfermeiros";
+import Nutricao from "./Nutricao";
 import Migracao from "./Migracao";
 import Conferencia from "./Conferencia";
 import Prontuario from "./Prontuario";
@@ -13,6 +14,7 @@ import "./Bpa.css";
 
 const GRUPOS = [
   { rotulo: "Dia a dia", abas: [{ id: "digitacao", rotulo: "Digitação" }, { id: "enfermeiros", rotulo: "Enfermeiros" }] },
+  { rotulo: "Nutrição", abas: [{ id: "nutricao", rotulo: "Nutrição do mês" }] },
   { rotulo: "Mês", abas: [{ id: "migracao", rotulo: "Migração" }, { id: "conferencia", rotulo: "Conferência" }] },
   { rotulo: "Consultas", abas: [{ id: "prontuario", rotulo: "Buscar prontuário" }] },
 ];
@@ -224,6 +226,7 @@ export default function Bpa() {
           )}
           {aba === "digitacao" && <Digitacao profissionais={profissionais} />}
           {aba === "enfermeiros" && <Enfermeiros profissionais={profissionais} />}
+          {aba === "nutricao" && <Nutricao />}
           {aba === "migracao" && <Migracao migracaoAuto={status.migracao_auto} aoTerminar={recarregar} />}
           {aba === "conferencia" && <Conferencia />}
           {aba === "prontuario" && <Prontuario />}

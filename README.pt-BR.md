@@ -201,7 +201,8 @@ cd frontend && npm run dev      # proxy /api -> backend
 ### BPA (notebooks do faturamento)
 
 As telas ficam na aba **BPA** do sistema (perfil faturamento): Digitação
-(médicos), Enfermeiros, Migração, Conferência e Buscar prontuário. Quem faz
+(médicos), Enfermeiros, Nutrição do mês, Migração, Conferência e Buscar
+prontuário. Quem faz
 o trabalho é o BPA local do notebook, que liga sozinho no logon (tarefa
 `HMPCF-BPA`) em `http://localhost:8503` e só aceita chamadas do sistema do
 hospital. Na primeira abertura do dia ele migra sozinho pro Firebird os
@@ -210,6 +211,9 @@ Os lotes de digitação (`bpa_lotes/DD-MM-AAAA.txt`) são copiados sozinhos
 para o servidor (tabela `bpa_lotes_backup`) a cada alteração e entram no
 backup diário que vai pro Google Drive. Restaurar os de um notebook:
 `bpa\.venv\Scripts\python bpa\ferramentas\restaurar_lotes.py <NOTEBOOK>`.
+A Nutrição lê a planilha do mês (DADOS NUTRIÇÃO.xlsx, uma aba por mês) e
+gera um arquivo só, `BPA_NUTRICAO_<AAAAMM>.txt`, com as nutricionistas e
+todos os dias; as regras da planilha estão em `bpa/nutricao.py`.
 Manual: `bpa\iniciar.bat` (com console) ou o atalho `bpa\start_bpa.vbs`.
 
 ---

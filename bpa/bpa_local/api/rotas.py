@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from bpa_local import postgres
 from bpa_local.cache import cache
-from bpa_local.services import backup_lotes, digitacao, geracao, migracao, producao
+from bpa_local.services import backup_lotes, digitacao, geracao, migracao, nutricao, producao
 
 router = APIRouter(prefix="/api")
 
@@ -114,6 +114,17 @@ def fechamento(competencia: str = ""):
 @router.post("/gerar")
 def gerar(d: Corpo = Body(None)):
     return geracao.gerar(_corpo(d))
+
+
+# ── Nutrição (planilha do mês → um BPA-I com as nutricionistas) ──────────────
+@router.post("/nutricao/ler")
+def nutricao_ler(d: Corpo = Body(None)):
+    return nutricao.ler(_corpo(d))
+
+
+@router.post("/nutricao/gerar")
+def nutricao_gerar(d: Corpo = Body(None)):
+    return nutricao.gerar(_corpo(d))
 
 
 # ── Migração Postgres → Firebird ──────────────────────────────────────────────

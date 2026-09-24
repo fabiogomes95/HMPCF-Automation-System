@@ -55,6 +55,12 @@ export const bpaLocal = {
   dividir: (data, enfermeiros) =>
     req("/api/enfermeiros/dividir", { metodo: "POST", corpo: { data, enfermeiros }, timeout: LONGO }),
 
+  // Nutrição (planilha do mês; sem aba = só lista as abas)
+  nutricaoLer: (arquivoB64, aba) =>
+    req("/api/nutricao/ler", { metodo: "POST", corpo: { arquivo_b64: arquivoB64, aba }, timeout: LONGO }),
+  nutricaoGerar: (competencia, dias) =>
+    req("/api/nutricao/gerar", { metodo: "POST", corpo: { competencia, dias }, timeout: LONGO }),
+
   // Migração
   migracaoPreview: (mes) => req("/api/migracao/preview", { metodo: "POST", corpo: { mes }, timeout: LONGO }),
   migracaoStreamUrl: (mes) => `${URL_BPA_LOCAL}/api/migracao/stream?mes=${encodeURIComponent(mes)}`,
