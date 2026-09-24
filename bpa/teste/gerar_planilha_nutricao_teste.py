@@ -17,6 +17,7 @@ Uso: bpa\\.venv\\Scripts\\python bpa\\teste\\gerar_planilha_nutricao_teste.py
 """
 import json
 import random
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -125,8 +126,13 @@ def main() -> None:
     ws.title = "AGO-26"
     ws.append([None, "DADOS DOS PACIENTES AGOSTO DE 2026 (TESTE)", None, None, None, None])
     ws.append(["DATA", "NOME:", "DATA NTO:", "CPF", "ENDEREÇO", "BAIRRO"])
+    # Com um nome (ex. FABIO): toda nutricionista da planilha vira ela -- pra
+    # BPA de teste com uma nutricionista só ("TODAS NUT" continua igual).
+    so_uma = sys.argv[1].upper() if len(sys.argv) > 1 else ""
     for a, p in LINHAS:
         nome, dn, cpf = p
+        if so_uma and a in ("BARBARA", "Mariane", "MARIANE", "NAILA", "NAÍLLA"):
+            a = so_uma
         ws.append([a, nome, dn, cpf, "RUA DE TESTE", "CENTRO"])
     for linha in ws.iter_rows(min_row=3):
         for c in (linha[0], linha[2]):
