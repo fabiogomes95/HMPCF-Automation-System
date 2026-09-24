@@ -164,7 +164,7 @@ export default function Digitacao({ profissionais }) {
   async function gravar(p) {
     if (!sessao || !p || gravando) return;
     // Sem CPF: grava pelo número do cadastro no Firebird ("ID:n"); no arquivo do
-    // BPA sai sem CPF/SUS e com "sem CPF = s" (quem tem SUS antigo sai com o SUS).
+    // BPA sai sem CPF/SUS e com "sem CPF = s" (SUS não é mais usado).
     const doc = p.cpf || (p.id != null ? `ID:${p.id}` : "");
     if (!doc) {
       setMsg({ tipo: "erro", texto: `${p.nome} não tem CPF nem cadastro no Firebird — não é possível gravar.` });
@@ -348,7 +348,6 @@ export default function Digitacao({ profissionais }) {
                   <span><b>{p.nome}</b><br /><small>nasc. {p.dtnasc || "—"}</small></span>
                   <span>{p.cpf ? fmtCpf(p.cpf) : <span style={{ color: "var(--bp-texto-3)" }}>sem CPF</span>}</span>
                   {p.cpf ? <span className="bp-tag ok">CPF ok</span>
-                    : p.sus ? <span className="bp-tag neutro" title="Cadastro antigo: vai com o SUS">vai com SUS</span>
                     : <span className="bp-tag alerta" title="Vai no BPA sem CPF/SUS, com 'sem CPF = Sim'">sem documento</span>}
                   <span style={{ justifySelf: "end" }}>{i === sel ? <span className="bp-tecla">Enter ↵</span> : ""}</span>
                 </div>

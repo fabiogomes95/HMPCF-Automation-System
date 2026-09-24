@@ -362,8 +362,8 @@ def test_buscar_pacientes_por_id_do_cadastro():
     docs = ["ID:501", "ID:502", "12345678909", "ID:501", "ID:999", "123"]
     pacientes, nao_enc, invalidos = bpa.buscar_pacientes(con, docs)
     assert [p["nome"].strip() for p in pacientes] == ["SEM DOC", "SO SUS", "COM CPF", "SEM DOC"]
-    assert [p["sem_doc"] for p in pacientes] == [True, False, False, True]  # só SUS: tem documento
-    assert pacientes[1]["cns"] == "700000000000001"
+    assert [p["sem_doc"] for p in pacientes] == [True, True, False, True]   # sem CPF = sem documento
+    assert pacientes[1]["cns"] == " " * 15                                   # SUS antigo não vai
     assert nao_enc == ["ID:999"] and invalidos == ["123"]
     sql, params = con.cursor.return_value.execute.call_args[0]
     assert "ID_CADCNS IN" in sql and 501 in params and 999 in params

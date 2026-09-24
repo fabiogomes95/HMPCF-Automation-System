@@ -404,8 +404,8 @@ def _normalizar_dtnasc(valor) -> str:
 
 def _buscar_dados_pacientes(con, cns_list: list[str], cpf_list: list[str], id_list: list[str] = ()) -> dict[str, dict]:
     """Consulta a CADCNS e retorna {documento: dados} para CNS, CPF e "ID:n" buscados.
-    Paciente sem CPF e sem CNS sai com "sem_doc" = True (vai com "s" no
-    campo prd_possui_cpf_cns do BPA-I)."""
+    Paciente sem CPF sai com "sem_doc" = True: SUS em branco e "s" no campo
+    prd_possui_cpf_cns do BPA-I (SUS não é mais usado)."""
     cns_unicos = list(set(cns_list))
     cpf_unicos = list(set(cpf_list))
     ids_unicos = list({int(v[len(PREFIXO_ID):]) for v in id_list})
@@ -460,13 +460,19 @@ def _buscar_dados_pacientes(con, cns_list: list[str], cpf_list: list[str], id_li
         email  = str(row[16]).strip()[:40].ljust(40) if row[16] else " " * 40
         cpf    = str(row[17]).strip() if row[17] else ""
 
+        # SUS não vai mais pro BPA (dá erro no BPA Magnético): sem CPF = sem
+        # documento, com o SUS em branco mesmo que o cadastro antigo tenha.
+        sem_doc = not cpf
+        if sem_doc:
+            cns = " " * 15
+
         dados = {
             "cns": cns, "nome": nome, "nasc": nasc, "sexo": sexo,
             "ibge": ibge, "raca": raca, "etnia": etnia, "nac": nac,
             "lograd": lograd, "cep": cep, "end": end_,
             "compl": compl, "num": num, "bairro": bairro,
             "ddd": ddd, "tel": tel, "email": email, "cpf": cpf,
-            "sem_doc": not cpf and not cns_raw,
+            "sem_doc": sem_doc,
         }
         if cns_raw:
             por_documento[cns_raw] = dados
