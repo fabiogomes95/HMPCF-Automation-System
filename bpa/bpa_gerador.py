@@ -460,11 +460,10 @@ def _buscar_dados_pacientes(con, cns_list: list[str], cpf_list: list[str], id_li
         email  = str(row[16]).strip()[:40].ljust(40) if row[16] else " " * 40
         cpf    = str(row[17]).strip() if row[17] else ""
 
-        # SUS não vai mais pro BPA (dá erro no BPA Magnético): sem CPF = sem
-        # documento, com o SUS em branco mesmo que o cadastro antigo tenha.
+        # SUS não vai mais pro BPA (com SUS o BPA Magnético dá erro): o campo
+        # prd-cnspac sai sempre em branco. Sem CPF = sem documento ("s").
         sem_doc = not cpf
-        if sem_doc:
-            cns = " " * 15
+        cns = " " * 15
 
         dados = {
             "cns": cns, "nome": nome, "nasc": nasc, "sexo": sexo,

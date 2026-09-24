@@ -367,3 +367,16 @@ def test_buscar_pacientes_por_id_do_cadastro():
     assert nao_enc == ["ID:999"] and invalidos == ["123"]
     sql, params = con.cursor.return_value.execute.call_args[0]
     assert "ID_CADCNS IN" in sql and 501 in params and 999 in params
+
+
+def test_sus_nunca_vai_no_arquivo():
+    """SUS deixou de ser usado: mesmo com CPF e SUS no cadastro, prd-cnspac sai em branco."""
+    linha_cad = ("700000000000001", "COM CPF E SUS", "19700101", "M", "240360", "03", "", "010", "081",
+                 "59575000", "RUA", "1", "", "CENTRO", "84", "999999999", "", "12345678909", 900)
+    con = MagicMock()
+    con.cursor.return_value.fetchall.return_value = [linha_cad]
+    pacientes, _, _ = bpa.buscar_pacientes(con, ["12345678909"])
+    assert pacientes[0]["cns"] == " " * 15 and not pacientes[0]["sem_doc"]
+    linha = bpa._linha_detalhe(pacientes[0], PROC_MEDICO, CBO_MEDICO, "111111111111111", "20260801", "202608", 1, 1)
+    assert linha[59:74] == " " * 15 and linha[-1] == "n"
+
