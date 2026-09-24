@@ -57,7 +57,7 @@ def _salvar() -> None:
 
 def ligado() -> bool:
     # desligado nos testes e no modo de teste (pacientes falsos: não há servidor)
-    return os.getenv("BPA_BACKUP_LOTES", "1") != "0" and not config.POSTGRES_FALSO
+    return os.getenv("BPA_BACKUP_LOTES", "1") != "0"
 
 
 def estado() -> dict:

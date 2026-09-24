@@ -1,5 +1,4 @@
 """Backup dos lotes de digitação no servidor (bpa_local/services/backup_lotes.py)."""
-from pathlib import Path
 
 import pytest
 
@@ -83,8 +82,3 @@ def test_sem_servidor_fica_pendente_e_manda_depois(ambiente):
     assert e["situacao"] == "ok" and ("NOTE-TESTE", "03-09-2026.txt") in srv.tabela
     assert backup_lotes.ARQUIVO_ESTADO.exists()               # lembra o que já foi, mesmo reiniciando
 
-
-def test_desligado_no_modo_teste(ambiente, monkeypatch):
-    monkeypatch.setenv("BPA_BACKUP_LOTES", "1")
-    monkeypatch.setattr(backup_lotes.config, "POSTGRES_FALSO", Path("teste/pacientes_falsos.json"))
-    assert backup_lotes.ligado() is False and backup_lotes.estado()["situacao"] == "desligado"
