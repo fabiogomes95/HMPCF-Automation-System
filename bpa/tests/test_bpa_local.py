@@ -194,3 +194,16 @@ def test_gerar_arquivo_com_paciente_sem_documento(cliente, monkeypatch):
     assert "TESTE SEM DOCUMENTO" in sem_doc
     # prd-cnspac: logo depois de ident(2)+cnes(7)+cmp(6)+cnsmed(15)+cbo(6)+dtaten(8)+flh(3)+seq(2)+pa(10)
     assert sem_doc[59:74] == " " * 15                           # sem CNS
+
+
+def test_busca_sem_doc_lista_quem_nao_tem_cpf(cliente, monkeypatch):
+    monkeypatch.setattr(cache, "pacientes", [
+        {"sus": "", "nome": "ZULMIRA SEM", "dtnasc": "", "cpf": "", "id": 2},
+        {"sus": "", "nome": "MARIA COM", "dtnasc": "", "cpf": "12345678909", "id": 3},
+        {"sus": "", "nome": "ANA SEM", "dtnasc": "", "cpf": "", "id": 1},
+    ])
+    for termo in ("sem doc", "SEM DOC", "semdoc", "Sem  Documento", "sem cpf"):
+        r = cliente.get("/api/buscar", params={"q": termo, "incluir_sus": "0"}).json()
+        assert [p["nome"] for p in r] == ["ANA SEM", "ZULMIRA SEM"], termo   # só sem CPF, por nome
+    # busca normal não muda
+    assert [p["nome"] for p in cliente.get("/api/buscar", params={"q": "MARIA"}).json()] == ["MARIA COM"]

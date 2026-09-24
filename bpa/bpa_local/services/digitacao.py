@@ -8,8 +8,17 @@ import bpa_gerador as bpa
 from bpa_local.cache import cache
 
 
+# Atalho da busca: "sem doc" lista todos os pacientes sem documento (sem CPF)
+# -- são poucos, e a digitação procura primeiro pelo CPF.
+_TERMOS_SEM_DOC = {"SEM DOC", "SEMDOC", "SEM DOCUMENTO", "SEM CPF"}
+LIMITE_SEM_DOC = 300
+
+
 def buscar(q: str, incluir_sus: bool) -> list[dict]:
     q = q.strip()
+    if " ".join(q.upper().split()) in _TERMOS_SEM_DOC:
+        sem_doc = [p for p in cache.pacientes if not p.get("cpf")]
+        return sorted(sem_doc, key=lambda p: p["nome"])[:LIMITE_SEM_DOC]
     if len(q) < 2:
         return []
     return bpa.buscar_pacientes_memoria(q, cache.pacientes, limite=40, incluir_sus=incluir_sus)

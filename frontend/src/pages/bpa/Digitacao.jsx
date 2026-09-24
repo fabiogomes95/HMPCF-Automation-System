@@ -332,7 +332,7 @@ export default function Digitacao({ profissionais }) {
         <h2>2. Pacientes atendidos</h2>
         <p className="bp-desc">
           Digite o CPF ou o nome, escolha com <span className="bp-tecla">↑</span> <span className="bp-tecla">↓</span> ou <span className="bp-tecla">Tab</span> e
-          aperte <span className="bp-tecla">Enter</span> para gravar.
+          aperte <span className="bp-tecla">Enter</span> para gravar. Digite <b>sem doc</b> para ver todos os pacientes sem documento.
         </p>
         <input ref={buscaRef} className="bp-campo" value={q} disabled={!sessao} autoComplete="off"
                placeholder={sessao ? "CPF ou nome do paciente" : "Confirme o dia e o médico primeiro"}
