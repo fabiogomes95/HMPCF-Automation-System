@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from datetime import date
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -66,6 +66,24 @@ def status():
         "erro_firebird": cache.erro,
         "migracao_auto": migracao_auto.estado(),
     }
+
+
+# ── Telas novas servidas pelo próprio BPA (sem o servidor do hospital) ────────
+# Mesmas telas da aba BPA do sistema, montadas em bpa/ui/ por "npm run build:bpa".
+# Modo offline: se a rede do hospital cair, o faturamento continua por aqui.
+_UI = config.BASE / "ui"
+if (_UI / "assets").exists():
+    app.mount("/ui/assets", StaticFiles(directory=_UI / "assets"), name="ui-assets")
+
+
+@app.get("/ui", include_in_schema=False)
+def ui_sem_barra():
+    return RedirectResponse("/ui/")
+
+
+@app.get("/ui/", include_in_schema=False)
+def ui():
+    return FileResponse(_UI / "bpa-local.html", headers={"Cache-Control": "no-cache"})
 
 
 # ── Página atual (Bootstrap) — sai quando a aba BPA do sistema estiver pronta ─
