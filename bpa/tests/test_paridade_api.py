@@ -172,6 +172,8 @@ def test_origem_e_preflight_iguais(clientes):
 
 def test_status_novo(clientes):
     _, novo = clientes
-    assert novo.get("/api/status").json() == {
+    st = novo.get("/api/status").json()
+    assert {k: st[k] for k in ("ok", "pacientes", "profissionais", "erro_firebird")} == {
         "ok": True, "pacientes": 3, "profissionais": 2, "erro_firebird": "",
     }
+    assert "situacao" in st["migracao_auto"]

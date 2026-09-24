@@ -11,11 +11,13 @@ from fastapi.templating import Jinja2Templates
 from bpa_local import config, postgres
 from bpa_local.api.rotas import router
 from bpa_local.cache import cache
+from bpa_local.services import migracao_auto
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cache.carregar_tudo()
+    migracao_auto.executar_se_preciso()  # 1ª abertura do dia: migra em segundo plano
     yield
 
 
@@ -54,11 +56,15 @@ app.include_router(router)
 # ── Estado (pra aba BPA do sistema saber se o BPA local está vivo) ────────────
 @app.get("/api/status")
 def status():
+    # A aba BPA consulta isto ao abrir e a cada 30 s -- também é o gatilho da
+    # migração automática quando o BPA ficou ligado de um dia pro outro.
+    migracao_auto.executar_se_preciso()
     return {
         "ok": not cache.erro,
         "pacientes": len(cache.pacientes),
         "profissionais": len(cache.profissionais),
         "erro_firebird": cache.erro,
+        "migracao_auto": migracao_auto.estado(),
     }
 
 

@@ -3,6 +3,7 @@ necessária pro BPA Magnético aceitar a importação. Portado sem mudança do
 antigo app Flask."""
 import json
 import re
+import threading
 from datetime import date
 from typing import Iterator
 
@@ -125,37 +126,57 @@ def preview(d: dict) -> dict:
         pg.close()
 
 
+
+
+# Uma migração por vez (manual ou automática): as duas numeram cadastro novo
+# com MAX(ID_CADCNS)+1 -- rodando juntas repetiriam o mesmo ID.
+TRAVA = threading.Lock()
+
+
 def _sse(payload: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
 def stream(mes: str) -> Iterator[str]:
-    """Migração com progresso ao vivo (Server-Sent Events)."""
+    """Migração manual de uma competência, com progresso ao vivo (Server-Sent Events)."""
+    if not TRAVA.acquire(blocking=False):
+        yield _sse({"tipo": "erro", "msg": "Já existe uma migração em andamento (a automática do dia). Aguarde terminar."})
+        return
+    try:
+        for evento in migrar(postgres.query_pacientes_mes(mes)):
+            yield _sse(evento)
+    finally:
+        TRAVA.release()
+
+
+def migrar(query: str) -> Iterator[dict]:
+    """Núcleo da migração (manual e automática): gera eventos
+    {"tipo": log | progresso | erro | fim, ...}. Quem chama segura a TRAVA."""
     try:
         pg = postgres.conectar()
     except Exception as e:
-        yield _sse({"tipo": "erro", "msg": f"PostgreSQL indisponível: {e}"})
+        yield {"tipo": "erro", "msg": f"PostgreSQL indisponível: {e}"}
         return
 
-    yield _sse({"tipo": "log", "msg": "Conectado ao PostgreSQL."})
+    yield {"tipo": "log", "msg": "Conectado ao PostgreSQL."}
 
     try:
         cur = pg.cursor()
-        cur.execute(postgres.query_pacientes_mes(mes))
+        cur.execute(query)
         rows = cur.fetchall()
     except Exception as e:
-        yield _sse({"tipo": "erro", "msg": f"Consulta falhou: {e}"})
+        yield {"tipo": "erro", "msg": f"Consulta falhou: {e}"}
         pg.close()
         return
 
     total = len(rows)
-    yield _sse({"tipo": "log", "msg": f"{total} paciente(s) com CPF no mês.", "total": total})
+    yield {"tipo": "log", "msg": f"{total} paciente(s) com CPF no período.", "total": total}
 
     if total == 0:
-        yield _sse({
+        yield {
             "tipo": "fim", "inseridos": 0, "atualizados": 0, "duplicatas": 0,
             "erros": 0, "cpf_invalidos": 0,
-        })
+        }
         pg.close()
         return
 
@@ -163,17 +184,17 @@ def stream(mes: str) -> Iterator[str]:
         fb = bpa.conectar()
         fb_cur = fb.cursor()
     except Exception as e:
-        yield _sse({"tipo": "erro", "msg": f"Firebird indisponível: {e}"})
+        yield {"tipo": "erro", "msg": f"Firebird indisponível: {e}"}
         pg.close()
         return
 
-    yield _sse({"tipo": "log", "msg": "Conectado ao Firebird."})
+    yield {"tipo": "log", "msg": "Conectado ao Firebird."}
 
     fb_cur.execute("SELECT MAX(ID_CADCNS) FROM CADCNS")
     max_id = fb_cur.fetchone()[0] or 0
 
     por_cns, cpf_set = _carregar_existentes_fb(fb_cur)
-    yield _sse({"tipo": "log", "msg": f"{len(cpf_set)} CPF(s) já cadastrados carregados em memória."})
+    yield {"tipo": "log", "msg": f"{len(cpf_set)} CPF(s) já cadastrados carregados em memória."}
 
     inseridos = atualizados = duplicatas = erros = cpf_invalidos = 0
     LOTE = 50
@@ -186,7 +207,7 @@ def stream(mes: str) -> Iterator[str]:
 
         if not bpa.valida_cpf(cpf):
             cpf_invalidos += 1
-            yield _sse({"tipo": "log", "msg": f"CPF ausente/inválido, paciente pulado: {nome_r} ({cpf_r!r})"})
+            yield {"tipo": "log", "msg": f"CPF ausente/inválido, paciente pulado: {nome_r} ({cpf_r!r})"}
             continue
 
         if cns and not _cns_valido(cns):
@@ -205,7 +226,7 @@ def stream(mes: str) -> Iterator[str]:
                 por_cns[cns] = (id_existente, cpf)
             except Exception as e:
                 erros += 1
-                yield _sse({"tipo": "log", "msg": f"Erro ao atualizar CPF de {nome_r} (CNS {cns}): {e}"})
+                yield {"tipo": "log", "msg": f"Erro ao atualizar CPF de {nome_r} (CNS {cns}): {e}"}
 
         else:  # "novo"
             max_id += 1
@@ -241,30 +262,30 @@ def stream(mes: str) -> Iterator[str]:
                 cpf_set.add(cpf)
             except Exception as e:
                 erros += 1
-                yield _sse({"tipo": "log", "msg": f"Erro CPF {cpf}: {e}"})
+                yield {"tipo": "log", "msg": f"Erro CPF {cpf}: {e}"}
 
         if i % LOTE == 0:
             fb.commit()
-            yield _sse({
+            yield {
                 "tipo": "progresso",
                 "msg": f"{i}/{total} — inseridos: {inseridos} | atualizados: {atualizados} | duplicatas: {duplicatas}",
                 "i": i, "total": total,
                 "inseridos": inseridos, "atualizados": atualizados, "duplicatas": duplicatas,
-            })
+            }
 
     try:
         fb.commit()
     except Exception as e:
-        yield _sse({"tipo": "log", "msg": f"Erro no commit: {e}"})
+        yield {"tipo": "log", "msg": f"Erro no commit: {e}"}
 
     fb.close()
     pg.close()
     cache.carregar_pacientes()
 
-    yield _sse({
+    yield {
         "tipo": "fim",
         "msg": f"Concluído! Inseridos: {inseridos} | Atualizados (CPF): {atualizados} | "
                f"Duplicatas: {duplicatas} | CPF inválido: {cpf_invalidos} | Erros: {erros}",
         "inseridos": inseridos, "atualizados": atualizados, "duplicatas": duplicatas, "erros": erros,
         "cpf_invalidos": cpf_invalidos,
-    })
+    }

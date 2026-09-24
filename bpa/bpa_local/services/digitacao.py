@@ -155,3 +155,36 @@ def lotes() -> list[dict]:
         }
         for lote in bpa.listar_lotes()
     ]
+
+
+def lote(arquivo: str) -> dict:
+    """Conteúdo de um lote do dia, bloco a bloco, com o nome de cada paciente
+    (pelo cache do Firebird) — a tela mostra os gravados e, na aba
+    Enfermeiros, quantos CPFs os médicos já digitaram."""
+    arquivo = (arquivo or "").strip()
+    if not arquivo:
+        return {"ok": False, "erro": "Informe o lote."}
+    try:
+        grupos = bpa.ler_arquivo_lote(bpa.caminho_lote(arquivo))
+    except bpa.LoteError as e:
+        return {"ok": False, "erro": str(e)}
+
+    nomes = {}
+    for p in cache.pacientes:
+        if p.get("cpf"):
+            nomes[p["cpf"]] = p["nome"]
+        if p.get("sus"):
+            nomes.setdefault(p["sus"], p["nome"])
+    categorias = {p["cns"]: p["categoria"] for p in cache.profissionais}
+
+    blocos = []
+    for g in grupos:
+        cns = (g.get("cns") or "").strip()
+        blocos.append({
+            "profissional": g.get("medico_raw", ""),
+            "cns": cns,
+            "categoria": categorias.get(cns.zfill(15), categorias.get(cns, "")),
+            "data": g.get("data", ""),
+            "pacientes": [{"doc": d, "nome": nomes.get(d, "")} for d in g["documentos"]],
+        })
+    return {"ok": True, "arquivo": arquivo, "blocos": blocos}

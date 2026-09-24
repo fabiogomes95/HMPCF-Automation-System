@@ -64,3 +64,19 @@ def query_pacientes_mes(mes_aaaamm: str) -> str:
           AND ra.data_atendimento <  '{fim}'
         ORDER BY p.nome
     """
+
+
+def query_pacientes_periodo(inicio, fim) -> str:
+    """Mesma consulta da migração, por intervalo de datas [inicio, fim) —
+    usada pela migração automática (janela dos últimos dias)."""
+    return f"""
+        SELECT DISTINCT p.cns, p.num_cpf, p.nome, p.dtnasc, p.sexo, p.raca, p.maepcn,
+            p.logpcn, p.numpcn, p.bairro_pcnte, p.ceppcn, p.ibge,
+            p.nacionalidade, p.ddtel_pcnte, p.tel_pcnte
+        FROM pacientes p
+        INNER JOIN recepcao_atendimentos ra ON ra.paciente_id = p.id
+        WHERE p.num_cpf IS NOT NULL AND p.num_cpf <> ''
+          AND ra.data_atendimento >= '{inicio.isoformat()}'
+          AND ra.data_atendimento <  '{fim.isoformat()}'
+        ORDER BY p.nome
+    """

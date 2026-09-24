@@ -30,6 +30,7 @@ os itens vão sendo feitos ou entrando na lista.
 | 14 | Lançadores redundantes resolvidos: produção sobe só pelo serviço `HMPCF-Backend-Svc` (nssm); `INICIAR.bat`, `ABRIR_HMPCF.bat`, `iniciar_sistema.vbs`, watchdog e as tarefas `HMPCF-Backend`/`Watchdog`/`Dashboard` (já desativadas) foram para `legado/lancadores_antigos/` (23/09/2026) | `scripts/servidor/`, `legado/` |
 | 21 | Organização das pastas: `scripts/servidor/` (só o que roda no servidor), `bpa/ferramentas/`, `legado/scripts_uso_unico/`; README em português vira a documentação única | `README.pt-BR.md` |
 | 22 | Perfil faturamento + BPA etapa 1 (instalador, liga com o Windows, só aceita o sistema do hospital) | `frontend/src/App.jsx`, `bpa/instalar.ps1` |
+| 23 | BPA em FastAPI (mesmo padrão do backend, paridade byte a byte com o antigo) + aba BPA no sistema (Digitação, Enfermeiros, Migração, Conferência com reenviar, Prontuário) + migração automática do dia | `bpa/bpa_local/`, `frontend/src/pages/bpa/` |
 
 ## Deploy em produção — em andamento
 

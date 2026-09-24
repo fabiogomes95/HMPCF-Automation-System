@@ -4,6 +4,7 @@ import Historico from "./pages/Historico";
 import PlanilhaAtendimentos from "./pages/PlanilhaAtendimentos";
 import Auditoria from "./pages/Auditoria";
 import Painel from "./pages/Painel";
+import Bpa from "./pages/bpa/Bpa";
 import GerenciarUsuarios from "./pages/GerenciarUsuarios";
 import Correcao from "./pages/Correcao";
 import AlterarSenha from "./pages/AlterarSenha";
@@ -22,10 +23,10 @@ const TELAS = [
   { id: "auditoria", rotulo: "Auditoria", papeis: ["ti"] },
   { id: "usuarios",  rotulo: "Usuários",  papeis: ["ti"] },
   { id: "correcao",  rotulo: "Correção",  papeis: ["ti", "faturamento"] },
+  // BPA fala com o BPA local do notebook (Firebird/BPA Magnético) -- em PC sem BPA mostra "desligado"
+  { id: "bpa",       rotulo: "BPA",       papeis: ["faturamento", "ti"] },
   { id: "senha",     rotulo: "Senha",     papeis: ["ti"] },
 ];
-// BPA roda local em cada notebook do faturamento (Firebird/BPA Magnético offline).
-const URL_BPA_LOCAL = "http://localhost:8503";
 
 export default function App() {
   const [tela, setTelaState] = useState(() => {
@@ -149,11 +150,6 @@ export default function App() {
             {t.rotulo}
           </button>
         ))}
-        {usuario.role === "faturamento" && (
-          <a className="app-nav-btn app-nav-link" href={URL_BPA_LOCAL} target="_blank" rel="noreferrer">
-            BPA ↗
-          </a>
-        )}
         <button className="app-nav-btn app-nav-sair" onClick={handleSair}>
           Sair ({usuario.username})
         </button>
@@ -179,6 +175,7 @@ export default function App() {
         <Correcao onAbrirA4={abrirManual} podeExcluir={usuario.role === "ti"} />
       )}
       {telaAtual === "senha" && <AlterarSenha />}
+      {telaAtual === "bpa" && <Bpa />}
     </>
   );
 }

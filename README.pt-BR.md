@@ -200,7 +200,12 @@ cd frontend && npm run dev      # proxy /api -> backend
 
 ### BPA (notebooks do faturamento)
 
-Liga sozinho no logon (tarefa `HMPCF-BPA`) em `http://localhost:8503`.
+As telas ficam na aba **BPA** do sistema (perfil faturamento): Digitação
+(médicos), Enfermeiros, Migração, Conferência e Buscar prontuário. Quem faz
+o trabalho é o BPA local do notebook, que liga sozinho no logon (tarefa
+`HMPCF-BPA`) em `http://localhost:8503` e só aceita chamadas do sistema do
+hospital. Na primeira abertura do dia ele migra sozinho pro Firebird os
+pacientes atendidos nos últimos 40 dias (resultado em `bpa/migracao_auto.json`).
 Manual: `bpa\iniciar.bat` (com console) ou o atalho `bpa\start_bpa.vbs`.
 
 ---

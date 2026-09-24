@@ -8,6 +8,8 @@ from typing import Optional
 from fastapi import APIRouter, Body
 from fastapi.responses import StreamingResponse
 
+from bpa_local import postgres
+from bpa_local.cache import cache
 from bpa_local.services import digitacao, geracao, migracao, producao
 
 router = APIRouter(prefix="/api")
@@ -53,6 +55,21 @@ def enfermeiros_dividir(d: Corpo = Body(None)):
 @router.get("/lotes")
 def lotes():
     return digitacao.lotes()
+
+
+@router.get("/lote")
+def lote(arquivo: str = ""):
+    return digitacao.lote(arquivo)
+
+
+@router.get("/profissionais")
+def profissionais():
+    return cache.profissionais
+
+
+@router.get("/competencias")
+def competencias():
+    return postgres.competencias_disponiveis()
 
 
 # ── Produção (Firebird S_PRD / CADCNS) ────────────────────────────────────────
