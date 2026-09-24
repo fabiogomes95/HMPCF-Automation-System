@@ -4,8 +4,7 @@ Carrega os .env ANTES de qualquer módulo de domínio ser importado — o
 bpa_gerador lê FIREBIRD_* e BPA_LOTES_DIR do ambiente na importação.
 Prioridade (o primeiro valor encontrado vale):
   1. bpa/.env        — este notebook (Firebird, bpa_leitura, pastas)
-  2. dashboard/.env  — notebooks que ainda não rodaram o instalar.ps1
-  3. backend/.env    — fallback do servidor (desenvolvimento)
+  2. backend/.env    — fallback do servidor (desenvolvimento)
 """
 import os
 from pathlib import Path
@@ -16,12 +15,11 @@ BASE = Path(__file__).resolve().parent.parent  # bpa/
 RAIZ = BASE.parent
 
 load_dotenv(BASE / ".env")
-load_dotenv(RAIZ / "dashboard" / ".env", override=False)
 load_dotenv(RAIZ / "backend" / ".env", override=False)
 
 # Pasta dos lotes: nos 2 notebooks é C:\BPA\bpa_lotes (ao lado do BPA Magnético).
 # Sem BPA_LOTES_DIR em nenhum .env, usa ela se o C:\BPA existir -- nunca a pasta do
-# sistema por engano (o dashboard\.env antigo é que tinha essa configuração).
+# sistema por engano.
 if not os.getenv("BPA_LOTES_DIR"):
     _padrao = Path(r"C:\BPA\bpa_lotes")
     os.environ["BPA_LOTES_DIR"] = str(_padrao if _padrao.parent.is_dir() else BASE / "bpa_lotes")

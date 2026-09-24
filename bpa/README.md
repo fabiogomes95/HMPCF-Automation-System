@@ -18,9 +18,9 @@ powershell -ExecutionPolicy Bypass -File bpa\instalar.ps1
 O `instalar.ps1` (rodar de novo = atualizar):
 
 1. cria/atualiza o Python do BPA em `bpa\.venv`;
-2. completa o `bpa\.env` com o que faltar (Firebird, `bpa_leitura`, pasta dos
-   lotes) copiando do `dashboard\.env` antigo, e mostra a **pasta dos lotes**
-   (nos notebooks: `C:\BPA\bpa_lotes`);
+2. confere o `bpa\.env` (Firebird, `bpa_leitura`, pasta dos lotes — modelo em
+   `bpa\.env.example`) e mostra a **pasta dos lotes** (nos notebooks:
+   `C:\BPA\bpa_lotes`);
 3. registra a tarefa `HMPCF-BPA`, que liga o BPA sozinho ao entrar no Windows,
    e reinicia o BPA;
 4. cria o atalho **HMPCF - BPA** na área de trabalho (abre o sistema no

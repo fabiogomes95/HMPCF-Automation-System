@@ -9,23 +9,17 @@ Usa a mesma leitura/deduplicação de bpa_gerador.ler_arquivo_lote (descarta
 "Gerar BPA-I" já usa, então não acusa como divergência uma duplicidade que o
 próprio sistema já ignora silenciosamente.
 
-Uso:
-    python conferencia.py                          # últimos 7 dias corridos
-    python conferencia.py 01/06/2026 07/06/2026     # período específico
-    python conferencia.py --relatorio               # idem, salva .txt (CPF mascarado)
-                                                      # em conferencia_relatorios/
+Usado pelas telas Conferência e Digitação ("No BPA Magnético: X de Y"). O
+relatório semanal por linha de comando foi pro legado (legado/bpa_ferramentas).
 """
 from __future__ import annotations
 
-import sys
 from collections import Counter
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import bpa_gerador as bpa
 
-BASE = Path(__file__).resolve().parent
-RELATORIOS_DIR = BASE / "conferencia_relatorios"
 
 
 def periodo_padrao() -> tuple[date, date]:
@@ -174,70 +168,3 @@ def conferir_periodo(data_ini: date, data_fim: date) -> dict:
 
 # ── Relatório em texto (CPF mascarado — não deixa documento completo em texto
 #    puro num arquivo persistido em disco; ver "Segurança" no README do projeto) ──
-def _mascarar_cpf(cpf: str) -> str:
-    if len(cpf) != 11:
-        return "?" * len(cpf)
-    return f"{cpf[:3]}.***.**{cpf[9:]}"
-
-
-def formatar_relatorio_texto(resultado: dict, mascarar: bool = True) -> str:
-    fmt_cpf = _mascarar_cpf if mascarar else (lambda c: c)
-    linhas = [
-        f"Conferencia BPA - digitado x lote de producao (Firebird)",
-        f"Periodo: {resultado['data_ini']} a {resultado['data_fim']}",
-        f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
-        "=" * 70,
-    ]
-    if not resultado["dias"]:
-        linhas.append("Nenhum arquivo de lote digitado encontrado no periodo.")
-        return "\n".join(linhas)
-
-    for d in resultado["dias"]:
-        status = "OK" if d["ok"] else "DIVERGENTE"
-        linhas.append(
-            f"\n[{status}] {d['data']} ({d['arquivo']}) "
-            f"- digitado={d['total_digitado']}  banco={d['total_banco']}"
-        )
-        for p in d["profissionais"]:
-            if p["ok"]:
-                continue
-            linhas.append(f"    {p['nome']} (CNS {p['cns']}): digitado={p['digitado']} banco={p['banco']}")
-            if p["faltando_no_banco"]:
-                cpfs = ", ".join(fmt_cpf(c) for c in p["faltando_no_banco"])
-                linhas.append(f"        faltando no banco ({len(p['faltando_no_banco'])}): {cpfs}")
-            if p["sobrando_no_banco"]:
-                cpfs = ", ".join(fmt_cpf(c) for c in p["sobrando_no_banco"])
-                linhas.append(f"        no banco mas sem correspondencia no arquivo ({len(p['sobrando_no_banco'])}): {cpfs}")
-
-    linhas.append("\n" + "=" * 70)
-    linhas.append(f"TOTAL digitado: {resultado['total_digitado']}   TOTAL banco: {resultado['total_banco']}")
-    linhas.append("Situacao geral: " + ("tudo bate." if resultado["ok"] else "ha divergencias - ver acima."))
-    return "\n".join(linhas)
-
-
-def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    salvar_relatorio = "--relatorio" in sys.argv
-
-    if len(args) >= 2:
-        data_ini = datetime.strptime(args[0], "%d/%m/%Y").date()
-        data_fim = datetime.strptime(args[1], "%d/%m/%Y").date()
-    else:
-        data_ini, data_fim = periodo_padrao()
-
-    resultado = conferir_periodo(data_ini, data_fim)
-
-    print(formatar_relatorio_texto(resultado, mascarar=False))
-
-    if salvar_relatorio:
-        RELATORIOS_DIR.mkdir(exist_ok=True)
-        nome = f"conferencia_{date.today().strftime('%Y%m%d')}.txt"
-        texto_mascarado = formatar_relatorio_texto(resultado, mascarar=True)
-        (RELATORIOS_DIR / nome).write_text(texto_mascarado, encoding="utf-8")
-        print(f"\nRelatorio salvo em: {RELATORIOS_DIR / nome}")
-
-    sys.exit(0 if resultado["ok"] else 1)
-
-
-if __name__ == "__main__":
-    main()

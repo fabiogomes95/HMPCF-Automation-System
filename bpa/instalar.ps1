@@ -1,6 +1,6 @@
 # Instala/atualiza o BPA neste notebook (rodar de novo = atualizar).
-#   1. Python proprio em bpa\.venv (sem depender de dashboard\.venv)
-#   2. bpa\.env com as credenciais do Firebird (copiadas de dashboard\.env, se faltarem)
+#   1. Python proprio em bpa\.venv
+#   2. Confere o bpa\.env (Firebird, bpa_leitura, pasta dos lotes)
 #   3. Tarefa Agendada "HMPCF-BPA": liga o BPA sozinho ao entrar no Windows
 #   4. Atalho "HMPCF - BPA" na area de trabalho (abre o sistema no Chrome)
 #
@@ -12,7 +12,6 @@ $ErrorActionPreference = "Stop"
 $bpa = $PSScriptRoot
 $venv = Join-Path $bpa ".venv"
 $envBpa = Join-Path $bpa ".env"
-$envDash = Join-Path (Split-Path $bpa -Parent) "dashboard\.env"
 $tarefa = "HMPCF-BPA"
 
 function Passo($t) { Write-Host ""; Write-Host "== $t" -ForegroundColor Cyan }
@@ -32,27 +31,11 @@ if ($LASTEXITCODE -ne 0) { throw "pip install falhou" }
 Write-Host "[OK] Dependencias instaladas/atualizadas"
 
 # 2. .env ------------------------------------------------------------------------
-# Tudo que o BPA usa passa a morar em bpa\.env: o que faltar e existir no
-# dashboard\.env antigo e copiado (inclusive a PASTA DOS LOTES), pra pasta
-# dashboard poder ser apagada sem o BPA mudar de lugar sem avisar.
+# Tudo que o BPA usa mora em bpa\.env (modelo: bpa\.env.example).
 Passo "Configuracao (bpa\.env)"
-$chaves = @("FIREBIRD_PATH", "FIREBIRD_USER", "FIREBIRD_PASSWORD", "BPA_LOTES_DIR", "BPA_SAIDA_DIR",
-            "POSTGRES_HOST", "POSTGRES_PORT", "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB")
 $linhasBpa = @()
 if (Test-Path $envBpa) { $linhasBpa = @(Get-Content $envBpa) }
-$faltando = $chaves | Where-Object { $chave = $_; -not ($linhasBpa | Where-Object { $_ -match "^$chave=" }) }
-$copiar = @()
-if ($faltando -and (Test-Path $envDash)) {
-    $copiar = @(Get-Content $envDash | Where-Object { $l = $_; $faltando | Where-Object { $l -match "^$_=" } })
-}
-if ($copiar.Count -gt 0) {
-    if (Test-Path $envBpa) { Copy-Item $envBpa "$envBpa.bak_$(Get-Date -Format yyyyMMdd_HHmmss)" }
-    Add-Content -Path $envBpa -Value (@("", "# Copiado de dashboard\.env pelo instalar.ps1") + $copiar) -Encoding ASCII
-    $nomes = $copiar | ForEach-Object { ($_ -split "=", 2)[0] }
-    Write-Host "[OK] Copiado de dashboard\.env: $($nomes -join ', ') (valores nao exibidos)"
-    $linhasBpa = @(Get-Content $envBpa)
-}
-foreach ($c in @("FIREBIRD_PATH", "FIREBIRD_USER", "FIREBIRD_PASSWORD")) {
+foreach ($c in @("FIREBIRD_PATH", "FIREBIRD_USER", "FIREBIRD_PASSWORD", "POSTGRES_USER", "POSTGRES_PASSWORD")) {
     if (-not ($linhasBpa | Where-Object { $_ -match "^$c=" })) {
         Write-Host "[AVISO] Falta $c em bpa\.env -- preencha a mao (ver .env.example)" -ForegroundColor Yellow
     }

@@ -1,7 +1,8 @@
 # scripts/
 
-Só o que roda **no servidor**. O que é do BPA fica em `bpa/` (inclusive
-`bpa/ferramentas/`); o que saiu de uso fica em `legado/`.
+Só o que roda **no servidor**. O que é do BPA fica em `bpa/`; o que saiu de
+uso fica em `legado/` (o instalador antigo do servidor e o WinRM estão em
+`legado/instalacao_antiga/` — servidor novo: `docs/RECUPERACAO_SERVIDOR.md`).
 
 ## servidor/
 
@@ -12,8 +13,6 @@ Só o que roda **no servidor**. O que é do BPA fica em `bpa/` (inclusive
 | `copiar_backup_nuvem.ps1` | Cópia pra fora da máquina: `C:\HMPCF\backups_nuvem` (pasta que o app do Google Drive sincroniza) e, rodando como o usuário, também `G:\Meu Drive\HMPCF-Backups` |
 | `agendador_backup.py` | Serviço do backup: todo dia às 23:00, na hora se o último tiver mais de 26 h, ou quando existir `C:\HMPCF\backups\RODAR_AGORA`. Substitui a tarefa agendada desde 24/09/2026 (o Agendador de Tarefas do servidor parou de executar) |
 | `instalar_servico_backup.ps1` | Instala/atualiza o serviço `HMPCF-Backup-Svc` (nssm; rodar como administrador) |
-| `DEPLOY_HMPCF_REMOTO.ps1` | Instalação completa de um servidor novo (Python, Postgres, serviço nssm) |
-| `CONFIGURAR_WINRM.bat` | Habilita administração remota (WinRM) do servidor |
 
 Restaurar um backup:
 

@@ -10,7 +10,7 @@
 #
 # NUNCA copiar scripts/servidor/.backup_passphrase para esta pasta —
 # guardar a senha de criptografia ao lado do dado criptografado anula a
-# proteção (ver docs/DEPLOY_HOSPITAL.md, seção 9.6).
+# proteção (ver docs/RECUPERACAO_SERVIDOR.md).
 #
 # Uso:
 #   powershell -File copiar_backup_nuvem.ps1 -Path "C:\HMPCF\backups\hmpcf_2026-07-02.sql.enc"

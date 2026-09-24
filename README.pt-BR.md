@@ -1,341 +1,221 @@
 # HMPCF Automation System
 
-🇺🇸 [English summary](README.md) · este arquivo é a documentação completa
+🇺🇸 [English summary](README.md) · este arquivo é a documentação principal
 
-> Sistema de automação hospitalar para recepção digital, painel gerencial e
-> faturamento BPA/SUS. Desenvolvido para o Hospital Municipal Pres. Café
-> Filho — Extremoz/RN, Brasil.
+> Sistema do Hospital Municipal Pres. Café Filho (Extremoz/RN): recepção
+> digital, painel gerencial e faturamento SUS (BPA), num sistema só.
 
-Um sistema só, com uma interface web e menu por perfil (recepção,
-faturamento, TI): **FastAPI + PostgreSQL + React/Vite** no servidor, e o
-**BPA** rodando local em cada notebook do faturamento, junto do Firebird e
-do BPA Magnético (offline).
+**FastAPI + PostgreSQL 16 + React/Vite** no servidor da recepção, com menu por
+perfil (recepção, faturamento, TI), e o **BPA local** em cada notebook do
+faturamento, ao lado do Firebird e do BPA Magnético (que continuam offline).
 
 ---
 
-## Visão Geral
+## Módulos
 
-O sistema é composto por três frentes independentes, todas lendo o mesmo
-PostgreSQL como fonte única de verdade:
+| Módulo | O que faz | Onde roda |
+|---|---|---|
+| **Recepção** | cadastro de pacientes, atendimento com boletim A4, histórico, planilha mensal por plantão, correção | servidor (`backend/` + `frontend/`) |
+| **Painel** (TI) | atendimentos do dia/plantão/mês, movimento por hora, perfil, qualidade do cadastro e **saúde do backup** — só números agregados | servidor, `GET /api/v1/ti/painel` |
+| **Auditoria e usuários** (TI) | quem criou/editou/apagou o quê; gestão de contas | servidor |
+| **BPA** (faturamento) | Digitação (médicos), Enfermeiros, **Nutrição do mês**, Migração pro Firebird, Conferência, Buscar prontuário → arquivos BPA-I pra importar no BPA Magnético | telas no servidor, trabalho no notebook (`bpa/`) |
 
-1. **Recepção digital** (`backend/` + `frontend/`) — cadastro e atendimento
-   de pacientes, em produção no terminal da recepção do hospital.
-2. **Painel gerencial** (aba **Painel** do próprio sistema, só TI) —
-   visão em tempo real: atendimentos do dia e do plantão, comparação com o
-   mês anterior, movimento por hora, perfil (sexo, faixa etária, bairro,
-   cidade, procedência) e qualidade do cadastro. Rota `GET /api/v1/ti/painel`,
-   só números agregados. Substituiu o antigo dashboard Streamlit, arquivado
-   em `legado/dashboard_streamlit/`.
-3. **Faturamento BPA/SUS** (`bpa/`) — aplicação Flask separada que gera os
-   arquivos posicionais BPA-I (um por profissional/categoria, por
-   competência) a partir dos atendimentos do PostgreSQL, migrando os dados
-   para a base Firebird (`BPAMAG.GDB`) exigida pelo BPA Magnético do
-   Ministério da Saúde.
-
-O **sistema legado** (`legado/`, Python/Eel/SQLite) foi **descontinuado em
-02/07/2026** — permanece no repositório apenas como referência histórica e
-não recebe mais manutenção nem deploy.
+Perfis: **recepção** (Recepção, Histórico, Planilha) · **faturamento** (BPA —
+abre nela —, Recepção, Histórico, Planilha, Correção) · **TI** (tudo).
 
 ---
 
-## Status
+## Como funciona
 
-| Módulo | Situação |
-|--------|----------|
-| Recepção digital (FastAPI + React) | **Em produção** |
-| Painel gerencial (aba Painel, TI) | **Em produção** |
-| Faturamento BPA/SUS (geração de arquivo posicional) | **Em produção** |
-| Importação de planilhas manuais (deduplicação, correção de fuso/turno) | **Em produção** |
-| Início automático (serviço do Windows via nssm) | Configurado |
-| Login, perfis (recepção, faturamento, TI) e auditoria | **Em produção** |
-| Testes automatizados (backend / bpa) | pytest — rodam no CI a cada push |
-| Testes automatizados (frontend) | Ainda não há |
-| Sistema legado (Firebird/Eel) | **Descontinuado** — mantido só como referência |
+```
+ Notebooks do faturamento (x2)                 Servidor (PC da recepção, 192.168.1.29)
+ ┌──────────────────────────────┐              ┌──────────────────────────────────────┐
+ │ Chrome ── telas do sistema ──┼── :8001 ────▶│ HMPCF-Backend-Svc (FastAPI + telas)  │
+ │   │                          │              │   └─ PostgreSQL 16 (hmpcf)           │
+ │   └─ localhost:8503          │              │ HMPCF-Backup-Svc (backup 23:00)      │
+ │      BPA local (FastAPI) ────┼── :5432 ────▶│   └─ C:\HMPCF\backups_nuvem → Drive  │
+ │        └─ Firebird BPAMAG    │ bpa_leitura  └──────────────────────────────────────┘
+ │           + BPA Magnético    │
+ └──────────────────────────────┘
+```
 
----
+- O **navegador** do notebook carrega as telas do servidor e chama o BPA local
+  (`localhost:8503`), que só aceita pedidos vindos do sistema do hospital.
+- O **BPA local** lê pacientes/atendimentos do servidor com o usuário
+  `bpa_leitura` (só leitura), grava no Firebird do próprio notebook e manda
+  uma cópia dos lotes de digitação pro servidor.
+- Na primeira abertura do dia ele **migra sozinho** pro Firebird os pacientes
+  dos últimos 40 dias.
 
-## Funcionalidades
-
-- CRUD de pacientes com busca agrupada por nome, CPF ou CNS e histórico
-  completo de atendimentos.
-- Registro de atendimentos vinculado a cada paciente, com paginação e
-  busca livre.
-- Painel gerencial (TI) somente leitura: atendimentos de hoje e do plantão,
-  mês contra o mesmo período do mês anterior, movimento por hora, perfil
-  (sexo, faixa etária, bairro, cidade, procedência) e qualidade do cadastro.
-- Importação de planilha manual (`.tsv`) que compara com o banco e
-  importa só o que falta, com deduplicação e correção automática de data
-  pra atendimentos de plantão noturno.
-- Geração do BPA-I seguindo o layout posicional oficial do DATASUS (350
-  caracteres), com folha/sequência contínua por competência.
-- Migração PostgreSQL → Firebird pro cadastro do BPA Magnético
-  (`CADCNS`), com validação de CPF antes de migrar.
-- Boletim de atendimento A4 pra impressão na recepção.
+Detalhes das camadas: [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
 
 ---
 
 ## Stack
 
-| Componente | Stack |
+| Parte | Stack |
 |---|---|
-| Backend (API da recepção) | Python 3.12 · FastAPI · SQLAlchemy 2 (async) · asyncpg · Pydantic v2 · pytest |
-| Frontend (interface da recepção) | React 18.3 · Vite 5.4 · axios |
-| Painel gerencial | Streamlit · pandas · Plotly · SQLAlchemy (síncrono, psycopg2) |
-| Faturamento BPA | Flask · firebirdsql · psycopg2 · pandas/openpyxl |
-| Banco de dados | PostgreSQL 16 — instalação nativa, **não containerizado** |
-| Legado (descontinuado) | Python · Eel · SQLite |
+| Backend | Python 3.12+ · FastAPI · SQLAlchemy 2 (async) · asyncpg · Pydantic v2 · Alembic |
+| Frontend | React 18 · Vite 5 · axios |
+| BPA local | Python 3.12+ · FastAPI · firebirdsql · psycopg2 · openpyxl |
+| Banco | PostgreSQL 16 nativo no Windows (sem Docker) |
+| Serviços | nssm (`HMPCF-Backend-Svc`, `HMPCF-Backup-Svc`) · Tarefa `HMPCF-BPA` nos notebooks |
+| Testes | pytest (backend com Postgres, BPA com Firebird simulado) · GitHub Actions a cada push |
 
 ---
 
-## Pré-requisitos
+## Operação no dia a dia
 
-- Windows 10/11 (ambiente de produção — rede LAN do hospital, uptime 24h)
-- Python 3.12+
-- Node.js 18+ e npm (só pra buildar o frontend)
-- PostgreSQL 16, instalado nativamente (sem Docker — ver nota em [Banco de Dados](#banco-de-dados))
-- Cliente Firebird + uma base `BPAMAG.GDB`, só pro módulo `bpa/`
+### Servidor
 
-TODO: fixar versão exata de Node.js/npm se o projeto adotar `.nvmrc` ou matriz de CI no futuro.
+| O quê | Como |
+|---|---|
+| Sistema (porta 8001) | serviço `HMPCF-Backend-Svc` — liga com o Windows e religa se cair |
+| Banco | serviço `postgresql-x64-16` |
+| Backup | serviço `HMPCF-Backup-Svc`: todo dia às 23:00 (ou na hora, criando `C:\HMPCF\backups\RODAR_AGORA`) → `pg_dump` → criptografia AES → `C:\HMPCF\backups` (30 dias) + `C:\HMPCF\backups_nuvem`, que o Google Drive sincroniza |
+| Conferir o backup | faixa no topo da aba **Painel** (vermelha se atrasar ou não chegar na nuvem) |
 
----
+Acesso: `http://192.168.1.29:8001`. O terminal da recepção entra sozinho
+(auto-login local); os outros PCs usam login e senha.
 
-## Instalação
+**Atualizar o servidor:** `git pull`, `npm run build` em `frontend/` (telas —
+valem na hora, F5) e, se mudou o backend, reiniciar o `HMPCF-Backend-Svc`.
+Mudou modelo do banco: `alembic upgrade head` antes de reiniciar.
 
-Cada parte tem seu próprio ambiente: `backend/.venv`, `frontend/node_modules`
-e, nos notebooks do faturamento, `bpa/.venv` (criado pelo `bpa/instalar.ps1`).
+> Reiniciar o backend às vezes trava em *StopPending* (nssm). Nesse caso:
+> finalizar o processo do nssm do serviço e `Start-Service HMPCF-Backend-Svc`.
 
-### Backend
-
-```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\pip install -r requirements.txt
-cp .env.example .env   # preencha POSTGRES_PASSWORD
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run build   # gera frontend/dist, servido pelo backend em produção
-```
-
-### BPA (em cada notebook do faturamento)
-
-O BPA roda **local** em cada notebook, ao lado do Firebird e do BPA
-Magnético (offline). Um script instala e atualiza tudo:
+### Notebooks do BPA
 
 ```powershell
+cd C:\HMPCF-Automation-System
+git pull
 powershell -ExecutionPolicy Bypass -File bpa\instalar.ps1
 ```
 
-Ele cria `bpa\.venv`, completa o `bpa\.env` com as credenciais do Firebird
-(copiadas do antigo `dashboard\.env`, se existir) e registra a tarefa
-`HMPCF-BPA`, que liga o BPA sozinho ao entrar no Windows. Rodar de novo =
-atualizar.
+Instala/atualiza o BPA, confere o `bpa\.env`, liga com o Windows e cria o
+atalho **HMPCF - BPA**. Detalhes: [`bpa/README.md`](bpa/README.md).
+
+- Lotes de digitação: `C:\BPA\bpa_lotes\DD-MM-AAAA.txt` (cópia no servidor;
+  restaurar: `bpa\ferramentas\restaurar_lotes.py`).
+- Arquivos pra importar no BPA Magnético: `BPA_MEDICOS_<data>.txt`,
+  `BPA_ENFERMEIROS_<data>.txt`, `BPA_NUTRICAO_<AAAAMM>.txt`.
+- O **SUS/CNS nunca vai no BPA-I**; paciente sem CPF vai como *sem documento*.
+
+---
+
+## Instalação (desenvolvimento)
+
+```bash
+cd backend  && python -m venv .venv && .venv\Scripts\pip install -r requirements.txt
+copy backend\.env.example backend\.env        # POSTGRES_PASSWORD
+cd frontend && npm install
+```
+
+```bash
+cd backend  && .venv\Scripts\uvicorn app.main:app --reload --port 8001
+cd frontend && npm run dev          # telas com proxy /api -> backend
+cd frontend && npm run build:bpa    # telas do BPA local (bpa/ui, versionado: os notebooks não têm Node)
+```
+
+Servidor novo ou restauração depois de pane:
+[`docs/RECUPERACAO_SERVIDOR.md`](docs/RECUPERACAO_SERVIDOR.md).
 
 ---
 
 ## Configuração
 
-Credenciais reais nunca são commitadas — `.env` está coberto em todo
-lugar pelo `.gitignore` (`.env`, `**/.env`). Copie o `.env.example`
-correspondente em cada pasta e preencha com valores reais.
+Segredos só em `.env` (fora do git). Modelos: `backend/.env.example` e
+`bpa/.env.example`.
 
-O `bpa/app.py` carrega os três `.env`, nesta ordem (o primeiro valor
-encontrado vale): `bpa/.env` → `dashboard/.env` → `backend/.env`.
-
-### `backend/.env` — PostgreSQL, API
-
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `APP_NAME` | `HMPCF` | Nome exibido nos metadados OpenAPI do FastAPI |
-| `ENVIRONMENT` | `development` | `development` \| `staging` \| `production` — esconde `/docs`, `/redoc`, `/openapi.json` em produção |
-| `POSTGRES_HOST` | `localhost` | Host do PostgreSQL |
-| `POSTGRES_PORT` | `5432` | Porta do PostgreSQL |
-| `POSTGRES_USER` | `postgres` | Usuário do PostgreSQL |
-| `POSTGRES_PASSWORD` | — (obrigatório) | Senha do PostgreSQL — passa por URL-encode automático antes de montar a connection string |
-| `POSTGRES_DB` | `hmpcf` | Nome do banco |
-| `DATABASE_POOL_SIZE` | `10` | Tamanho do pool async do SQLAlchemy |
-| `DATABASE_MAX_OVERFLOW` | `20` | Conexões extras sob demanda |
-| `DATABASE_POOL_PRE_PING` | `true` | Testa conexões antes de reusar |
-| `CORS_ORIGINS` | `["*"]` | Seguro como `["*"]` em produção porque frontend e backend dividem a mesma origem na rede local |
-| `TEST_POSTGRES_DB` | `hmpcf_test` | Banco usado pela suíte pytest — nunca apontar pro `hmpcf` |
-
-### `bpa/.env` — Firebird e ajustes do notebook
-
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `FIREBIRD_PATH` | `C:\BPA\BPAMAG.GDB` | Base Firebird local do BPA Magnético |
-| `FIREBIRD_USER` / `FIREBIRD_PASSWORD` | — | Credenciais do Firebird |
-| `POSTGRES_HOST` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | — | Acesso **só leitura** ao servidor (usuário `bpa_leitura`) |
-| `BPA_LOTES_DIR` | `bpa/bpa_lotes` | Lotes `.txt` de digitação diária |
-| `BPA_SAIDA_DIR` | *(vazio → `~/Downloads`)* | Pasta de saída do arquivo BPA-I |
-| `BPA_ORIGENS_PERMITIDAS` | `http://192.168.1.29:8001,...` | Quem pode chamar este BPA pelo navegador (o sistema do hospital) |
-
----
-
-## Como Rodar
-
-### Servidor (produção)
-
-Tudo sobe sozinho com o Windows, sem janela:
-
-| O quê | Como |
+| Arquivo | Principais variáveis |
 |---|---|
-| Sistema (backend + telas, porta 8001) | serviço `HMPCF-Backend-Svc` (nssm) — religa sozinho se cair |
-| PostgreSQL | serviço `postgresql-x64-16` |
-| Backup diário 23:00 → Google Drive | serviço `HMPCF-Backup-Svc` (nssm, `scripts\servidor\agendador_backup.py` → `backup_postgres.bat`); backup na hora: criar o arquivo `C:\HMPCF\backups\RODAR_AGORA` |
-
-Acesso: `http://192.168.1.29:8001`. O terminal da recepção entra sozinho
-(auto-login local); os outros PCs usam login e senha.
-
-### Desenvolvimento
-
-```bash
-cd backend  && .venv\Scripts\uvicorn app.main:app --reload --port 8001
-cd frontend && npm run dev      # proxy /api -> backend
-```
-
-### BPA (notebooks do faturamento)
-
-As telas ficam na aba **BPA** do sistema (perfil faturamento): Digitação
-(médicos), Enfermeiros, Nutrição do mês, Migração, Conferência e Buscar
-prontuário. Quem faz
-o trabalho é o BPA local do notebook, que liga sozinho no logon (tarefa
-`HMPCF-BPA`) em `http://localhost:8503` e só aceita chamadas do sistema do
-hospital. Na primeira abertura do dia ele migra sozinho pro Firebird os
-pacientes atendidos nos últimos 40 dias (resultado em `bpa/migracao_auto.json`).
-Os lotes de digitação (`bpa_lotes/DD-MM-AAAA.txt`) são copiados sozinhos
-para o servidor (tabela `bpa_lotes_backup`) a cada alteração e entram no
-backup diário que vai pro Google Drive. Restaurar os de um notebook:
-`bpa\.venv\Scripts\python bpa\ferramentas\restaurar_lotes.py <NOTEBOOK>`.
-A Nutrição lê a planilha do mês (DADOS NUTRIÇÃO.xlsx, uma aba por mês) e
-gera um arquivo só, `BPA_NUTRICAO_<AAAAMM>.txt`, com as nutricionistas e
-todos os dias; as regras da planilha estão em `bpa/nutricao.py`.
-Manual: `bpa\iniciar.bat` (com console) ou o atalho `bpa\start_bpa.vbs`.
+| `backend/.env` | `POSTGRES_*`, `ENVIRONMENT=production` (esconde `/docs`), `AUTO_LOGIN_LOCAL` (só no terminal da recepção), `BACKUP_DIR`, `TEST_POSTGRES_DB=hmpcf_test` |
+| `bpa/.env` | `FIREBIRD_*`, `POSTGRES_*` (usuário `bpa_leitura`), `BPA_LOTES_DIR=C:\BPA\bpa_lotes`, `BPA_SAIDA_DIR` |
+| `scripts/servidor/.backup_passphrase` | senha de criptografia do backup — **guardar também fora do servidor** |
 
 ---
 
-## Estrutura de Pastas
+## Banco de dados
+
+PostgreSQL 16, banco `hmpcf`, fuso `America/Sao_Paulo`. O esquema é versionado
+com **Alembic** (`backend/migrations/`; a versão `0001` é o esquema de
+produção de 24/09/2026). Na pasta `backend`:
 
 ```
-📦 HMPCF-Automation-System
- ┣ 📂 backend/              # FastAPI — API + serve as telas (porta 8001)
- ┃  ┣ 📂 app/               # api → services → repositories → models
- ┃  ┣ 📂 scripts/           # gerenciar usuários, diagnósticos, criação de tabelas
- ┃  ┗ 📂 tests/             # pytest
- ┣ 📂 frontend/             # React + Vite — todas as telas (menu por perfil)
- ┣ 📂 bpa/                  # BPA local dos notebooks (Firebird / BPA Magnético)
- ┃  ┣ 📜 instalar.ps1       # instala/atualiza + liga com o Windows
- ┃  ┣ 📜 bpa_gerador.py     # layout BPA-I validado byte a byte (DATASUS)
- ┃  ┣ 📂 ferramentas/       # conferência agendada, layout/checksum, preparo mensal
- ┃  ┗ 📂 tests/
- ┣ 📂 scripts/servidor/     # backup (+ criptografia e nuvem), instalador do servidor
- ┣ 📂 docs/                 # documentação viva (+ historico/ com registros datados)
- ┗ 📂 legado/               # o que saiu de uso: dashboard Streamlit, lançadores antigos, scripts de uso único
+.venv\Scripts\python -m alembic revision --autogenerate -m "o que mudou"   # depois de mudar um modelo
+.venv\Scripts\python -m alembic upgrade head                              # aplica (faça backup antes)
+.venv\Scripts\python -m alembic check                                     # banco == modelos?
 ```
 
 ---
 
-## API (Backend)
+## API
 
-Prefixo base: `/api/v1`. Documentação interativa só fora de produção
-(`http://localhost:8001/docs`). Toda rota exige sessão, exceto `/health` e
-`/auth/login`; as marcadas **TI** recusam outros perfis (403).
+Prefixo `/api/v1`; documentação interativa só fora de produção
+(`/docs`). Tudo exige sessão, menos `/health` e `/auth/login`; **TI** = só
+perfil TI (403 para os outros).
 
-| Grupo | Rotas principais |
+| Grupo | Rotas |
 |---|---|
 | `auth` | `POST /auth/login` · `POST /auth/logout` · `GET /auth/me` · `POST /auth/change-password` |
-| `pacientes` | `GET /pacientes` (busca `q`) · `GET /pacientes/busca` (CPF/CNS) · `GET/PUT /pacientes/{id}` · `POST /pacientes` · `DELETE /pacientes/{id}` **TI** |
-| `recepcao` | `GET /recepcao` · `GET /recepcao/recentes` · `GET /recepcao/pacientes/agrupado` · `GET /recepcao/paciente/{id}` · `GET /recepcao/planilha` (mês) · `GET /recepcao/planilha/plantao` · `GET/PUT /recepcao/{id}` · `POST /recepcao` · `DELETE /recepcao/{id}/repetido` (só duplicata real, até 15 min) · `DELETE /recepcao/{id}` **TI** |
-| `ti` | `GET/POST /ti/usuarios` · `PATCH /ti/usuarios/{id}/senha` · `PATCH /ti/usuarios/{id}/ativo` · `DELETE /ti/atendimentos/{id}` · `GET /ti/painel` — tudo **TI** |
-| `auditoria` | `GET /auditoria` (filtros por recurso, ação, usuário, datas) **TI** |
+| `pacientes` | `GET /pacientes` (`q`) · `GET /pacientes/busca` · `GET/PUT /pacientes/{id}` · `POST /pacientes` · `DELETE /pacientes/{id}` **TI** |
+| `recepcao` | `GET /recepcao` · `/recentes` · `/pacientes/agrupado` · `/paciente/{id}` · `/planilha` · `/planilha/plantao` · `GET/PUT /recepcao/{id}` · `POST /recepcao` · `DELETE /recepcao/{id}/repetido` (duplicata real, até 15 min) · `DELETE /recepcao/{id}` **TI** |
+| `ti` | `GET/POST /ti/usuarios` · `PATCH /ti/usuarios/{id}/senha` · `PATCH /ti/usuarios/{id}/ativo` · `DELETE /ti/atendimentos/{id}` · `GET /ti/painel` — **TI** |
+| `auditoria` | `GET /auditoria` **TI** |
 | `terminal` | `POST /terminal/start` · `POST /terminal/ping` |
-| infra | `GET /health` — sem sessão, sem dados sensíveis |
+| infra | `GET /health` |
 
----
-
-## Banco de Dados
-
-PostgreSQL 16 como única fonte de verdade (banco `hmpcf`, fuso
-`America/Sao_Paulo`). Mudanças nas tabelas são versionadas com **Alembic**
-(`backend/migrations/`). A versão `0001` é o esquema como estava em produção em
-24/09/2026 (o banco foi só marcado nela). Na pasta `backend`:
-
-```
-.venv\Scripts\python -m alembic current                                   # versão do banco
-.venv\Scripts\python -m alembic revision --autogenerate -m "o que mudou"  # depois de mudar um modelo
-.venv\Scripts\python -m alembic upgrade head                             # aplica no banco
-.venv\Scripts\python -m alembic check                                    # banco == modelos?
-```
-
-Confira o arquivo gerado antes do `upgrade` e faça backup antes de aplicar em
-produção. Os scripts antigos que criavam tabela à mão estão em
-`legado/scripts_uso_unico/`.
+O BPA local (`localhost:8503/api/...`) tem a própria API, usada só pelas telas
+do BPA — rotas em `bpa/bpa_local/api/rotas.py`.
 
 ---
 
 ## Testes
 
 ```bash
-cd backend && .venv\Scripts\python -m pytest tests -q   # usa o banco hmpcf_test, nunca o de produção
-cd bpa     && .venv\Scripts\python -m pytest tests -q
+cd backend && .venv\Scripts\python -m pytest -q    # banco hmpcf_test, nunca o de produção
+cd bpa     && .venv\Scripts\python -m pytest -q    # Firebird simulado
 ```
 
-Rodam também no GitHub Actions a cada push. O frontend ainda não tem suíte
-automatizada.
+Rodam no GitHub Actions a cada push. O frontend ainda não tem suíte.
 
 ---
 
-## Deploy
+## Estrutura
 
-Produção roda nativamente no Windows (sem Docker, sem containers) no PC
-da recepção do hospital, pela rede LAN interna. Guias completos
-passo a passo:
-
-- `docs/DEPLOY_HOSPITAL.md` — guia geral de implantação
-- `docs/INSTALACAO_PC_RECEPCAO.md` — preparar um PC de recepção do zero
-- `docs/INSTALACAO_BPA_MIGRACAO.md` — instalar o app BPA + migração PG→Firebird numa máquina nova
-
----
-
-## Segurança e Limitações Conhecidas
-
-Este sistema foi desenhado pra operar dentro da **rede local isolada do
-hospital**, não exposto à internet. Pontos relevantes pra quem for
-implantar ou operar:
-
-- **Login por sessão (cookie httpOnly) e perfis** — recepção, faturamento e
-  TI; ações só da TI (excluir, usuários, auditoria, painel) são barradas no
-  servidor. O terminal fixo da recepção entra sozinho apenas pelo próprio
-  PC (auto-login local). Toda escrita fica na auditoria.
-- **Banco fechado pra rede** — `postgres` só local; pela rede só o usuário
-  `bpa_leitura`, somente leitura.
-- **Segredos vivem só em arquivos `.env`** (nunca em scripts ou docs
-  versionados) — ao gerar uma senha nova, evite caracteres delimitadores
-  de URL (`@ : / ? #`) em strings de conexão, ou garanta que o código
-  faça URL-encode antes (o backend já faz isso pro PostgreSQL).
-- **Dados sensíveis** (CPF, CNS, endereço, dados de saúde) — evite logar
-  esses valores em texto puro em scripts de importação/migração; prefira
-  logar só identificadores internos em caso de erro.
-- **Backups** (`scripts/servidor/backup_postgres.bat`) são criptografados
-  (AES) antes de sair da máquina; ficam 30 dias no servidor e vão pro
-  Google Drive.
-
-Contribuições que fecham essas lacunas (auth de sessão, RBAC básico,
-criptografia de backup) são bem-vindas.
+```
+backend/            API + telas compiladas (porta 8001)
+  app/              api → services → repositories → models
+  migrations/       Alembic
+  scripts/          gerenciar usuários, diagnósticos
+  tests/
+frontend/           React + Vite — todas as telas (menu por perfil)
+bpa/                BPA local dos notebooks
+  bpa_local/        FastAPI: api → services (+ cache do Firebird)
+  bpa_gerador.py    layout BPA-I (DATASUS), validado byte a byte
+  nutricao.py       leitura da planilha da nutrição
+  conferencia.py    digitado x importado no BPA Magnético
+  ui/               telas do BPA compiladas (versionado)
+  instalar.ps1      instala/atualiza + liga com o Windows + atalho
+scripts/servidor/   backup (serviço, criptografia, nuvem)
+docs/               arquitetura, recuperação do servidor, pendências, histórico
+legado/             tudo que saiu de uso, só como referência
+```
 
 ---
 
-## Sistema Legado
+## Segurança
 
-O sistema original (`legado/`, Python/Eel/SQLite) foi **oficialmente
-descontinuado em 02/07/2026**. Permanece no repositório apenas como
-referência histórica e fallback documental — não recebe deploy nem
-manutenção. Consulte `legado/passo_a_passo.md` se precisar entender como
-ele operava.
+- Rede local do hospital, não exposto à internet.
+- Sessão por cookie httpOnly e perfis; ações de TI barradas no servidor; toda
+  escrita vai pra auditoria.
+- PostgreSQL: `postgres` só local; pela rede só `bpa_leitura` (leitura +
+  gravar a cópia dos lotes).
+- O BPA local só aceita chamadas do sistema do hospital (origem conferida).
+- Backups criptografados (AES) antes de sair da máquina.
+- CPF/CNS nunca vão pro git (lotes e planilhas ficam fora do repositório, que
+  é público).
 
 ---
 

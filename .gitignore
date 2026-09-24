@@ -48,7 +48,6 @@ bpa/ferramentas/inspecao.txt
 
 # Relatorios da conferencia semanal (CPF mascarado, mas ainda assim dado de
 # paciente — nunca commitar, mesma regra dos lotes BPA)
-bpa/conferencia_relatorios/
 
 # Exports reais do BPA Magnetico (dados de pacientes — nunca commitar)
 *.ABR

@@ -7,7 +7,7 @@ Validado em 2026-06-18 byte a byte contra o layout oficial DATASUS
 Magnético em produção (checksum do cabeçalho reproduzido com sucesso).
 
 Processo 100% independente — não importa nada do backend/ (Recepção) nem
-do frontend/. Usa as próprias credenciais em dashboard/.env.
+do frontend/. Credenciais do Firebird no bpa/.env (ver bpa/bpa_local/config.py).
 """
 
 from __future__ import annotations

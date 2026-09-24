@@ -1,226 +1,133 @@
-# Arquitetura HMPCF — Backend Modular
+# Arquitetura
 
-## Visão Geral
-
-O HMPCF adota a mesma filosofia arquitetural do **BarrioERP**: camadas bem definidas,
-separação de responsabilidades, PostgreSQL como única fonte de verdade, e migrations
-versionadas via Alembic.
+Visão de como o sistema é montado. Operação e instalação: `README.pt-BR.md`;
+servidor do zero: `docs/RECUPERACAO_SERVIDOR.md`.
 
 ---
 
-## Estrutura de Diretórios
+## Peças
+
+| Peça | Onde | O que é |
+|---|---|---|
+| `backend/` | servidor | FastAPI async; API em `/api/v1` e as telas compiladas (`frontend/dist`) na mesma porta 8001 |
+| `frontend/` | servidor | React/Vite; um app só com menu por perfil. Gera também as telas do BPA local (`npm run build:bpa` → `bpa/ui`) |
+| `bpa/` | cada notebook do faturamento | FastAPI síncrono em `127.0.0.1:8503`; fala com o Firebird do BPA Magnético e lê o PostgreSQL do servidor |
+| `scripts/servidor/` | servidor | backup diário (serviço próprio), criptografia e cópia pra nuvem |
+| PostgreSQL 16 | servidor | fonte única de verdade (banco `hmpcf`) |
+
+---
+
+## Backend (`backend/app`)
 
 ```
-HMPCF-Automation-System/
-├── backend/                    # Aplicação FastAPI
-│   ├── app/                    # Código-fonte do novo sistema
-│   │   ├── main.py             # Entrypoint FastAPI (lifespan, CORS, exception handlers)
-│   │   ├── core/
-│   │   │   ├── config.py       # Settings via pydantic-settings (lê .env)
-│   │   │   └── exceptions.py   # Exceções de domínio (agnósticas a HTTP)
-│   │   ├── database/
-│   │   │   ├── base.py         # DeclarativeBase SQLAlchemy
-│   │   │   └── session.py      # Engine async, SessionLocal, get_db()
-│   │   ├── models/             # SQLAlchemy ORM Models
-│   │   ├── schemas/            # Pydantic v2 Schemas (Create/Update/Response)
-│   │   ├── repositories/       # Queries isoladas (BaseRepository + específicos)
-│   │   ├── services/           # Regras de negócio
-│   │   └── api/
-│   │       ├── deps.py         # Tipos anotados (DBSession)
-│   │       └── v1/
-│   │           ├── router.py   # Agrega todos os endpoints v1
-│   │           └── endpoints/  # Um arquivo por recurso
-│   ├── alembic/                # Migrations versionadas
-│   │   └── versions/           # Histórico de migrations
-│   ├── tests/                  # 21 testes (pytest)
-│   ├── alembic.ini             # Configuração Alembic
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env                    # Variáveis de ambiente (não versionado)
-│
-├── frontend/                   # React + Vite — terminal de digitação da recepção
-├── bpa/                        # Flask — geração BPA-I e migração PG→Firebird
-├── docs/                       # Esta documentação, guias de instalação/deploy
-├── scripts/                    # deploy/, windows/, bpa/, importacao/, migrations/
-└── legado/                     # Sistema original — descontinuado, mantido como referência
-    └── docker-compose.yml      # PostgreSQL + pgAdmin + backend (descontinuado, ver NOTA.md)
+api/v1/endpoints/   rotas finas: validam entrada, injetam sessão/usuário, chamam o service
+services/           regras de negócio; lançam exceções de domínio (nunca HTTPException)
+repositories/       consultas SQLAlchemy async; flush/refresh, nunca commit
+models/             tabelas (SQLAlchemy 2, Mapped[]) — espelham o banco de produção
+schemas/            Pydantic v2 (Create / Update / Response)
+core/               config (pydantic-settings, lê .env) e exceções
+database/           engine async, get_db() (um commit por requisição)
 ```
 
-> O `docker-compose.yml` foi descontinuado (desde 09/2026 o PostgreSQL roda
-> nativamente, sem Docker, inclusive em desenvolvimento) e está arquivado em
-> `legado/docker-compose/` — ver `legado/docker-compose/NOTA.md`. Produção
-> roda nativamente no Windows (ver `docs/DEPLOY_HOSPITAL.md`).
+Fluxo: **endpoint → service → repository → PostgreSQL**. O service recebe a
+sessão e instancia o repository com ela (mesma transação); o `get_db()` faz o
+commit no fim da requisição ou o rollback se der erro.
+
+**Dependências anotadas** (`api/deps.py`): `DBSession`, `CurrentUser` (sessão
+válida; auto-login só no acesso local do terminal da recepção quando
+`AUTO_LOGIN_LOCAL=true`) e `TIUser` (403 para quem não é TI).
+
+**Exceções de domínio** (`core/exceptions.py`) viram HTTP em `main.py`:
+
+| Exceção | HTTP |
+|---|---|
+| `NotFoundError` | 404 |
+| `ConflictError` | 409 |
+| `BusinessRuleError`, `ValidationError` | 422 |
+| `UnauthorizedError` | 401 |
+| `ForbiddenError` | 403 |
+
+Resposta de erro: `{"error": "ConflictError", "message": "..."}`. Rota
+`/api/*` inexistente devolve 404 JSON (nunca o `index.html` das telas).
+
+**Auditoria**: toda escrita (pacientes, atendimentos, usuários) grava em
+`logs_auditoria` quem fez, o quê e quais campos mudaram — nunca senhas.
+
+**Painel** (`services/painel_service.py`): só agregados (contagens, médias,
+faixas), nenhum nome/CPF sai; inclui a saúde do backup
+(`services/backup_status.py`, lê `C:\HMPCF\backups`).
+
+### Banco e Alembic
+
+- App: `postgresql+asyncpg://` · Alembic e scripts: `postgresql+psycopg2://`.
+- Esquema versionado em `backend/migrations/` (Alembic). A `0001` é o esquema
+  de produção de 24/09/2026 — o banco foi só marcado (`stamp`), nunca recriado.
+  Os modelos têm os **mesmos nomes** de índices/constraints da produção, então
+  `alembic check` mostra zero diferença.
+- Regra: mudou um modelo → `alembic revision --autogenerate` → revisar o
+  arquivo → backup → `alembic upgrade head`. Nada de `ALTER TABLE` à mão.
+- Desfazer a `0001` é bloqueado (apagaria o banco).
 
 ---
 
-## Fluxo de Dados
+## BPA local (`bpa/`)
 
 ```
-HTTP Request
-    │
-    ▼
-FastAPI Endpoint  (app/api/v1/endpoints/*.py)
-    │  Injeta DBSession via Depends(get_db)
-    │  Valida request com Schema Pydantic
-    ▼
-Service           (app/services/*.py)
-    │  Regras de negócio
-    │  Lança exceções de domínio (NotFoundError, ConflictError...)
-    ▼
-Repository        (app/repositories/*.py)
-    │  Queries SQLAlchemy async
-    │  Nunca faz commit — delega para get_db()
-    ▼
-PostgreSQL        (via asyncpg + SQLAlchemy 2.x)
-    │
-    ▼
-Schema Response   (Pydantic .model_validate(orm_object))
-    │
-    ▼
-HTTP Response
+bpa_local/
+  main.py        app FastAPI: lifespan (cache, migração do dia, backup dos lotes),
+                 filtro de origem, /api/status, telas em /ui/
+  config.py      carrega bpa/.env (e backend/.env no servidor) ANTES do domínio
+  cache.py       pacientes (CADCNS) e profissionais (CADMED) do Firebird em memória
+  api/rotas.py   rotas finas → services
+  services/      digitacao, geracao, producao (conferência), migracao (+ _auto),
+                 nutricao, backup_lotes
+bpa_gerador.py   domínio: layout BPA-I (DATASUS, validado byte a byte), folha/sequência,
+                 leitura dos lotes, acesso ao Firebird
+nutricao.py      leitura da planilha da nutrição (regras combinadas com o faturamento)
+conferencia.py   lote digitado x produção importada (S_PRD)
 ```
 
----
-
-## Padrão de Camadas
-
-### 1. API (Endpoints)
-- Responsabilidade: receber request, injetar dependências, retornar response
-- **Nunca** contém lógica de negócio
-- **Nunca** acessa banco diretamente
-- Usa tipos anotados: `DBSession = Annotated[AsyncSession, Depends(get_db)]`
-
-### 2. Service
-- Responsabilidade: regras de negócio, orquestração
-- Lança `HMPCFError` (não `HTTPException`)
-- Recebe sessão assíncrona no `__init__`
-- Instancia o Repository com a **mesma sessão** (mesma transação)
-
-### 3. Repository
-- Responsabilidade: queries SQLAlchemy isoladas
-- Herda `BaseRepository[ModelT]` com CRUD genérico
-- Métodos específicos para buscas de domínio (ex: `get_by_cpf`, `search`)
-- **Nunca** faz `commit` — apenas `flush + refresh`
-
-### 4. Model (SQLAlchemy)
-- Define a estrutura da tabela e mapeamento ORM
-- Usa `Mapped[]` e `mapped_column()` do SQLAlchemy 2.x
-- Colunas com nomes legacy (ex: `"NUM_CPF"`) mapeadas para atributos snake_case
-
-### 5. Schema (Pydantic v2)
-- `{Entidade}Create` → campos para criação
-- `{Entidade}Update` → todos opcionais, semântica PATCH
-- `{Entidade}Response` → representação completa na resposta
-- `from_attributes=True` para ler objetos SQLAlchemy diretamente
+- **Rotas `def` (não async)**: Firebird e psycopg2 bloqueiam; o FastAPI roda
+  cada chamada numa thread.
+- **Quem pode chamar**: só as telas do sistema do hospital
+  (`BPA_ORIGENS_PERMITIDAS`) e a própria página local; qualquer outro site
+  aberto no notebook leva 403 (CORS + *Private Network Access*).
+- **Dados**: lê o PostgreSQL como `bpa_leitura`; escreve no Firebird local
+  (`CADCNS` na migração, `S_PRD` só no "reenviar" da Conferência). Os lotes
+  `DD-MM-AAAA.txt` ficam em `C:\BPA\bpa_lotes` e são copiados pro servidor
+  (tabela `bpa_lotes_backup`) a cada alteração.
+- **Regras fixas do BPA-I**: SUS/CNS nunca vai no arquivo; paciente sem CPF
+  entra pelo ID do cadastro e sai com `prd_possui_cpf_cns = "s"`; folha e
+  sequência continuam a produção real do profissional no mês (conta o `S_PRD`).
+- **Processos em lote nunca escrevem nos lotes de digitação** (incidente de
+  julho/2026) — a nutrição, por exemplo, gera o arquivo direto da planilha.
 
 ---
 
-## Exception Handlers
+## Frontend (`frontend/src`)
 
-As exceções de domínio em `app/core/exceptions.py` são capturadas em `main.py`
-e convertidas para respostas HTTP padronizadas:
-
-| Exceção de Domínio | HTTP Status | Quando usar |
-|--------------------|-------------|-------------|
-| `NotFoundError` | 404 | Recurso não encontrado |
-| `ConflictError` | 409 | Duplicata (CPF, CNS) |
-| `BusinessRuleError` | 422 | Regra de negócio violada |
-| `ValidationError` | 422 | Dados inválidos |
-| `HMPCFError` | 500 | Erro genérico de domínio |
-
-Formato padrão de resposta de erro:
-```json
-{"error": "ConflictError", "message": "Paciente com CPF 12345678900 já existe"}
-```
+- `App.jsx`: login, menu por perfil (`TELAS` + primeira aba por papel) e troca
+  de tela.
+- `services/api.js` (axios, servidor) · `services/bpaLocal.js` (fetch pro
+  `localhost:8503`, com tempo limite e erro "BPA desligado").
+- `pages/` uma pasta/arquivo por tela; `pages/bpa/` as telas do BPA, usadas
+  tanto dentro do sistema quanto em `localhost:8503/ui/`.
 
 ---
 
-## PostgreSQL
+## Serviços e processos
 
-### Conexão
-- **FastAPI**: `postgresql+asyncpg://` (assíncrono, pool gerenciado pelo SQLAlchemy)
-- **Alembic**: `postgresql+psycopg2://` (síncrono, apenas para migrations)
+| Onde | Nome | Como |
+|---|---|---|
+| servidor | `HMPCF-Backend-Svc` | nssm → `uvicorn app.main:app --port 8001` (LocalSystem) |
+| servidor | `HMPCF-Backup-Svc` | nssm → `scripts/servidor/agendador_backup.py` (23:00) |
+| servidor | `postgresql-x64-16` | serviço do PostgreSQL |
+| notebooks | tarefa `HMPCF-BPA` | ao entrar no Windows → `bpa/executar.py` (sem janela) |
 
-### Pool de conexões
-```
-DATABASE_POOL_SIZE=10     # conexões permanentes no pool
-DATABASE_MAX_OVERFLOW=20  # conexões extras sob demanda
-DATABASE_POOL_PRE_PING=true  # testa conexões antes de usar
-```
-
-### Tabela pacientes
-Todas as colunas usam **snake_case** (renomeadas em 2026-05-24 via `recreate_pacientes.py`).
-O SQLAlchemy mapeia diretamente sem aliases — atributo Python = nome da coluna no banco.
+O backup não usa o Agendador de Tarefas do Windows desde 24/09/2026 (ele parou
+de executar no servidor); o serviço também cobre o PC desligado às 23:00
+(faz ao ligar se o último tiver mais de 26 h).
 
 ---
 
-## Docker (descontinuado)
-
-O projeto usou `docker-compose.yml` (PostgreSQL + pgAdmin + backend) no
-início do desenvolvimento local. Desde 09/2026 o PostgreSQL roda como
-instalação nativa também em desenvolvimento — o compose não é mais usado
-e está arquivado em `legado/docker-compose/` (ver `NOTA.md` lá dentro para
-reativar, se algum dia precisar).
-
-Produção **nunca usou Docker** — PostgreSQL nativo no Windows (ver
-`docs/DEPLOY_HOSPITAL.md`).
-
----
-
-## Alembic — Migrations
-
-```bash
-cd backend
-
-# Banco já existe (dados migrados via ETL)
-alembic stamp 0001
-
-# Criar nova migration
-alembic revision --autogenerate -m "add_coluna_xyz"
-
-# Aplicar
-alembic upgrade head
-
-# Ver histórico
-alembic history --verbose
-```
-
-**Regra**: Toda alteração de schema via Alembic. Nunca manualmente.
-
----
-
-## Legado (Removido)
-
-Os arquivos legados foram removidos em 2026-05-25:
-
-| Arquivo | Motivo |
-|---------|--------|
-| `backend/main.py` | Entrypoint legado concorrente |
-| `backend/database.py` | Conexão SQLite (apenas routes legados usavam) |
-| `backend/database_pg.py` | Conexão PostgreSQL raw (substituída por SQLAlchemy async) |
-| `backend/routes/` | Rotas SQLite + PostgreSQL raw |
-
-O único módulo ativo é `backend/app/` com FastAPI modular + SQLAlchemy async + PostgreSQL.
-
----
-
-## Módulos
-
-| Módulo | Status | Rota |
-|--------|--------|------|
-| Pacientes | Implementado | `/api/v1/pacientes` |
-| Recepção | Implementado | `/api/v1/recepcao` |
-| Terminal | Implementado | `/api/v1/terminal` |
-| Busca Agrupada | Implementado | `GET /api/v1/recepcao/pacientes/agrupado?q=...` |
-| Testes | 21 testes | `backend/tests/` |
-| Classificação | Não iniciado | — |
-| Relatórios | Não iniciado | — |
-
-### Endpoints da Busca Agrupada
-
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| GET | `/api/v1/recepcao/pacientes/agrupado?q=...` | Pacientes únicos com total de entradas e última data |
-| GET | `/api/v1/recepcao/paciente/{id}` | Histórico completo de atendimentos de um paciente |
-
-> Ver histórico completo de decisões em `docs/HISTORICO.md`.
+Decisões e marcos: `docs/HISTORICO.md` · pendências: `docs/PENDENCIAS.md`.

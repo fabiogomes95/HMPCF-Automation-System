@@ -5,6 +5,52 @@ estão no código e nos commits do git.
 
 ---
 
+## 2026-09-23/24 — Sistema unificado: perfil faturamento, BPA novo, Painel, backup como serviço
+
+### Um sistema só
+- Painel gerencial virou a aba **Painel** (TI) do próprio sistema; o Streamlit
+  saiu (`legado/dashboard_streamlit/`).
+- Perfil **faturamento** (BPA — abre nela —, Recepção, Histórico, Planilha,
+  Correção). Login sem bloqueio por tentativas (travava o terminal fixo).
+- BPA refeito em FastAPI no padrão do backend (`bpa/bpa_local/`), com as telas
+  dentro do sistema; o Flask foi pro legado depois de validado nos notebooks.
+  Firebird e BPA Magnético continuam locais e offline em cada notebook.
+
+### BPA
+- Migração automática do dia; paciente sem documento (ID do cadastro, `s` no
+  BPA-I); **SUS/CNS nunca vai no BPA-I** (dava erro no BPA Magnético);
+  "completar CPF pelo SUS" removido depois da remigração só com CPF.
+- Lotes de digitação copiados pro servidor (`bpa_lotes_backup`); pasta dos
+  lotes fixada em `C:\BPA\bpa_lotes`; situação do dia na Digitação.
+- **Nutrição do mês**: planilha lida por bloco (linha em branco separa os
+  dias — o 1º paciente pode vir acima da data), nutricionista pelo 1º nome
+  (o prefixo de 3 letras juntava outra pessoa com o mesmo CBO), CPF errado
+  corrigido por nome+nascimento, um BPA-I único do mês. Substitui o script
+  antigo, que perdia pacientes e trocava a nutricionista.
+
+### Servidor
+- PostgreSQL fechado pra rede (só `bpa_leitura`), fuso `America/Sao_Paulo`,
+  senha antiga removida do histórico do git.
+- **Alembic** com a `0001` = esquema de produção (só `stamp`); modelos
+  alinhados com a produção (nomes de índices, `CHAR(1)`, `ON UPDATE CASCADE`).
+- Backup: estava parado desde 17/06 (tarefa apontando pra caminho antigo);
+  voltou em 23/09 com criptografia e Google Drive. Em 24/09 o **Agendador de
+  Tarefas do Windows parou de executar** no servidor — o backup passou pro
+  serviço `HMPCF-Backup-Svc` (nssm), com cópia na nuvem pela pasta
+  `C:\HMPCF\backups_nuvem` (o serviço não pode gravar no G: do Drive). Faixa
+  de saúde do backup no Painel.
+- Reiniciar o backend travava em *StopPending*: `AppRotateOnline=0` no nssm.
+
+### Organização
+- Limpeza geral: BPA Flask, ferramentas de montagem do BPA, conferência
+  semanal, instalador antigo do servidor/WinRM → `legado/`; guias antigos →
+  `docs/historico/`; dumps `.sql` sem criptografia, SQLite e `.env` antigos
+  apagados do servidor; pasta `dashboard` apagada de todos os PCs.
+- Documentação reescrita: README, arquitetura, pendências e o guia novo
+  `docs/RECUPERACAO_SERVIDOR.md`.
+
+---
+
 ## 2026-09-04 — Reorganização de pastas (auditoria + arquivamento)
 
 ### Estrutura de pastas

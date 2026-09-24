@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { bpaLocal, BpaDesligado, fmtNum, URL_BPA_LOCAL } from "../../services/bpaLocal";
+import { bpaLocal, BpaDesligado, fmtNum } from "../../services/bpaLocal";
 import { dataLocalISO } from "../../utils";
 import Digitacao from "./Digitacao";
 import Enfermeiros from "./Enfermeiros";
@@ -183,9 +183,9 @@ export default function Bpa() {
       {antigo ? (
         <div className="bp-cartao bp-desligado">
           <div className="bp-desligado-icone" style={{ background: "var(--bp-alerta-bg)", color: "var(--bp-alerta)", borderColor: "var(--bp-alerta-borda)" }}>!</div>
-          <h2 style={{ fontSize: 18 }}>O BPA deste notebook é a versão antiga</h2>
+          <h2 style={{ fontSize: 18 }}>O BPA deste notebook está desatualizado</h2>
           <p className="bp-desc" style={{ marginTop: 6 }}>
-            Ele funciona normalmente, mas estas telas precisam da versão nova. Enquanto isso, use o BPA antigo em outra aba.
+            Estas telas precisam da versão nova do BPA. Atualize este notebook:
           </p>
           <ol>
             <li>Na pasta do sistema: <code>git pull origin main</code></li>
@@ -193,7 +193,6 @@ export default function Bpa() {
             <li>Volte aqui e clique em <b>Tentar de novo</b>.</li>
           </ol>
           <div className="bp-linha" style={{ justifyContent: "center" }}>
-            <a className="bp-btn contorno" href={URL_BPA_LOCAL} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>Abrir o BPA antigo</a>
             <button className="bp-btn" onClick={tentarDeNovo}>Tentar de novo</button>
           </div>
         </div>
@@ -208,10 +207,9 @@ export default function Bpa() {
           <ol>
             <li>Espere 1 minuto se o notebook acabou de ligar.</li>
             <li>Clique em <b>Tentar de novo</b>.</li>
-            <li>Se continuar, abra o atalho <b>BPA</b> da área de trabalho ou chame a TI.</li>
+            <li>Se continuar, chame a TI (diagnóstico: <code>bpa\iniciar.bat</code> mostra o erro na tela).</li>
           </ol>
           <div className="bp-linha" style={{ justifyContent: "center" }}>
-            <a className="bp-btn contorno" href={URL_BPA_LOCAL} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>Abrir o BPA em outra aba</a>
             <button className="bp-btn" onClick={tentarDeNovo}>Tentar de novo</button>
           </div>
         </div>
