@@ -185,6 +185,14 @@ export default function Digitacao({ profissionais }) {
   }
 
   function teclaBusca(e) {
+    // Tab anda na lista como a seta pra baixo (e volta ao 1º no fim); Shift+Tab sobe.
+    // Sem resultados, o Tab funciona normal.
+    if (e.key === "Tab" && resultados.length) {
+      e.preventDefault();
+      const n = resultados.length;
+      setSel((s) => (e.shiftKey ? (s - 1 + n) % n : (s + 1) % n));
+      return;
+    }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setSel((s) => Math.min(s + 1, resultados.length - 1));
@@ -315,7 +323,7 @@ export default function Digitacao({ profissionais }) {
       <section className="bp-cartao">
         <h2>2. Pacientes atendidos</h2>
         <p className="bp-desc">
-          Digite o CPF ou o nome, escolha com <span className="bp-tecla">↑</span> <span className="bp-tecla">↓</span> e
+          Digite o CPF ou o nome, escolha com <span className="bp-tecla">↑</span> <span className="bp-tecla">↓</span> ou <span className="bp-tecla">Tab</span> e
           aperte <span className="bp-tecla">Enter</span> para gravar.
         </p>
         <input ref={buscaRef} className="bp-campo" value={q} disabled={!sessao || gravando} autoComplete="off"
