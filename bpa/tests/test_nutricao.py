@@ -37,20 +37,30 @@ def d(dia, mes=8):
     return datetime(2026, mes, dia)
 
 
+BR = (None, None, None, None)  # linha em branco: separa os dias
+
 PLANILHA = [
-    ("", "ANTES DA DATA", datetime(1950, 1, 1), "111.444.777-35"),
-    (d(1), "PRIMEIRO DO DIA", "01/02/1960", "529.982.247-25"),     # 1º paciente ANTES do nome
+    BR,
+    (None, "ACIMA DA DATA", datetime(1950, 1, 1), "111.444.777-35"),  # mesmo bloco do dia 01
+    (d(1), "PRIMEIRO DO DIA", "01/02/1960", "529.982.247-25"),
     ("BARBARA", "SEGUNDO DO DIA", "02/02/1960", "123.456.789-09"),  # CPF errado → pelo nome
     ("FDS", "SEM CPF NO FIREBIRD", "03/03/1970", ""),
+    BR,
     (d(2), "DIA DOIS A", "01/01/1980", "529.982.247-25"),
     ("Mariane", "DIA DOIS B", "01/01/1980", "52998224725"),
     ("NAÍLLA", "DIA DOIS C", "01/01/1980", "52998224725"),
+    BR,
+    (None, "MIGUEL ACIMA DO DIA TRES", "", "529.982.247-25"),        # caso real da linha 37 de AGO-26
     (d(3), "DIA TRES", "01/01/1990", "529.982.247-25"),              # sem nome: pendente
+    BR,
     ("20/ago", "DIA VINTE", "", "529.982.247-25"),                    # data em texto
-    ("TODAS NUT", "DIA VINTE B", "", "529.982.247-25"),
+    ("TODAS NUT", "DIA VINTE B", "", "529.982.247-25"),               # escolhe na tela
+    BR,
     (d(5, 7), "DATA DE OUTRO MES", "", "529.982.247-25"),            # 05/07 na aba de agosto
     ("NAILA", "", "", ""),
     (None, "NINGUEM CONHECE", "01/01/2000", "000.000.000-00"),
+    (" ", None, None, None),                                          # célula com espaço = em branco
+    ("BARBARA", "BLOCO SEM DATA", "", "529.982.247-25"),              # escolhe o dia na tela
 ]
 
 CACHE = [
@@ -68,18 +78,24 @@ def test_regras_da_planilha():
     r = planilha.ler_aba(_xlsx(PLANILHA), "AGO-26", _nutris())
     assert r["competencia"] == "202608"
     por_data = {x["data"]: x for x in r["dias"]}
-    semdia = r["dias"][0]
-    assert semdia["data"] is None and [p["nome"] for p in semdia["pacientes"]] == ["ANTES DA DATA"]
 
     dia1 = por_data[d(1).date()]
     assert [n["nome"] for n in dia1["nutricionistas"]] == ["BARBARA COSTA"]
-    assert [p["nome"] for p in dia1["pacientes"]] == ["PRIMEIRO DO DIA", "SEGUNDO DO DIA", "SEM CPF NO FIREBIRD"]
+    assert [p["nome"] for p in dia1["pacientes"]] == [
+        "ACIMA DA DATA", "PRIMEIRO DO DIA", "SEGUNDO DO DIA", "SEM CPF NO FIREBIRD"]
 
     assert len(por_data[d(2).date()]["nutricionistas"]) == 2                    # MARIANE + NAÍLLA
-    assert por_data[d(3).date()]["nutricionistas"] == []                        # pendente
+    dia3 = por_data[d(3).date()]
+    assert dia3["nutricionistas"] == []                                         # pendente
+    assert [p["nome"] for p in dia3["pacientes"]] == ["MIGUEL ACIMA DO DIA TRES", "DIA TRES"]
+    assert por_data[d(2).date()]["pacientes"][-1]["nome"] == "DIA DOIS C"       # não "vazou" pro dia 2
     assert por_data[d(20).date()]["nutricionistas"] == []                      # TODAS NUT: escolhe na tela
     assert [n["nome"] for n in por_data[d(5).date()]["nutricionistas"]] == ["NAILLA PEREIRA"]
     assert any("05/07/2026" in a for a in r["avisos"])
+
+    sem_dia = r["dias"][0]
+    assert sem_dia["data"] is None and [p["nome"] for p in sem_dia["pacientes"]] == ["BLOCO SEM DATA"]
+    assert [n["nome"] for n in sem_dia["nutricionistas"]] == ["BARBARA COSTA"]
 
 
 def test_limpar_cpf():

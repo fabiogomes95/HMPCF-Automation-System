@@ -11,8 +11,9 @@ Regras (confirmadas com o usuário em 24/09/2026):
   1. Cada dia começa na linha com a data (célula de data OU texto "20/jul",
      "08/Jjun", "02.03.2026"...). Data de outro mês dentro da aba vira o mesmo
      dia no mês da aba, com aviso.
-  2. O dia INTEIRO é da nutricionista escrita nele — inclusive o 1º paciente,
-     que fica na linha da data, antes do nome.
+  2. Cada dia é um bloco separado por linha em branco; o bloco INTEIRO é do
+     dia e da nutricionista escritos nele — inclusive paciente na linha da
+     data ou até acima dela (antes do nome).
   3. Dia com 2+ nomes: pacientes divididos igualmente entre elas. "TODAS NUT":
      fica sem nutricionista e a tela pergunta (decisão de 24/09/2026).
   4. Dia sem nome: fica pendente — a tela pergunta de quem é. Paciente acima
@@ -136,9 +137,56 @@ def _qual_nutri(texto: str, nutricionistas: list[dict]) -> list[dict] | None:
     return achadas or None
 
 
+def _data_da_celula(a, texto_a: str, ano: int, mes: int, n_linha: int, avisos: list) -> date | None:
+    """Data do dia na coluna A: célula de data ou texto ("20/jul", "08/Jjun")."""
+    if isinstance(a, (datetime, date)):
+        d = a.date() if isinstance(a, datetime) else a
+        if (d.year, d.month) == (ano, mes):
+            return d
+        try:
+            nova = date(ano, mes, d.day)
+        except ValueError:
+            avisos.append(f"Linha {n_linha}: data {d:%d/%m/%Y} fora do mês da aba e sem dia correspondente — ignorada.")
+            return None
+        avisos.append(f"Linha {n_linha}: data {d:%d/%m/%Y} fora do mês da aba — considerada {nova:%d/%m/%Y}.")
+        return nova
+    m = _RE_DIA_TEXTO.match(texto_a) if texto_a else None
+    if m:
+        try:
+            return date(ano, mes, int(m.group(1)))
+        except ValueError:
+            avisos.append(f"Linha {n_linha}: '{texto_a}' não é um dia válido de {mes:02d}/{ano}.")
+    return None
+
+
+def _nutris_da_celula(texto_a: str, nutricionistas: list[dict], n_linha: int, avisos: list) -> list[dict]:
+    """Nutricionista(s) escrita(s) na coluna A, com os avisos de dúvida."""
+    s = sem_acento(texto_a).upper()
+    if "TODAS" in s:
+        # Decisão do usuário (24/09/2026): dia "TODAS NUT" fica sem
+        # nutricionista e ele escolhe na tela, como dia sem nome.
+        avisos.append(f"Linha {n_linha}: '{texto_a}' — escolha as nutricionistas do dia na tela.")
+        return []
+    nutris = _qual_nutri(texto_a, nutricionistas) or []
+    if len(nutris) > 1 and len(texto_a.split()) == 1:
+        avisos.append(f"Linha {n_linha}: '{texto_a}' serve para mais de uma nutricionista cadastrada "
+                      f"({', '.join(n['nome'] for n in nutris)}) — confira o dia.")
+    palavras = {_chave_nome(w) for w in re.sub(r"[^A-Z ]", " ", s).split()}
+    if len(nutris) == 1 and _chave_nome(nutris[0]["nome"].split()[0]) not in palavras:
+        avisos.append(f"Linha {n_linha}: '{texto_a}' entendido como {nutris[0]['nome']} — confira.")
+    if not nutris and not any(s.startswith(x) for x in _NOTAS):
+        avisos.append(f"Linha {n_linha}: '{texto_a}' na coluna A não é data, nutricionista nem anotação — ignorado.")
+    return nutris
+
+
 def ler_aba(conteudo: bytes, aba: str, nutricionistas: list[dict]) -> dict:
     """Lê uma aba e devolve os dias com nutricionista(s) e pacientes (ainda sem
-    cruzar com o Firebird). `nutricionistas`: [{"nome", "cns"}] do CADMED (CBO 223710)."""
+    cruzar com o Firebird). `nutricionistas`: [{"nome", "cns"}] do CADMED (CBO 223710).
+
+    Cada dia é um BLOCO de linhas separado por linha em branco. A data pode
+    não estar na 1ª linha do bloco (às vezes há 1 paciente acima dela) — tudo
+    do bloco é do dia da data e da nutricionista escritas nele. Uma 2ª data
+    dentro do mesmo bloco ("20/jul") começa outro dia dali pra baixo."""
     comp = competencia_da_aba(aba)
     if not comp:
         raise ValueError(f"Não entendi o mês da aba '{aba}' (esperado algo como AGO-26).")
@@ -148,72 +196,72 @@ def ler_aba(conteudo: bytes, aba: str, nutricionistas: list[dict]) -> dict:
 
     dias: list[dict] = []
     avisos: list[str] = []
-    dia = None
+
+    def dia_da_data(d: date) -> dict:
+        existente = next((x for x in dias if x["data"] == d), None)
+        if existente is None:
+            existente = {"data": d, "nutricionistas": [], "pacientes": []}
+            dias.append(existente)
+        return existente
+
+    def juntar(dia: dict, nutris: list, pacientes: list) -> None:
+        for n in nutris:
+            if n not in dia["nutricionistas"]:
+                dia["nutricionistas"].append(n)
+        dia["pacientes"].extend(pacientes)
+
+    def fechar_bloco(bloco: list) -> None:
+        dia = None
+        antes_nutris: list = []   # o que vem antes da data do bloco
+        antes_pacs: list = []
+        for n_linha, a, nome, nasc, cpf in bloco:
+            texto_a = "" if a is None or isinstance(a, (datetime, date)) else str(a).strip()
+            d = _data_da_celula(a, texto_a, ano, mes, n_linha, avisos)
+            if d:
+                dia = dia_da_data(d)
+                if antes_nutris or antes_pacs:
+                    juntar(dia, antes_nutris, antes_pacs)
+                    antes_nutris, antes_pacs = [], []
+            elif texto_a:
+                nutris = _nutris_da_celula(texto_a, nutricionistas, n_linha, avisos)
+                if dia is None:
+                    antes_nutris += [n for n in nutris if n not in antes_nutris]
+                else:
+                    juntar(dia, nutris, [])
+            if nome and str(nome).strip():
+                pac = {
+                    "linha": n_linha,
+                    "nome": " ".join(str(nome).split()).upper(),
+                    "nascimento": _data_nasc(nasc),
+                    "cpf_planilha": str(cpf or "").strip(),
+                    "cpf": limpar_cpf(cpf),
+                }
+                if dia is None:
+                    antes_pacs.append(pac)
+                else:
+                    dia["pacientes"].append(pac)
+        if antes_pacs:  # bloco sem data nenhuma: a tela pergunta o dia
+            sem_dia = {"data": None, "nutricionistas": [], "pacientes": []}
+            juntar(sem_dia, antes_nutris, antes_pacs)
+            dias.append(sem_dia)
+            avisos.append(f"Linhas {antes_pacs[0]['linha']}–{antes_pacs[-1]['linha']}: pacientes sem data no bloco — escolha o dia.")
+
     comecou = False
+    bloco: list = []
     for n_linha, row in enumerate(ws.iter_rows(values_only=True), start=1):
         a, nome, nasc, cpf = (tuple(row) + (None,) * 4)[:4]
         if not comecou:  # pula o título até o cabeçalho (coluna A "DATA"; B varia: "NOME:", "DADOS DOS PACIENTES"...)
             comecou = str(a or "").strip().upper() == "DATA" or str(nome or "").strip().upper().startswith("NOME")
             continue
-
-        # ── coluna A: começo de dia, nutricionista ou anotação
-        texto_a = "" if a is None or isinstance(a, (datetime, date)) else str(a).strip()
-        nova_data = None
-        if isinstance(a, (datetime, date)):
-            d = a.date() if isinstance(a, datetime) else a
-            nova_data = d
-            if (d.year, d.month) != (ano, mes):
-                try:
-                    nova_data = date(ano, mes, d.day)
-                    avisos.append(f"Linha {n_linha}: data {d:%d/%m/%Y} fora do mês da aba — considerada {nova_data:%d/%m/%Y}.")
-                except ValueError:
-                    nova_data = None
-                    avisos.append(f"Linha {n_linha}: data {d:%d/%m/%Y} fora do mês da aba e sem dia correspondente — ignorada.")
-        elif texto_a and _RE_DIA_TEXTO.match(texto_a):
-            try:
-                nova_data = date(ano, mes, int(_RE_DIA_TEXTO.match(texto_a).group(1)))
-            except ValueError:
-                avisos.append(f"Linha {n_linha}: '{texto_a}' não é um dia válido de {mes:02d}/{ano}.")
-        if nova_data:
-            dia = next((x for x in dias if x["data"] == nova_data), None)
-            if dia is None:
-                dia = {"data": nova_data, "nutricionistas": [], "pacientes": []}
-                dias.append(dia)
-
-        if texto_a and dia is not None:
-            nutris = _qual_nutri(texto_a, nutricionistas)
-            if nutris and len(nutris) > 1 and "TODAS" not in sem_acento(texto_a).upper() and len(texto_a.split()) == 1:
-                avisos.append(f"Linha {n_linha}: '{texto_a}' serve para mais de uma nutricionista cadastrada "
-                              f"({', '.join(n['nome'] for n in nutris)}) — confira o dia.")
-            if nutris and len(nutris) == 1 and not any(
-                _chave_nome(w) == _chave_nome(nutris[0]["nome"].split()[0]) for w in re.sub(r"[^A-Z ]", " ", sem_acento(texto_a).upper()).split()
-            ) and "TODAS" not in sem_acento(texto_a).upper():
-                avisos.append(f"Linha {n_linha}: '{texto_a}' entendido como {nutris[0]['nome']} — confira.")
-            if "TODAS" in sem_acento(texto_a).upper():
-                # Decisão do usuário (24/09/2026): dia "TODAS NUT" fica sem
-                # nutricionista e ele escolhe na tela, como dia sem nome.
-                avisos.append(f"Linha {n_linha}: '{texto_a}' — escolha as nutricionistas do dia na tela.")
-                nutris = None
-            if nutris:
-                for n in nutris:
-                    if n not in dia["nutricionistas"]:
-                        dia["nutricionistas"].append(n)
-            elif not nova_data and not any(sem_acento(texto_a).upper().startswith(x) for x in _NOTAS):
-                avisos.append(f"Linha {n_linha}: '{texto_a}' na coluna A não é data, nutricionista nem anotação — ignorado.")
-
-        # ── paciente
-        if nome and str(nome).strip():
-            if dia is None:  # antes da 1ª data da aba: a tela pergunta o dia
-                dia = {"data": None, "nutricionistas": [], "pacientes": []}
-                dias.append(dia)
-                avisos.append(f"Linha {n_linha}: paciente antes da primeira data da aba — escolha o dia.")
-            dia["pacientes"].append({
-                "linha": n_linha,
-                "nome": " ".join(str(nome).split()).upper(),
-                "nascimento": _data_nasc(nasc),
-                "cpf_planilha": str(cpf or "").strip(),
-                "cpf": limpar_cpf(cpf),
-            })
+        em_branco = not str(nome or "").strip() and (a is None or (isinstance(a, str) and not a.strip()))
+        if em_branco:
+            if bloco:
+                fechar_bloco(bloco)
+            bloco = []
+        else:
+            bloco.append((n_linha, a, nome, nasc, cpf))
+    if bloco:
+        fechar_bloco(bloco)
 
     dias = [d for d in dias if d["pacientes"]]
     dias.sort(key=lambda d: (d["data"] is not None, d["data"] or date.min))

@@ -99,6 +99,12 @@ export default function Nutricao() {
     }));
   }
 
+  // Bloco sem data (ex.: rascunho no fim da aba): fica de fora do arquivo
+  function alternarIgnorar(i) {
+    setResGeracao(null);
+    setDias((ds) => ds.map((d, j) => (j === i ? { ...d, ignorado: !d.ignorado } : d)));
+  }
+
   function mudarData(i, valor) {
     setResGeracao(null);
     setDias((ds) => ds.map((d, j) => (j === i ? { ...d, data: mascaraData(valor) } : d)));
@@ -114,9 +120,9 @@ export default function Nutricao() {
     const pendencias = [];
     dias.forEach((d, i) => {
       const docs = d.pacientes.filter((p) => p.doc).map((p) => p.doc);
-      if (!docs.length) return;
+      if (!docs.length || d.ignorado) return;
       const dataOk = d.data.length === 10 && d.data.slice(3) === mesAba;
-      if (!dataOk) pendencias.push({ i, texto: `${fmtNum(docs.length)} paciente(s) sem dia — digite a data` });
+      if (!dataOk) pendencias.push({ i, texto: `${fmtNum(d.pacientes.length)} paciente(s) sem dia — digite a data ou clique em "ignorar"` });
       else if (!d.nutricionistas.length) pendencias.push({ i, texto: `${d.data.slice(0, 5)} sem nutricionista — escolha de quem é` });
       if (d.nutricionistas.length) {
         Object.entries(dividir(docs, d.nutricionistas)).forEach(([c, q]) => { porNutri[c] = (porNutri[c] || 0) + q; });
@@ -125,7 +131,7 @@ export default function Nutricao() {
     return { porNutri, pendencias };
   }, [dias, nutris, mesAba]);
 
-  const naoAchados = dias.flatMap((d) => d.pacientes.filter((p) => p.situacao === "nao_achado").map((p) => ({ ...p, data: d.data })));
+  const naoAchados = dias.filter((d) => !d.ignorado).flatMap((d) => d.pacientes.filter((p) => p.situacao === "nao_achado").map((p) => ({ ...p, data: d.data })));
   const nomeArquivo = lido ? `BPA_NUTRICAO_${lido.competencia}.txt` : "";
   const jaGerado = arquivosPasta.find((a) => a.nome === nomeArquivo);
   const totalGerar = Object.values(resumo.porNutri).reduce((s, q) => s + q, 0);
@@ -140,7 +146,7 @@ export default function Nutricao() {
     try {
       const corpo = dias.map((d) => ({
         data: d.data, nutricionistas: d.nutricionistas, docs: d.pacientes.filter((p) => p.doc).map((p) => p.doc),
-      })).filter((d) => d.docs.length);
+      })).filter((d, i) => d.docs.length && !dias[i].ignorado);
       setResGeracao(await bpaLocal.nutricaoGerar(lido.competencia, corpo));
       carregarPasta();
     } catch (e) {
@@ -269,15 +275,26 @@ export default function Nutricao() {
                   const atencao = d.pacientes.filter((p) => p.situacao !== "ok").length;
                   const semNutri = !d.nutricionistas.length;
                   return [
-                    <tr key={`d${i}`}>
+                    <tr key={`d${i}`} style={d.ignorado ? { opacity: 0.45 } : undefined}>
                       <td>
                         {lido.dias[i].data ? (
                           <button className="bp-btn-sec" style={{ padding: "2px 8px" }} onClick={() => setAberto(aberto === i ? null : i)}>
                             {aberto === i ? "▾" : "▸"} {d.data.slice(0, 5)}
                           </button>
                         ) : (
-                          <input className="bp-campo curto" style={{ width: 120 }} value={d.data} placeholder={`DD/${mesAba}`}
-                                 inputMode="numeric" onChange={(e) => mudarData(i, e.target.value)} onFocus={() => setAberto(i)} />
+                          <div className="bp-linha" style={{ gap: 4, alignItems: "center" }}>
+                            {!d.ignorado && (
+                              <input className="bp-campo curto" style={{ width: 120 }} value={d.data} placeholder={`DD/${mesAba}`}
+                                     inputMode="numeric" onChange={(e) => mudarData(i, e.target.value)} onFocus={() => setAberto(i)} />
+                            )}
+                            <button className="bp-btn-sec" style={{ padding: "2px 8px" }} onClick={() => setAberto(aberto === i ? null : i)}>
+                              {aberto === i ? "▾" : "▸"}{d.ignorado ? " ignorado" : ""}
+                            </button>
+                            <button className="bp-btn-sec" style={{ padding: "2px 8px" }} onClick={() => alternarIgnorar(i)}
+                                    title="Bloco sem data (ex.: rascunho) — deixar de fora do arquivo">
+                              {d.ignorado ? "usar" : "ignorar"}
+                            </button>
+                          </div>
                         )}
                       </td>
                       <td>
