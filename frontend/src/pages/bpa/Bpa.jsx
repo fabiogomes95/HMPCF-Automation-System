@@ -111,7 +111,7 @@ export default function Bpa() {
       <div className="bp-topo">
         <div>
           <h1>BPA</h1>
-          <p className="bp-sub">Produção SUS deste notebook — Firebird e BPA Magnético continuam locais</p>
+          <p className="bp-sub">Faturamento SUS: digitação dos atendimentos de médicos e enfermeiros e geração dos arquivos para importar no BPA Magnético</p>
           {ligado && <LinhaMigracaoAuto m={status.migracao_auto} />}
         </div>
         <div className="bp-estado">
