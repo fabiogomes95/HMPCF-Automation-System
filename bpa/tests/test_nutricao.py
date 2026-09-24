@@ -103,7 +103,7 @@ class _Cur:
         if "CADMED" in sql:
             self.res = list(NUTRIS)
         elif "S_PRD" in sql:
-            self.res = [(dt,) for cns, dt in self.s_prd if cns == params[0]]
+            self.res = [(dt, cbo) for cns, dt, cbo in self.s_prd if cns == params[0]]
 
     def fetchall(self):
         return self.res
@@ -163,8 +163,10 @@ def test_ler_acha_pacientes(firebird):
 
 def test_gerar_um_arquivo_com_folha_continua(firebird):
     mariane, barbara = NUTRIS[0][0], NUTRIS[1][0]
-    firebird["s_prd"] = [(mariane.zfill(15), "20260810")] * 100  # outro dia já importado
-    firebird["s_prd"] += [(barbara.zfill(15), "20260801")] * 2   # já importado NESTE dia
+    firebird["s_prd"] = [(mariane.zfill(15), "20260810", "223710")] * 100  # outro dia já importado
+    firebird["s_prd"] += [(barbara.zfill(15), "20260801", "223710")] * 2   # já importado NESTE dia
+    # mesmo CNS atendendo como médico no mesmo dia: não é nutrição repetida
+    firebird["s_prd"] += [(mariane.zfill(15), "20260802", "225125")] * 3
     r = nutricao.gerar({"competencia": "202608", "dias": [
         {"data": "01/08/2026", "nutricionistas": [barbara], "docs": ["52998224725", "ID:3"]},
         {"data": "02/08/2026", "nutricionistas": [mariane, barbara], "docs": ["A", "B", "C"]},
@@ -177,9 +179,9 @@ def test_gerar_um_arquivo_com_folha_continua(firebird):
     assert texto.startswith("CAB|202608|6|") and texto.count("\r\n") == 7
 
     chamadas = {(c[0], c[1]): c for c in firebird["montar"]}
-    # Mariane: 100 já importados em outro dia → folha 2, seq 2; dia 3 continua (seq 4)
-    assert chamadas[(mariane.zfill(15), "20260802")][2:5] == (2, 2, ["A", "C"])
-    assert chamadas[(mariane.zfill(15), "20260803")][2:5] == (2, 4, ["D"])
+    # Mariane: 100 de nutrição em outro dia + 3 como médico → folha 2, seq 5; dia 3 continua (seq 7)
+    assert chamadas[(mariane.zfill(15), "20260802")][2:5] == (2, 5, ["A", "C"])
+    assert chamadas[(mariane.zfill(15), "20260803")][2:5] == (2, 7, ["D"])
     # Bárbara: os 2 do próprio dia 01 não contam pra folha, mas avisam
     assert chamadas[(barbara.zfill(15), "20260801")][2:5] == (1, 1, ["52998224725", "ID:3"])
     assert chamadas[(barbara.zfill(15), "20260802")][2:5] == (1, 3, ["B"])

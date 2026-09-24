@@ -137,15 +137,17 @@ def ler(d: dict) -> dict:
 
 
 def _producao_fora_das_datas(con, cns_prof: str, competencia: str, datas: list[str]) -> tuple[int, int]:
-    """(atendimentos da nutricionista no mês FORA das datas do arquivo — a
-    folha/sequência continua depois deles; atendimentos JÁ importados nessas
-    datas — importar de novo duplicaria)."""
+    """(atendimentos do profissional no mês que NÃO são a nutrição destas
+    datas — a folha/sequência continua depois deles, inclusive os de outro
+    CBO, pra não repetir folha; atendimentos de NUTRIÇÃO já importados
+    nestas datas — importar de novo duplicaria. Quem também atende com outro
+    CBO (ex. médico) no mesmo dia não gera esse aviso.)"""
     cur = con.cursor()
-    cur.execute("SELECT PRD_DTATEN FROM S_PRD WHERE PRD_CNSMED = ? AND PRD_CMP = ?", (cns_prof, competencia))
+    cur.execute("SELECT PRD_DTATEN, PRD_CBO FROM S_PRD WHERE PRD_CNSMED = ? AND PRD_CMP = ?", (cns_prof, competencia))
     fora = dentro = 0
     conjunto = set(datas)
-    for (dt,) in cur.fetchall():
-        if str(dt).strip() in conjunto:
+    for dt, cbo in cur.fetchall():
+        if str(dt).strip() in conjunto and str(cbo).strip() == planilha.CBO_NUTRI:
             dentro += 1
         else:
             fora += 1
