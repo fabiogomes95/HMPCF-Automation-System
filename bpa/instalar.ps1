@@ -59,23 +59,20 @@ Register-ScheduledTask -TaskName $tarefa -Action $acao -Trigger $gatilho -Settin
     -Description "BPA HMPCF local (porta 8503) - Firebird/BPA Magnetico deste notebook" -Force | Out-Null
 Write-Host "[OK] Tarefa registrada para o usuario $env:USERNAME"
 
-# Liga agora. Se o BPA antigo (app.py, Flask) estiver rodando, fecha ele antes
-# -- a versao nova (executar.py) usa a mesma porta 8503.
+# (Re)liga agora: fecha o BPA que estiver na porta 8503 (antigo app.py ou o
+# novo executar.py) e sobe pela tarefa -- assim rodar de novo = atualizar.
 $rodando = Get-NetTCPConnection -LocalPort 8503 -State Listen -ErrorAction SilentlyContinue
 if ($rodando) {
     $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($rodando[0].OwningProcess)"
-    if ($proc.CommandLine -match "app\.py") {
+    if ($proc.CommandLine -match "app\.py|executar\.py") {
         Stop-Process -Id $proc.ProcessId -Force
         Start-Sleep -Seconds 2
-        Write-Host "[OK] BPA antigo (app.py) fechado"
-        $rodando = $null
+        Write-Host "[OK] BPA que estava rodando foi fechado para reiniciar"
     } else {
-        Write-Host "[OK] BPA novo ja estava rodando na porta 8503"
+        Write-Host "[AVISO] Outro programa usa a porta 8503: $($proc.CommandLine)" -ForegroundColor Yellow
     }
 }
-if (-not $rodando) {
-    Start-ScheduledTask -TaskName $tarefa
-    Write-Host "[OK] BPA iniciado -- abra http://localhost:8503 em alguns segundos"
-}
+Start-ScheduledTask -TaskName $tarefa
+Write-Host "[OK] BPA iniciado -- abra http://localhost:8503/ui/ em alguns segundos"
 Write-Host ""
 Write-Host "Pronto." -ForegroundColor Green
