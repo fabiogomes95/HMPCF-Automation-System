@@ -55,9 +55,20 @@ $gatilho = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAM
 $gatilho.Delay = "PT30S"
 $config = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
     -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -StartWhenAvailable
-Register-ScheduledTask -TaskName $tarefa -Action $acao -Trigger $gatilho -Settings $config `
-    -Description "BPA HMPCF local (porta 8503) - Firebird/BPA Magnetico deste notebook" -Force | Out-Null
-Write-Host "[OK] Tarefa registrada para o usuario $env:USERNAME"
+try {
+    Register-ScheduledTask -TaskName $tarefa -Action $acao -Trigger $gatilho -Settings $config `
+        -Description "BPA HMPCF local (porta 8503) - Firebird/BPA Magnetico deste notebook" -Force -ErrorAction Stop | Out-Null
+    Write-Host "[OK] Tarefa registrada para o usuario $env:USERNAME"
+} catch {
+    # Tarefa criada antes num terminal de administrador: sem admin nao da pra
+    # regravar, mas ela continua valendo -- so atualizar o BPA nao precisa disso.
+    if (Get-ScheduledTask -TaskName $tarefa -ErrorAction SilentlyContinue) {
+        Write-Host "[OK] Tarefa ja existe (sem permissao para regravar, mantida como esta)"
+    } else {
+        Write-Host "[AVISO] Nao consegui criar a tarefa: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "        Rode este instalar.ps1 uma vez como administrador." -ForegroundColor Yellow
+    }
+}
 
 # (Re)liga agora: fecha o BPA que estiver na porta 8503 (antigo app.py ou o
 # novo executar.py) e sobe pela tarefa -- assim rodar de novo = atualizar.
@@ -72,7 +83,12 @@ if ($rodando) {
         Write-Host "[AVISO] Outro programa usa a porta 8503: $($proc.CommandLine)" -ForegroundColor Yellow
     }
 }
-Start-ScheduledTask -TaskName $tarefa
+try {
+    Start-ScheduledTask -TaskName $tarefa -ErrorAction Stop
+} catch {
+    # Sem a tarefa (ou sem permissao nela): sobe direto, igual a tarefa faria
+    Start-Process -FilePath (Join-Path $venv "Scripts\pythonw.exe") -ArgumentList "executar.py" -WorkingDirectory $bpa
+}
 Write-Host "[OK] BPA iniciado -- abra http://localhost:8503/ui/ em alguns segundos"
 Write-Host ""
 Write-Host "Pronto." -ForegroundColor Green

@@ -26,6 +26,9 @@ function ResultadoGeracao({ r }) {
   );
 }
 
+// Só os últimos na tela: notebook do BPA é fraco e dia cheio passa de 100
+const MOSTRAR_GRAVADOS = 15;
+
 // "Já importou esse dia?" -- digitados no lote x o que já entrou no BPA Magnético
 function SituacaoDia({ s, carregando, aoAtualizar }) {
   let tag = null;
@@ -405,7 +408,7 @@ export default function Digitacao({ profissionais }) {
           <table className="bp-tabela">
             <thead><tr><th>#</th><th>Paciente</th><th>CPF</th><th className="num">Hora</th><th></th></tr></thead>
             <tbody>
-              {gravados.map((g, i) => (
+              {gravados.slice(0, MOSTRAR_GRAVADOS).map((g, i) => (
                 <tr key={`${g.doc}-${gravados.length - i}`}>
                   <td>{gravados.length - i}</td>
                   <td>{g.nome || <span style={{ color: "var(--bp-texto-3)" }}>fora do Firebird</span>}</td>
@@ -422,6 +425,11 @@ export default function Digitacao({ profissionais }) {
               ))}
             </tbody>
           </table>
+        )}
+        {gravados.length > MOSTRAR_GRAVADOS && (
+          <p className="bp-vazio">
+            Mostrando os últimos {MOSTRAR_GRAVADOS} de {fmtNum(gravados.length)} — todos continuam gravados no lote.
+          </p>
         )}
       </section>
     </div>
