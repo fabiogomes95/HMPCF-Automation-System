@@ -113,12 +113,12 @@ export default function Entradas() {
 
   return (
     <div className="entradas">
-      <div className="en-topo">
+      <div className="en-topo no-print">
         <h1>Entradas do paciente</h1>
         <p>Em que dias o paciente deu entrada e quantas vezes — pra achar o boletim impresso (guardado por data).</p>
       </div>
 
-      <div className="en-busca">
+      <div className="en-busca no-print">
         <form onSubmit={(e) => { e.preventDefault(); buscar(); }}>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="CPF, SUS ou nome do paciente"
                  autoFocus autoComplete="off" />
@@ -148,6 +148,20 @@ export default function Entradas() {
           <p className="en-vazio">Nenhuma entrada encontrada {fonte === "ambos" ? "no sistema nem nas planilhas" : fonte === "sistema" ? "no sistema" : "nas planilhas"}.</p>
         ) : (
           <>
+            <div className="en-barra no-print">
+              <span>
+                {fmt(resultado.pessoas.length)} {resultado.pessoas.length === 1 ? "paciente" : "pacientes"} ·{" "}
+                {fmt(resultado.pessoas.reduce((s, p) => s + p.total, 0))} entradas
+              </span>
+              <button type="button" onClick={() => window.print()}>Imprimir</button>
+            </div>
+            <div className="en-so-impressao">
+              <b>HMPCF — Entradas do paciente</b>
+              <span>
+                Busca: {ultima.current.q} · {FONTES.find((f) => f.valor === resultado.fonte)?.rotulo} · impresso em{" "}
+                {new Date().toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+              </span>
+            </div>
             {resultado.limitado && (
               <div className="en-aviso">
                 Mostrando {fmt(resultado.pessoas.length)} de {fmt(resultado.total_pessoas)} pessoas — digite o nome

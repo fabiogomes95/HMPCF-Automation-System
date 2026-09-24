@@ -96,3 +96,33 @@
   .en-origem { grid-column: 1 / -1; }
   .en-total { align-items: flex-start; text-align: left; }
 }
+
+/* ── Barra do resultado e impressão ─────────────────────────────────── */
+.en-barra { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13.5px; color: var(--en-texto-2); }
+.en-barra button {
+  background: var(--en-cartao); border: 1px solid var(--en-borda); border-radius: 8px;
+  padding: 7px 16px; font-size: 14px; font-weight: 600; color: var(--en-texto); cursor: pointer;
+}
+.en-barra button:hover { border-color: var(--en-azul); color: var(--en-azul); }
+.en-so-impressao { display: none; }
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+  .no-print { display: none !important; }
+  .entradas { background: #fff; padding: 0; min-height: 0; font-size: 11pt; }
+  .en-so-impressao {
+    display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px;
+    padding-bottom: 6px; border-bottom: 2px solid #000;
+  }
+  .en-so-impressao b { font-size: 14pt; }
+  .en-so-impressao span { font-size: 9.5pt; }
+  .en-pessoa { border: 1px solid #999; border-radius: 0; padding: 10px 12px; margin-bottom: 10px; break-inside: auto; }
+  .en-pessoa-topo { break-inside: avoid; }
+  .en-total strong { color: #000; }
+  .en-ano { break-inside: auto; }
+  .en-ano h3 { color: #000; break-after: avoid; }
+  .en-ano li { break-inside: avoid; padding: 3px 2px; font-size: 10pt; grid-template-columns: 34mm 14mm auto 1fr; border-top-color: #ccc; }
+  .en-origem { white-space: normal; color: #444; font-size: 8.5pt; }
+  .en-tag { border: 1px solid #999; background: #fff !important; color: #000 !important; }
+  .en-aviso { border-color: #999; background: #fff; color: #000; }
+}
