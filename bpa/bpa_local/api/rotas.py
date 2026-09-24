@@ -37,6 +37,11 @@ def gravar(d: Corpo = Body(None)):
     return digitacao.gravar(_corpo(d))
 
 
+@router.post("/desfazer")
+def desfazer(d: Corpo = Body(None)):
+    return digitacao.desfazer_ultimo(_corpo(d))
+
+
 @router.post("/recarregar")
 def recarregar():
     return digitacao.recarregar()

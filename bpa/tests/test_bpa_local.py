@@ -111,3 +111,20 @@ def test_manual_e_automatica_nunca_juntas(cliente, monkeypatch):
         assert "migração em andamento" in eventos[0]
     finally:
         migracao.TRAVA.release()
+
+
+def test_desfazer_so_o_ultimo(cliente):
+    arq = Path(bpa.BPA_LOTES_DIR, "06-09-2026.txt")
+    arq.write_text("PROFISSIONAL: DR MEDICO | CNS: 111111111111111 | DATA: 06/09/2026\n"
+                   "12345678909\n98765432100\n", encoding="utf-8")
+    # não é o último: recusa e não mexe no arquivo
+    r = cliente.post("/api/desfazer", json={"arquivo": "06-09-2026.txt", "cpf": "12345678909"}).json()
+    assert r["ok"] is False
+    assert arq.read_text(encoding="utf-8").count("12345678909") == 1
+    # o último sai
+    assert cliente.post("/api/desfazer", json={"arquivo": "06-09-2026.txt", "cpf": "987.654.321-00"}).json() == {"ok": True}
+    assert arq.read_text(encoding="utf-8").endswith("12345678909\n")
+    # depois de um cabeçalho novo (outro médico), o último registro não é paciente: recusa
+    cliente.post("/api/cabecalho", json={"medico": "OUTRO", "cns": "", "data": "06/09/2026"})
+    r = cliente.post("/api/desfazer", json={"arquivo": "06-09-2026.txt", "cpf": "12345678909"}).json()
+    assert r["ok"] is False and "12345678909" in arq.read_text(encoding="utf-8")

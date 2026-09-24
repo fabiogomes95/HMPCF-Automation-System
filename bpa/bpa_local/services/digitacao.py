@@ -1,5 +1,6 @@
 """Digitação dos lotes do dia: busca de paciente, cabeçalho, gravar CPF,
 localizar prontuário nos lotes, dividir entre enfermeiros e listar lotes."""
+import os
 from datetime import datetime
 
 import bpa_gerador as bpa
@@ -188,3 +189,30 @@ def lote(arquivo: str) -> dict:
             "pacientes": [{"doc": d, "nome": nomes.get(d, "")} for d in g["documentos"]],
         })
     return {"ok": True, "arquivo": arquivo, "blocos": blocos}
+
+
+def desfazer_ultimo(d: dict) -> dict:
+    """Tira do lote o ÚLTIMO paciente gravado (Enter no paciente errado).
+    Só vale se o documento for a última linha de paciente do arquivo — nunca
+    mexe no meio do lote nem em outro médico."""
+    arquivo = (d.get("arquivo") or "").strip()
+    doc = (d.get("cpf") or "").strip().replace(".", "").replace("-", "").replace(" ", "")
+    if not arquivo or not doc:
+        return {"ok": False, "erro": "Arquivo ou CPF inválido."}
+    caminho = bpa.caminho_lote(arquivo)
+    if not os.path.exists(caminho):
+        return {"ok": False, "erro": "Lote não encontrado."}
+
+    with open(caminho, encoding="utf-8") as f:
+        linhas = f.readlines()
+    for i in range(len(linhas) - 1, -1, -1):
+        conteudo = linhas[i].strip()
+        if not conteudo:
+            continue
+        if "PROFISSIONAL:" in conteudo.upper() or conteudo != doc:
+            return {"ok": False, "erro": "Só dá para desfazer o último paciente gravado neste lote."}
+        del linhas[i]
+        with open(caminho, "w", encoding="utf-8") as f:
+            f.writelines(linhas)
+        return {"ok": True}
+    return {"ok": False, "erro": "Lote sem pacientes."}

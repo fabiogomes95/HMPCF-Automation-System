@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { bpaLocal, arquivoParaData, fmtCpf, fmtNum, hojeBR, mascaraData } from "../../services/bpaLocal";
+import { bpaLocal, arquivoGerado, arquivoParaData, fmtCpf, fmtNum, mascaraData } from "../../services/bpaLocal";
 
 // Digitação = MÉDICOS. Enfermeiros ficam na aba Enfermeiros (dividem os CPFs
-// digitados aqui). Cada "Confirmar" abre um bloco novo no lote do dia
-// (DD-MM-AAAA.txt); o BPA local vira a folha sozinho a cada 99 pacientes.
+// digitados aqui). Cada "Confirmar" abre um bloco no lote do dia
+// (DD-MM-AAAA.txt); blocos do mesmo médico no mesmo dia são somados pelo BPA.
 
 const RE_LOTE_DIA = /^\d{2}-\d{2}-\d{4}\.txt$/;
-const POR_FOLHA = 99;
+// médico + dia em uso: volta sozinho depois de um F5
+const CHAVE_SESSAO = "hmpcf_bpa_digitacao";
 
 function ResultadoGeracao({ r }) {
   if (!r) return null;
@@ -27,17 +28,20 @@ function ResultadoGeracao({ r }) {
 
 export default function Digitacao({ profissionais }) {
   // ── 1. dia e médico
-  const [data, setData] = useState(hojeBR);
+  const [data, setData] = useState(""); // sem data padrão: digitam o mês seguinte, pulando dias entre os 2 notebooks
   const [buscaMedico, setBuscaMedico] = useState("");
   const [medico, setMedico] = useState(null);
-  const [sessao, setSessao] = useState(null); // {arquivo, nome, existentes}
+  const [sessao, setSessao] = useState(null); // {arquivo, nome, cns, data}
+  const [totalLote, setTotalLote] = useState(0);
   const [erroCab, setErroCab] = useState("");
 
   // ── 2. pacientes
   const [q, setQ] = useState("");
   const [resultados, setResultados] = useState([]);
   const [sel, setSel] = useState(0);
-  const [gravados, setGravados] = useState([]); // deste bloco, mais novo primeiro
+  // do médico no dia, mais novo primeiro; daSessao = gravado agora (pode desfazer)
+  const [gravados, setGravados] = useState([]);
+  const [desfazendo, setDesfazendo] = useState(false);
   const [msg, setMsg] = useState(null);
   const [gravando, setGravando] = useState(false);
   const buscaRef = useRef(null);
@@ -45,6 +49,7 @@ export default function Digitacao({ profissionais }) {
 
   // ── 3. gerar
   const [lotes, setLotes] = useState([]);
+  const [arquivosPasta, setArquivosPasta] = useState([]); // inclui os BPA_* já gerados
   const [loteSel, setLoteSel] = useState("");
   const [gerando, setGerando] = useState(false);
   const [resGeracao, setResGeracao] = useState(null);
@@ -60,33 +65,69 @@ export default function Digitacao({ profissionais }) {
 
   async function carregarLotes(preferir) {
     try {
-      const l = (await bpaLocal.lotes()).filter((x) => RE_LOTE_DIA.test(x.nome));
+      const todos = await bpaLocal.lotes();
+      const l = todos.filter((x) => RE_LOTE_DIA.test(x.nome));
+      setArquivosPasta(todos);
       setLotes(l);
       setLoteSel((atual) => (preferir && l.some((x) => x.nome === preferir) ? preferir : atual || l[0]?.nome || ""));
     } catch {
       setLotes([]);
     }
   }
-  useEffect(() => { carregarLotes(); }, []);
+  // O que esse médico já tem no dia (inclusive de antes de um F5)
+  async function carregarDoLote(arquivo, nome) {
+    try {
+      const r = await bpaLocal.lote(arquivo);
+      if (!r.ok) return;
+      const bloco = r.blocos.find((b) => b.profissional.toUpperCase() === nome.toUpperCase());
+      setGravados((bloco?.pacientes || []).map((p) => ({ doc: p.doc, nome: p.nome, hora: "", daSessao: false })).reverse());
+      setTotalLote(r.blocos.reduce((t, b) => t + b.pacientes.length, 0));
+    } catch {
+      /* status do topo mostra se o BPA caiu */
+    }
+  }
+
+  // Abre (ou reabre) o bloco do médico no dia. Sempre grava um cabeçalho novo:
+  // o paciente entra embaixo do ÚLTIMO cabeçalho do arquivo, então reabrir sem
+  // ele poderia jogar o paciente no bloco de outro médico.
+  async function abrirSessao(nome, cns, dataBR) {
+    const r = await bpaLocal.cabecalho(nome, cns, dataBR);
+    if (!r.ok) throw new Error(r.erro);
+    const s = { arquivo: r.arquivo, nome, cns, data: dataBR };
+    setSessao(s);
+    sessionStorage.setItem(CHAVE_SESSAO, JSON.stringify(s));
+    setMsg(null);
+    await carregarDoLote(r.arquivo, nome);
+    carregarLotes(r.arquivo);
+    setTimeout(() => buscaRef.current?.focus(), 0);
+  }
+
+  useEffect(() => {
+    carregarLotes();
+    try {
+      const salvo = JSON.parse(sessionStorage.getItem(CHAVE_SESSAO) || "null");
+      if (salvo?.nome && salvo?.data) {
+        abrirSessao(salvo.nome, salvo.cns, salvo.data).catch(() => sessionStorage.removeItem(CHAVE_SESSAO));
+      }
+    } catch {
+      sessionStorage.removeItem(CHAVE_SESSAO);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function confirmar() {
     setErroCab("");
     if (!medico) return setErroCab("Escolha o médico na lista.");
     if (data.length < 10) return setErroCab("Digite a data completa (DD/MM/AAAA).");
     try {
-      const r = await bpaLocal.cabecalho(medico.nome, medico.cns, data);
-      if (!r.ok) return setErroCab(r.erro);
-      setSessao({ arquivo: r.arquivo, nome: medico.nome, existentes: r.existentes || 0 });
-      setGravados([]);
-      setMsg(null);
-      carregarLotes(r.arquivo);
-      setTimeout(() => buscaRef.current?.focus(), 0);
+      await abrirSessao(medico.nome, medico.cns, data);
     } catch (e) {
       setErroCab(e.message);
     }
   }
 
   function trocar() {
+    sessionStorage.removeItem(CHAVE_SESSAO);
+    setGravados([]);
     setSessao(null);
     setMedico(null);
     setBuscaMedico("");
@@ -127,7 +168,8 @@ export default function Digitacao({ profissionais }) {
       const r = await bpaLocal.gravar(sessao.arquivo, p.cpf, p.nome);
       if (r.ok) {
         const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-        setGravados((g) => [{ doc: p.cpf, nome: p.nome, hora }, ...g]);
+        setGravados((g) => [{ doc: p.cpf, nome: p.nome, hora, daSessao: true }, ...g]);
+        setTotalLote((t) => t + 1);
         setMsg({ tipo: "ok", texto: `✓ Gravado: ${p.nome}` });
         setQ("");
         setResultados([]);
@@ -157,12 +199,40 @@ export default function Digitacao({ profissionais }) {
     }
   }
 
+  async function desfazer(g) {
+    if (!window.confirm(`Tirar ${g.nome || fmtCpf(g.doc)} do lote?`)) return;
+    setDesfazendo(true);
+    try {
+      const r = await bpaLocal.desfazer(sessao.arquivo, g.doc);
+      if (r.ok) {
+        setGravados((lista) => lista.slice(1));
+        setTotalLote((t) => t - 1);
+        setMsg({ tipo: "ok", texto: `Desfeito: ${g.nome || fmtCpf(g.doc)} saiu do lote.` });
+      } else {
+        setMsg({ tipo: "erro", texto: r.erro });
+      }
+    } catch (e) {
+      setMsg({ tipo: "erro", texto: e.message });
+    } finally {
+      setDesfazendo(false);
+      buscaRef.current?.focus();
+    }
+  }
+
+  // Arquivo dos médicos desse dia já gerado antes? (importar de novo duplica a produção)
+  const jaGerado = loteSel ? arquivosPasta.find((a) => a.nome === arquivoGerado(loteSel, "medico")) : null;
+
   async function gerar() {
     if (!loteSel) return;
+    if (jaGerado && !window.confirm(
+      `O arquivo dos médicos deste dia já foi gerado (${jaGerado.modificado_em}).\n\n` +
+      "Se ele já foi importado no BPA Magnético, importar de novo DUPLICA a produção.\n\nGerar de novo mesmo assim?"
+    )) return;
     setGerando(true);
     setResGeracao(null);
     try {
       setResGeracao(await bpaLocal.gerar(loteSel, "medico"));
+      carregarLotes(loteSel);
     } catch (e) {
       setResGeracao({ ok: false, erro: e.message });
     } finally {
@@ -170,7 +240,6 @@ export default function Digitacao({ profissionais }) {
     }
   }
 
-  const noBloco = gravados.length;
 
   return (
     <div className="bp-grade bp-grade-lado">
@@ -188,14 +257,14 @@ export default function Digitacao({ profissionais }) {
                 <button className="bp-btn-sec" onClick={trocar}>Trocar</button>
               </div>
               <div className="bp-contadores">
-                <div><strong>{fmtNum(noBloco)}</strong><span>neste bloco · folha {Math.floor(noBloco / POR_FOLHA) + 1}</span></div>
-                <div><strong>{fmtNum(sessao.existentes + noBloco)}</strong><span>no lote do dia</span></div>
+                <div><strong>{fmtNum(gravados.length)}</strong><span>deste médico no dia</span></div>
+                <div><strong>{fmtNum(totalLote)}</strong><span>no lote do dia</span></div>
               </div>
             </>
           ) : (
             <>
               <label className="bp-rot" htmlFor="dig-data">Data do atendimento</label>
-              <input id="dig-data" className="bp-campo curto" value={data} inputMode="numeric"
+              <input id="dig-data" className="bp-campo curto" value={data} inputMode="numeric" placeholder="DD/MM/AAAA"
                      onChange={(e) => setData(mascaraData(e.target.value))} />
               <label className="bp-rot" htmlFor="dig-medico">Médico</label>
               <input id="dig-medico" className="bp-campo" placeholder="Digite o nome…" value={buscaMedico}
@@ -231,6 +300,11 @@ export default function Digitacao({ profissionais }) {
               <option key={l.nome} value={l.nome}>{arquivoParaData(l.nome)} · alterado {l.modificado_em}</option>
             ))}
           </select>
+          {jaGerado && !resGeracao && (
+            <div className="bp-aviso alerta">
+              Já gerado em {jaGerado.modificado_em}. Se já importou no BPA Magnético, importar de novo duplica a produção.
+            </div>
+          )}
           <button className="bp-btn verde largo" onClick={gerar} disabled={!loteSel || gerando}>
             {gerando ? "Gerando…" : "Gerar BPA dos médicos"}
           </button>
@@ -265,16 +339,26 @@ export default function Digitacao({ profissionais }) {
           )
         )}
 
-        <h3>Gravados neste bloco</h3>
+        <h3>Gravados deste médico no dia</h3>
         {gravados.length === 0 ? (
-          <p className="bp-vazio">{sessao ? "Nenhum paciente gravado neste bloco ainda." : "—"}</p>
+          <p className="bp-vazio">{sessao ? "Nenhum paciente deste médico no dia ainda." : "—"}</p>
         ) : (
           <table className="bp-tabela">
-            <thead><tr><th>#</th><th>Paciente</th><th>CPF</th><th className="num">Hora</th></tr></thead>
+            <thead><tr><th>#</th><th>Paciente</th><th>CPF</th><th className="num">Hora</th><th></th></tr></thead>
             <tbody>
               {gravados.map((g, i) => (
                 <tr key={`${g.doc}-${gravados.length - i}`}>
-                  <td>{gravados.length - i}</td><td>{g.nome}</td><td>{fmtCpf(g.doc)}</td><td className="num">{g.hora}</td>
+                  <td>{gravados.length - i}</td>
+                  <td>{g.nome || <span style={{ color: "var(--bp-texto-3)" }}>fora do Firebird</span>}</td>
+                  <td>{fmtCpf(g.doc)}</td>
+                  <td className="num">{g.hora || "—"}</td>
+                  <td className="num">
+                    {i === 0 && g.daSessao && (
+                      <button className="bp-btn-sec" style={{ padding: "2px 8px" }} onClick={() => desfazer(g)} disabled={desfazendo}>
+                        desfazer
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

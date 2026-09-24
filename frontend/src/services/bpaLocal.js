@@ -46,6 +46,7 @@ export const bpaLocal = {
   buscar: (q) => req("/api/buscar", { params: { q, incluir_sus: "0" } }),
   cabecalho: (medico, cns, data) => req("/api/cabecalho", { metodo: "POST", corpo: { medico, cns, data } }),
   gravar: (arquivo, cpf, nome) => req("/api/gravar", { metodo: "POST", corpo: { arquivo, cpf, nome } }),
+  desfazer: (arquivo, cpf) => req("/api/desfazer", { metodo: "POST", corpo: { arquivo, cpf } }),
   lotes: () => req("/api/lotes"),
   lote: (arquivo) => req("/api/lote", { params: { arquivo } }),
   gerar: (arquivo, categoria) => req("/api/gerar", { metodo: "POST", corpo: { arquivo, categoria }, timeout: LONGO }),
@@ -88,3 +89,7 @@ export function mascaraData(v) {
 
 export const dataParaArquivo = (dataBR) => `${dataBR.replace(/\//g, "-")}.txt`; // "22/09/2026" -> "22-09-2026.txt"
 export const arquivoParaData = (arq) => arq.replace(".txt", "").replace(/-/g, "/");
+
+// Arquivo BPA-I que o BPA local gera para o lote do dia: "22-09-2026.txt" -> "BPA_MEDICOS_22092026.txt"
+export const arquivoGerado = (lote, categoria) =>
+  `BPA_${categoria === "enfermeiro" ? "ENFERMEIROS" : "MEDICOS"}_${lote.replace(".txt", "").replace(/-/g, "")}.txt`;

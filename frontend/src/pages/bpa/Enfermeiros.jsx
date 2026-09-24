@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { bpaLocal, dataParaArquivo, fmtCpf, fmtNum, hojeBR, mascaraData } from "../../services/bpaLocal";
+import { bpaLocal, arquivoGerado, dataParaArquivo, fmtCpf, fmtNum, mascaraData } from "../../services/bpaLocal";
 
 // Enfermeiros: divide os CPFs que os MÉDICOS já digitaram no dia entre os
 // enfermeiros marcados e gera o BPA dos enfermeiros. Refazer a divisão
 // descarta a anterior (não duplica) — regra do BPA local.
 
 export default function Enfermeiros({ profissionais }) {
-  const [data, setData] = useState(hojeBR);
+  const [data, setData] = useState(""); // sem data padrão: digitam o mês seguinte, pulando dias entre os 2 notebooks
   const [lote, setLote] = useState(null); // {ok, blocos} | {ok:false, erro}
   const [carregando, setCarregando] = useState(false);
   const [marcados, setMarcados] = useState(new Set());
@@ -14,6 +14,12 @@ export default function Enfermeiros({ profissionais }) {
   const [erro, setErro] = useState("");
   const [gerando, setGerando] = useState(false);
   const [resGeracao, setResGeracao] = useState(null);
+  const [arquivosPasta, setArquivosPasta] = useState([]); // pra saber se o dia já foi gerado
+
+  const carregarPasta = useCallback(() => {
+    bpaLocal.lotes().then(setArquivosPasta).catch(() => setArquivosPasta([]));
+  }, []);
+  useEffect(() => { carregarPasta(); }, [carregarPasta]);
 
   const enfermeiros = useMemo(() => profissionais.filter((p) => p.categoria === "enfermeiro"), [profissionais]);
   const dataCompleta = data.length === 10;
@@ -70,11 +76,20 @@ export default function Enfermeiros({ profissionais }) {
     }
   }
 
+  const jaGerado = dataCompleta
+    ? arquivosPasta.find((a) => a.nome === arquivoGerado(dataParaArquivo(data), "enfermeiro"))
+    : null;
+
   async function gerar() {
+    if (jaGerado && !window.confirm(
+      `O arquivo dos enfermeiros deste dia já foi gerado (${jaGerado.modificado_em}).\n\n` +
+      "Se ele já foi importado no BPA Magnético, importar de novo DUPLICA a produção.\n\nGerar de novo mesmo assim?"
+    )) return;
     setGerando(true);
     setResGeracao(null);
     try {
       setResGeracao(await bpaLocal.gerar(dataParaArquivo(data), "enfermeiro"));
+      carregarPasta();
     } catch (e) {
       setResGeracao({ ok: false, erro: e.message });
     } finally {
@@ -94,7 +109,7 @@ export default function Enfermeiros({ profissionais }) {
           Refazer não duplica.
         </p>
         <label className="bp-rot" htmlFor="enf-data">Data</label>
-        <input id="enf-data" className="bp-campo curto" value={data} inputMode="numeric"
+        <input id="enf-data" className="bp-campo curto" value={data} inputMode="numeric" placeholder="DD/MM/AAAA"
                onChange={(e) => setData(mascaraData(e.target.value))} />
 
         {!dataCompleta ? null : carregando ? (
@@ -141,6 +156,11 @@ export default function Enfermeiros({ profissionais }) {
               <tr><td><b>Total</b></td><td className="num"><b>{fmtNum(totalDividido)}</b></td></tr>
             </tbody>
           </table>
+        )}
+        {jaGerado && !resGeracao && (
+          <div className="bp-aviso alerta">
+            Já gerado em {jaGerado.modificado_em}. Se já importou no BPA Magnético, importar de novo duplica a produção.
+          </div>
         )}
         <button className="bp-btn verde largo" onClick={gerar} disabled={!divisaoSalva.length || gerando}>
           {gerando ? "Gerando…" : "Gerar BPA dos enfermeiros"}
