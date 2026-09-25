@@ -96,8 +96,9 @@ try {
 }
 Write-Host "[OK] BPA iniciado -- abra http://localhost:8503/ui/ em alguns segundos"
 # 4. Atalho na area de trabalho --------------------------------------------------
-# "HMPCF - BPA": abre o sistema do hospital direto no Chrome (sem janela preta),
-# com o icone do robo. Tira os atalhos antigos que ligavam o BPA Flask a mao.
+# "HMPCF - BPA": liga o BPA local escondido (abrir_bpa.vbs, igual ao
+# iniciar.bat sem janela) e abre o sistema do servidor no navegador, com o
+# icone do robo. Tira os atalhos antigos que ligavam o BPA Flask a mao.
 Passo "Atalho na area de trabalho"
 $desktop = [Environment]::GetFolderPath("Desktop")
 $shell = New-Object -ComObject WScript.Shell
@@ -108,22 +109,11 @@ Get-ChildItem $desktop -Filter *.lnk -ErrorAction SilentlyContinue | ForEach-Obj
         Write-Host "[OK] Atalho antigo removido: $($_.Name)"
     }
 }
-$chrome = @(
-    (Join-Path $env:ProgramFiles "Google\Chrome\Application\chrome.exe"),
-    (Join-Path ${env:ProgramFiles(x86)} "Google\Chrome\Application\chrome.exe"),
-    (Join-Path $env:LOCALAPPDATA "Google\Chrome\Application\chrome.exe")
-) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 $url = "http://192.168.1.29:8001"
 $lnk = $shell.CreateShortcut((Join-Path $desktop "HMPCF - BPA.lnk"))
-if ($chrome) {
-    $lnk.TargetPath = $chrome
-    $lnk.Arguments = $url
-} else {
-    # Sem Chrome: abre no navegador padrao
-    $lnk.TargetPath = Join-Path $env:WINDIR "explorer.exe"
-    $lnk.Arguments = $url
-    Write-Host "[AVISO] Chrome nao encontrado -- o atalho abre no navegador padrao" -ForegroundColor Yellow
-}
+$lnk.TargetPath = Join-Path $env:WINDIR "System32\wscript.exe"
+$lnk.Arguments = '"' + (Join-Path $bpa "abrir_bpa.vbs") + '"'
+$lnk.WorkingDirectory = $bpa
 $lnk.IconLocation = (Join-Path $bpa "robo-icon.ico") + ",0"
 $lnk.Description = "Sistema HMPCF (aba BPA) - $url"
 $lnk.Save()
