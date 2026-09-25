@@ -14,7 +14,7 @@ from bpa_local.services import migracao, migracao_auto
 @pytest.fixture
 def cliente(monkeypatch, tmp_path):
     monkeypatch.setattr(bpa, "BPA_LOTES_DIR", str(tmp_path))
-    monkeypatch.setattr(bpa, "carregar_pacientes_cadcns", lambda: [
+    monkeypatch.setattr(bpa, "carregar_pacientes_cadcns", lambda limite=None: [
         {"sus": "700000000000001", "nome": "MARIA DA SILVA", "dtnasc": "15/01/1990", "cpf": "12345678909"},
         {"sus": "", "nome": "JOSE SANTOS", "dtnasc": "01/02/1980", "cpf": "98765432100"},
     ])

@@ -55,7 +55,7 @@ def gravar(d: dict) -> dict:
 
 
 def recarregar() -> dict:
-    cache.carregar_tudo()
+    cache.recarregar_tudo()
     return {"ok": True, "total": len(cache.pacientes), "erro": cache.erro, "profs": cache.profissionais}
 
 

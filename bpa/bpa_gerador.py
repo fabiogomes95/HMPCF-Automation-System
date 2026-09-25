@@ -183,24 +183,37 @@ def carregar_profissionais_cadmed() -> list[dict]:
         con.close()
 
 
-def carregar_pacientes_cadcns() -> list[dict]:
-    """Carrega CNS/NOME/DTNASC/CPF de toda a CADCNS — usado pela busca instantânea."""
+def _pacientes_do_cursor(cur) -> list[dict]:
+    pacientes = []
+    for cns, nome, dtnasc, cpf, id_cadcns in cur.fetchall():
+        dn_raw = str(dtnasc or "").strip()
+        dtnasc_fmt = f"{dn_raw[6:8]}/{dn_raw[4:6]}/{dn_raw[0:4]}" if len(dn_raw) == 8 else ""
+        pacientes.append({
+            "sus": str(cns or "").strip(),
+            "nome": str(nome or "").strip().upper(),
+            "dtnasc": dtnasc_fmt,
+            "cpf": str(cpf or "").strip(),
+            "id": id_cadcns,
+        })
+    return pacientes
+
+
+def carregar_pacientes_cadcns(limite: int | None = None) -> list[dict]:
+    """Carrega CNS/NOME/DTNASC/CPF da CADCNS — usado pela busca instantânea.
+
+    Com `limite`, traz só os cadastros mais recentes (maior ID_CADCNS) — usado
+    pra carga inicial rápida do BPA; sem `limite`, traz a CADCNS inteira."""
     con = conectar()
     try:
         cur = con.cursor()
-        cur.execute("SELECT CNS, NOME, DTNASC, NUM_CPF, ID_CADCNS FROM CADCNS")
-        pacientes = []
-        for cns, nome, dtnasc, cpf, id_cadcns in cur.fetchall():
-            dn_raw = str(dtnasc or "").strip()
-            dtnasc_fmt = f"{dn_raw[6:8]}/{dn_raw[4:6]}/{dn_raw[0:4]}" if len(dn_raw) == 8 else ""
-            pacientes.append({
-                "sus": str(cns or "").strip(),
-                "nome": str(nome or "").strip().upper(),
-                "dtnasc": dtnasc_fmt,
-                "cpf": str(cpf or "").strip(),
-                "id": id_cadcns,
-            })
-        return pacientes
+        if limite:
+            cur.execute(
+                "SELECT FIRST ? CNS, NOME, DTNASC, NUM_CPF, ID_CADCNS FROM CADCNS ORDER BY ID_CADCNS DESC",
+                (limite,),
+            )
+        else:
+            cur.execute("SELECT CNS, NOME, DTNASC, NUM_CPF, ID_CADCNS FROM CADCNS")
+        return _pacientes_do_cursor(cur)
     finally:
         con.close()
 
