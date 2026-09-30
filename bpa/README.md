@@ -39,6 +39,7 @@ Mudança só nas telas não precisa: basta F5.
 | Configuração deste notebook | `bpa\.env` (fora do git) |
 | Log do BPA | `bpa\bpa_local.log` |
 | Cópia dos lotes no servidor | tabela `bpa_lotes_backup` (restaurar: `ferramentas\restaurar_lotes.py`) |
+| Limpar paciente sem CPF repetido no Firebird | `ferramentas\limpar_duplicados_sem_cpf.py` (sem `--apagar` só mostra) |
 
 A barra do topo da aba BPA mostra "lotes em …" — confira se é a pasta certa.
 

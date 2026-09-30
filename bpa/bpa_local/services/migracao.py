@@ -31,8 +31,13 @@ def _dtnasc(valor) -> str | None:
 
 
 def chave_nome_nasc(nome, dtnasc) -> tuple[str, str]:
-    """Identidade de paciente SEM CPF: nome (como vai pro Firebird, 30 letras) + nascimento."""
-    return (re.sub(r"\s+", " ", str(nome or "").strip().upper())[:30].strip(), _dtnasc(dtnasc) or "")
+    """Identidade de paciente SEM CPF: nome (como vai pro Firebird, 30 letras) + nascimento.
+
+    Corta em 30 ANTES de juntar espaços repetidos -- é o que `_texto` grava no
+    Firebird. Ao contrário, nome com espaço duplo e mais de 30 letras dava
+    chave diferente do lado Postgres ("...NETO") e do Firebird ("...NET"), e o
+    paciente era inserido de novo a cada migração."""
+    return (re.sub(r"\s+", " ", str(nome or "").strip().upper()[:30]).strip(), _dtnasc(dtnasc) or "")
 
 
 def _carregar_existentes_fb(cur) -> tuple[set, set]:

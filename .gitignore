@@ -66,6 +66,7 @@ backend/backups_mescla/
 # BPA local: estado da migracao automatica do dia (por notebook)
 bpa/migracao_auto.json
 bpa/backup_lotes.json
+bpa/backup_cadcns_duplicados_*.json
 
 # Planilhas (dados de pacientes) nunca vão pro git — ficam em C:\HMPCF\planilhas_manuais
 *.xlsx

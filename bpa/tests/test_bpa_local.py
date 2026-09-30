@@ -24,6 +24,7 @@ def cliente(monkeypatch, tmp_path):
     ])
     monkeypatch.setattr(migracao_auto, "ARQUIVO", tmp_path / "migracao_auto.json")
     monkeypatch.setattr(migracao_auto, "_estado", {"situacao": "nunca"})
+    monkeypatch.setattr(migracao_auto, "assinatura_recepcao", lambda: "100|2026-09-24T08:00:00")
     from bpa_local.main import app
     with TestClient(app) as c:
         yield c
@@ -87,6 +88,7 @@ def test_rodar_grava_resultado(cliente, monkeypatch):
     migracao_auto._rodar()
     e = migracao_auto.estado()
     assert e["situacao"] == "ok" and e["inseridos"] == 7 and e["duplicatas"] == 113 and e["total"] == 120
+    assert e["assinatura"] == "100|2026-09-24T08:00:00"           # como estava a recepção nesta rodada
     assert "INNER JOIN recepcao_atendimentos" in consultas[0]
     assert migracao_auto.ARQUIVO.exists()                         # sobrevive a reinício do BPA
     assert not migracao.TRAVA.locked()
@@ -98,6 +100,35 @@ def test_rodar_com_erro(cliente, monkeypatch):
     migracao_auto._rodar()
     e = migracao_auto.estado()
     assert e["situacao"] == "erro" and "PostgreSQL" in e["erro"]
+
+
+def test_roda_de_novo_quando_entra_atendimento_novo(cliente, monkeypatch):
+    # Ex.: o faturamento lançou uma folha A4 depois da migração do dia.
+    disparos = []
+    monkeypatch.setattr(migracao_auto, "_disparar", lambda agora: disparos.append(agora) or True)
+    _estado(situacao="ok", data=datetime.now().date().isoformat(), assinatura="100|2026-09-24T08:00:00")
+    assert migracao_auto.conferir_novos() is False and disparos == []   # nada novo
+    monkeypatch.setattr(migracao_auto, "assinatura_recepcao", lambda: "101|2026-09-24T09:30:00")
+    assert migracao_auto.conferir_novos() is True and len(disparos) == 1
+    _estado(situacao="rodando", assinatura="100|2026-09-24T08:00:00")
+    assert migracao_auto.conferir_novos() is False                 # já está rodando
+
+
+def test_conferir_novos_com_servidor_fora(cliente, monkeypatch):
+    def fora():
+        raise OSError("servidor fora")
+    monkeypatch.setattr(migracao_auto, "assinatura_recepcao", fora)
+    _estado(situacao="ok", data=datetime.now().date().isoformat(), assinatura="x")
+    assert migracao_auto.conferir_novos() is False
+
+
+def test_sem_cpf_com_espaco_duplo_e_nome_longo_nao_duplica():
+    # Postgres: espaço duplo + mais de 30 letras. Firebird guarda os 30 primeiros
+    # caracteres do jeito que vieram (_texto). As duas chaves têm que bater.
+    for nome in ("JOAQUIM JULIAO  CAVALCANTE NETO", "MARIA DAS GRACAS   QUINO   NDINIZ"):
+        gravado = migracao._texto(nome, 30)
+        assert migracao.chave_nome_nasc(nome, "19410207") == migracao.chave_nome_nasc(gravado, "19410207")
+    assert migracao.chave_nome_nasc(" maria  da silva ", "1990-01-15") == ("MARIA DA SILVA", "19900115")
 
 
 def test_manual_e_automatica_nunca_juntas(cliente, monkeypatch):
