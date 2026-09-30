@@ -53,6 +53,51 @@ function SituacaoDia({ s, carregando, aoAtualizar }) {
   );
 }
 
+// "Migrar agora": paciente lançado agora numa folha A4 ainda não está no
+// Firebird deste notebook -- leva na hora (mesma migração da abertura do dia).
+function MigrarAgora({ aoTerminar }) {
+  const [rodando, setRodando] = useState(false);
+  const [res, setRes] = useState(null);
+
+  async function migrar() {
+    setRodando(true);
+    setRes(null);
+    try {
+      const r = await bpaLocal.migrarAgora();
+      if (!r.ok) {
+        setRes({ ok: false, texto: r.erro });
+        return;
+      }
+      let m;
+      do {
+        await new Promise((ok) => setTimeout(ok, 1500));
+        m = (await bpaLocal.status()).migracao_auto;
+      } while (m?.situacao === "rodando");
+      setRes(m?.situacao === "ok"
+        ? { ok: true, texto: `Migração concluída: ${fmtNum(m.inseridos)} paciente(s) novo(s).` }
+        : { ok: false, texto: m?.erro || "Migração não terminou." });
+      aoTerminar();
+    } catch (e) {
+      setRes({ ok: false, texto: e.message });
+    } finally {
+      setRodando(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="bp-linha" style={{ marginTop: 10, alignItems: "center", fontSize: 13, color: "var(--bp-texto-2)" }}>
+        <span style={{ flex: 1 }}>Paciente lançado agora numa folha A4 e não aparece?</span>
+        <button className="bp-btn-sec" onClick={migrar} disabled={rodando}
+                title="Leva pro Firebird os pacientes atendidos na recepção nos últimos 40 dias">
+          {rodando ? "Migrando…" : "Migrar agora"}
+        </button>
+      </div>
+      {res && <div className={`bp-aviso ${res.ok ? "ok" : "erro"}`}>{res.texto}</div>}
+    </>
+  );
+}
+
 export default function Digitacao({ profissionais }) {
   // ── 1. dia e médico
   const [data, setData] = useState(""); // sem data padrão: digitam o mês seguinte, pulando dias entre os 2 notebooks
@@ -76,6 +121,7 @@ export default function Digitacao({ profissionais }) {
   const buscaRef = useRef(null);
   const medicoRef = useRef(null);
   const seqBusca = useRef(0);
+  const [migracoes, setMigracoes] = useState(0); // muda depois do "Migrar agora": refaz a busca
 
   // ── 3. gerar
   const [lotes, setLotes] = useState([]);
@@ -202,7 +248,7 @@ export default function Digitacao({ profissionais }) {
       }
     }, 120);
     return () => clearTimeout(t);
-  }, [q]);
+  }, [q, migracoes]);
 
   async function gravar(p) {
     if (!sessao || !p || gravando) return;
@@ -379,6 +425,7 @@ export default function Digitacao({ profissionais }) {
           Digite o CPF ou o nome, escolha com <span className="bp-tecla">↑</span> <span className="bp-tecla">↓</span> ou <span className="bp-tecla">Tab</span> e
           aperte <span className="bp-tecla">Enter</span> para gravar. Digite <b>sem doc</b> para ver todos os pacientes sem documento.
         </p>
+        <MigrarAgora aoTerminar={() => setMigracoes((n) => n + 1)} />
         <input ref={buscaRef} className="bp-campo" value={q} disabled={!sessao} autoComplete="off"
                placeholder={sessao ? "CPF ou nome do paciente" : "Confirme o dia e o médico primeiro"}
                onChange={(e) => setQ(e.target.value)} onKeyDown={teclaBusca} />

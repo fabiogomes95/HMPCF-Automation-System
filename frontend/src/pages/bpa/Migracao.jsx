@@ -30,8 +30,7 @@ function CartaoAutomatica({ m }) {
       <h2>Automática do dia</h2>
       <p className="bp-desc">
         Na primeira vez que o BPA é aberto no dia, os pacientes atendidos na recepção nos últimos 40 dias
-        vão sozinhos para o Firebird deste notebook. Quem já está lá é ignorado. Paciente lançado depois
-        (ex.: folha A4 do faturamento): botão "Migrar agora" no topo da aba BPA.
+        vão sozinhos para o Firebird deste notebook. Quem já está lá é ignorado.
       </p>
       {!m || m.situacao === "nunca" ? (
         <p className="bp-vazio">Ainda não rodou neste notebook.</p>

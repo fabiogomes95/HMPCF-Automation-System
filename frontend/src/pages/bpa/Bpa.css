@@ -37,11 +37,6 @@
 .bp-sub.ok { color: var(--bp-ok); }
 .bp-sub.erro { color: var(--bp-erro); }
 .bp-sub.andamento { color: var(--bp-azul); }
-.bp-migrar-agora { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.bp-migrar-agora .ok { color: var(--bp-ok); }
-.bp-migrar-agora .erro { color: var(--bp-erro); }
-.bp-migrar-agora .andamento { color: var(--bp-azul); }
-.bp-migrar-agora .bp-btn-sec { padding: 3px 10px; font-size: 12px; }
 
 .bp-estado {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
