@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from bpa_local import postgres
 from bpa_local.cache import cache
-from bpa_local.services import backup_lotes, digitacao, geracao, migracao, nutricao, producao
+from bpa_local.services import backup_lotes, digitacao, geracao, migracao, migracao_auto, nutricao, producao
 
 router = APIRouter(prefix="/api")
 
@@ -121,6 +121,11 @@ def nutricao_gerar(d: Corpo = Body(None)):
 @router.post("/migracao/preview")
 def migracao_preview(d: Corpo = Body(None)):
     return migracao.preview(_corpo(d))
+
+
+@router.post("/migracao/agora")
+def migracao_agora():
+    return migracao_auto.migrar_agora()
 
 
 @router.get("/migracao/stream")

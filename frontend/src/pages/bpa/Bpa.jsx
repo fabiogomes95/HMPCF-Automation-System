@@ -19,6 +19,7 @@ const GRUPOS = [
   { rotulo: "Consultas", abas: [{ id: "prontuario", rotulo: "Buscar prontuário" }] },
 ];
 const ATUALIZA_STATUS_MS = 30000;
+const ATUALIZA_MIGRANDO_MS = 2000; // enquanto a migração roda, acompanha de perto
 
 // Selo do backup dos lotes (bpa_local/services/backup_lotes.py)
 function SeloBackup({ b }) {
@@ -38,26 +39,34 @@ function hora(iso) {
   return iso ? new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
 }
 
-// Linha da migração automática do dia, embaixo do título
-function LinhaMigracaoAuto({ m }) {
-  if (!m || m.situacao === "nunca") return null;
+// Linha da migração automática do dia, embaixo do título, com o botão
+// "Migrar agora" (paciente lançado agora numa folha A4 e já vai ser digitado)
+function LinhaMigracaoAuto({ m, aoMigrarAgora, pedindo }) {
   const hojeISO = dataLocalISO();
-  if (m.situacao === "rodando") {
+  const rodando = m?.situacao === "rodando";
+  let texto = null;
+  if (rodando) {
     const pct = m.total ? ` · ${Math.round((m.i / m.total) * 100)}%` : "";
-    return <p className="bp-sub andamento">⟳ Migração automática de hoje em andamento{pct}…</p>;
-  }
-  if (m.situacao === "erro") {
-    return <p className="bp-sub erro">✕ Migração automática falhou ({hora(m.fim)}): {m.erro} — tenta de novo sozinha em alguns minutos</p>;
-  }
-  if (m.situacao === "ok" && m.data === hojeISO) {
-    return (
-      <p className="bp-sub ok">
-        ✓ Migração automática de hoje ({hora(m.fim)}): {fmtNum(m.inseridos)} pacientes novos
+    texto = <span className="andamento">⟳ Migrando pacientes para o Firebird{pct}…</span>;
+  } else if (m?.situacao === "erro") {
+    texto = <span className="erro">✕ Migração falhou ({hora(m.fim)}): {m.erro}</span>;
+  } else if (m?.situacao === "ok" && m.data === hojeISO) {
+    texto = (
+      <span className="ok">
+        ✓ Última migração ({hora(m.fim)}): {fmtNum(m.inseridos)} pacientes novos
         {m.erros ? ` · ${m.erros} erro(s) — veja a aba Migração` : ""}
-      </p>
+      </span>
     );
   }
-  return null;
+  return (
+    <div className="bp-sub bp-migrar-agora">
+      {texto}
+      <button type="button" className="bp-btn-sec" onClick={aoMigrarAgora} disabled={rodando || pedindo}
+              title="Leva pro Firebird os pacientes atendidos nos últimos 40 dias (ex.: lançado agora numa folha A4)">
+        {rodando || pedindo ? "Migrando…" : "Migrar agora"}
+      </button>
+    </div>
+  );
 }
 
 export default function Bpa() {
@@ -102,6 +111,28 @@ export default function Bpa() {
     return () => clearInterval(t);
   }, [verificar, carregarProfissionais]);
 
+  // Migração rodando: consulta a cada 2 s pra mostrar o fim na hora
+  const migrando = status?.migracao_auto?.situacao === "rodando";
+  useEffect(() => {
+    if (!migrando) return undefined;
+    const t = setInterval(verificar, ATUALIZA_MIGRANDO_MS);
+    return () => clearInterval(t);
+  }, [migrando, verificar]);
+
+  const [pedindoMigracao, setPedindoMigracao] = useState(false);
+  async function migrarAgora() {
+    setPedindoMigracao(true);
+    try {
+      const r = await bpaLocal.migrarAgora();
+      if (!r.ok) alert(r.erro);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      await verificar();
+      setPedindoMigracao(false);
+    }
+  }
+
   async function tentarDeNovo() {
     setStatus(null);
     if (await verificar()) carregarProfissionais();
@@ -128,7 +159,7 @@ export default function Bpa() {
         <div>
           <h1>BPA</h1>
           <p className="bp-sub">Faturamento SUS: digitação dos atendimentos de médicos e enfermeiros e geração dos arquivos para importar no BPA Magnético</p>
-          {ligado && <LinhaMigracaoAuto m={status.migracao_auto} />}
+          {ligado && <LinhaMigracaoAuto m={status.migracao_auto} aoMigrarAgora={migrarAgora} pedindo={pedindoMigracao} />}
         </div>
         <div className="bp-estado">
           {antigo ? (

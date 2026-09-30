@@ -24,7 +24,6 @@ def cliente(monkeypatch, tmp_path):
     ])
     monkeypatch.setattr(migracao_auto, "ARQUIVO", tmp_path / "migracao_auto.json")
     monkeypatch.setattr(migracao_auto, "_estado", {"situacao": "nunca"})
-    monkeypatch.setattr(migracao_auto, "assinatura_recepcao", lambda: "100|2026-09-24T08:00:00")
     from bpa_local.main import app
     with TestClient(app) as c:
         yield c
@@ -88,7 +87,6 @@ def test_rodar_grava_resultado(cliente, monkeypatch):
     migracao_auto._rodar()
     e = migracao_auto.estado()
     assert e["situacao"] == "ok" and e["inseridos"] == 7 and e["duplicatas"] == 113 and e["total"] == 120
-    assert e["assinatura"] == "100|2026-09-24T08:00:00"           # como estava a recepção nesta rodada
     assert "INNER JOIN recepcao_atendimentos" in consultas[0]
     assert migracao_auto.ARQUIVO.exists()                         # sobrevive a reinício do BPA
     assert not migracao.TRAVA.locked()
@@ -102,24 +100,24 @@ def test_rodar_com_erro(cliente, monkeypatch):
     assert e["situacao"] == "erro" and "PostgreSQL" in e["erro"]
 
 
-def test_roda_de_novo_quando_entra_atendimento_novo(cliente, monkeypatch):
-    # Ex.: o faturamento lançou uma folha A4 depois da migração do dia.
+def test_migrar_agora(cliente, monkeypatch):
+    # Botão da aba BPA: roda na hora mesmo já tendo rodado hoje (folha A4 lançada agora).
     disparos = []
     monkeypatch.setattr(migracao_auto, "_disparar", lambda agora: disparos.append(agora) or True)
-    _estado(situacao="ok", data=datetime.now().date().isoformat(), assinatura="100|2026-09-24T08:00:00")
-    assert migracao_auto.conferir_novos() is False and disparos == []   # nada novo
-    monkeypatch.setattr(migracao_auto, "assinatura_recepcao", lambda: "101|2026-09-24T09:30:00")
-    assert migracao_auto.conferir_novos() is True and len(disparos) == 1
-    _estado(situacao="rodando", assinatura="100|2026-09-24T08:00:00")
-    assert migracao_auto.conferir_novos() is False                 # já está rodando
+    _estado(situacao="ok", data=datetime.now().date().isoformat())
+    assert cliente.post("/api/migracao/agora").json()["ok"] and len(disparos) == 1
+    _estado(situacao="rodando")
+    assert cliente.post("/api/migracao/agora").json()["ok"] and len(disparos) == 1   # não dispara 2x
 
 
-def test_conferir_novos_com_servidor_fora(cliente, monkeypatch):
-    def fora():
-        raise OSError("servidor fora")
-    monkeypatch.setattr(migracao_auto, "assinatura_recepcao", fora)
-    _estado(situacao="ok", data=datetime.now().date().isoformat(), assinatura="x")
-    assert migracao_auto.conferir_novos() is False
+def test_migrar_agora_com_manual_rodando(cliente):
+    _estado(situacao="ok")
+    migracao.TRAVA.acquire()
+    try:
+        r = cliente.post("/api/migracao/agora").json()
+        assert r["ok"] is False and "manual" in r["erro"]
+    finally:
+        migracao.TRAVA.release()
 
 
 def test_sem_cpf_com_espaco_duplo_e_nome_longo_nao_duplica():

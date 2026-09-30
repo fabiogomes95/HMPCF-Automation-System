@@ -6,9 +6,8 @@ manual — quem já está no Firebird é ignorado, então rodar de novo não dup
 Roda numa thread (a tela abre na hora) e guarda o resultado em
 bpa/migracao_auto.json, pra não repetir no mesmo dia se o BPA reiniciar.
 
-Depois da do dia, confere a cada CONFERIR_NOVOS se entrou atendimento novo
-(ou foi alterado) na recepção -- ex.: o faturamento lançou uma folha A4 que a
-recepção esqueceu -- e, se entrou, roda de novo sozinha, sem migração manual."""
+O botão "Migrar agora" da aba BPA (migrar_agora) roda a mesma coisa na hora --
+ex.: o faturamento lançou uma folha A4 e já vai digitar o paciente."""
 import json
 import os
 import threading
@@ -22,16 +21,12 @@ JANELA_DIAS = 40
 # Depois de um erro (servidor fora, Firebird fechado), espera antes de tentar de
 # novo -- a tela consulta o status a cada 30 s e não pode martelar o servidor.
 ESPERA_APOS_ERRO = timedelta(minutes=10)
-# De quanto em quanto tempo pergunta ao Postgres se entrou atendimento novo
-# (uma consulta leve: MAX do id e do updated_at).
-CONFERIR_NOVOS = timedelta(minutes=2)
 ARQUIVO = BASE / "migracao_auto.json"
 
 _estado: dict = {"situacao": "nunca"}
 _lock_estado = threading.Lock()
-# Dispara no máximo uma migração por vez (a do dia e a de "entrou atendimento novo").
+# A do dia e o "Migrar agora" nunca disparam juntos.
 _lock_disparo = threading.Lock()
-_ultima_conferencia: datetime | None = None
 
 
 def _carregar() -> None:
@@ -74,19 +69,6 @@ def precisa_rodar(agora: datetime) -> bool:
     return True
 
 
-def assinatura_recepcao() -> str:
-    """Muda sempre que um atendimento é criado ou alterado na recepção
-    (inclusive pelo faturamento/TI numa folha A4)."""
-    pg = postgres.conectar()
-    try:
-        cur = pg.cursor()
-        cur.execute("SELECT COALESCE(MAX(id), 0), MAX(updated_at) FROM recepcao_atendimentos")
-        max_id, max_upd = cur.fetchone()
-        return f"{max_id}|{max_upd.isoformat() if max_upd else ''}"
-    finally:
-        pg.close()
-
-
 def _disparar(agora: datetime) -> bool:
     """Marca como rodando e começa a migração em segundo plano. Quem chama segura _lock_disparo."""
     if migracao.TRAVA.locked():  # manual em andamento: tenta na próxima consulta
@@ -99,37 +81,24 @@ def _disparar(agora: datetime) -> bool:
 
 def executar_se_preciso() -> bool:
     """Dispara a migração do dia em segundo plano, se ainda não rodou hoje.
-    Já rodou: de tempos em tempos confere (em outra thread) se entrou
-    atendimento novo e, se entrou, roda de novo. Devolve True se disparou agora."""
-    global _ultima_conferencia
+    Devolve True se disparou agora."""
     if os.getenv("BPA_MIGRACAO_AUTO", "1") == "0":  # desligada (testes)
         return False
     agora = datetime.now()
     with _lock_disparo:
-        if precisa_rodar(agora):
-            return _disparar(agora)
-        e = estado()
-        if e.get("situacao") != "ok" or e.get("data") != agora.date().isoformat():
+        if not precisa_rodar(agora):
             return False
-        if _ultima_conferencia and agora - _ultima_conferencia < CONFERIR_NOVOS:
-            return False
-        _ultima_conferencia = agora
-    threading.Thread(target=conferir_novos, name="migracao-auto-conferir", daemon=True).start()
-    return False
+        return _disparar(agora)
 
 
-def conferir_novos() -> bool:
-    """Roda a migração de novo se a recepção mudou desde a última. Devolve True se disparou."""
-    try:
-        atual = assinatura_recepcao()
-    except Exception:  # servidor fora: confere na próxima
-        return False
+def migrar_agora() -> dict:
+    """Botão "Migrar agora": roda a automática na hora, mesmo que já tenha rodado hoje."""
     with _lock_disparo:
-        e = estado()
-        if e.get("situacao") != "ok" or e.get("assinatura") == atual:
-            return False
-        print("[BPA] entrou atendimento novo na recepção: migração automática de novo")
-        return _disparar(datetime.now())
+        if estado().get("situacao") == "rodando":
+            return {"ok": True, "msg": "Migração já está rodando."}
+        if not _disparar(datetime.now()):
+            return {"ok": False, "erro": "Migração manual em andamento. Aguarde terminar."}
+    return {"ok": True, "msg": "Migração iniciada."}
 
 
 def _rodar() -> None:
@@ -137,12 +106,6 @@ def _rodar() -> None:
         _atualizar(situacao="interrompida", erro="Migração manual em andamento")
         return
     try:
-        try:
-            # Lida ANTES de migrar: atendimento que entrar durante a migração
-            # muda a assinatura e faz rodar de novo na próxima conferência.
-            assinatura = assinatura_recepcao()
-        except Exception:
-            assinatura = ""
         hoje = date.today()
         query = postgres.query_pacientes_periodo(hoje - timedelta(days=JANELA_DIAS), hoje + timedelta(days=1))
         final = None
@@ -157,7 +120,7 @@ def _rodar() -> None:
         if final is None or final["tipo"] == "erro":
             _atualizar(situacao="erro", fim=fim, erro=(final or {}).get("msg", "Migração não terminou"))
         else:
-            _atualizar(situacao="ok", fim=fim, erro="", assinatura=assinatura, **{
+            _atualizar(situacao="ok", fim=fim, erro="", **{
                 k: final.get(k, 0) for k in ("inseridos", "duplicatas", "erros", "cpf_invalidos", "sem_documento")
             })
         print(f"[BPA] migração automática: {estado()}")
