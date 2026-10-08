@@ -120,7 +120,7 @@ def _rodar() -> None:
         if final is None or final["tipo"] == "erro":
             _atualizar(situacao="erro", fim=fim, erro=(final or {}).get("msg", "Migração não terminou"))
         else:
-            _atualizar(situacao="ok", fim=fim, erro="", **{
+            _atualizar(situacao="ok", fim=fim, erro="", relatorio=final.get("relatorio"), **{
                 k: final.get(k, 0)
                 for k in ("inseridos", "atualizados", "duplicatas", "erros", "cpf_invalidos", "sem_documento")
             })

@@ -4,13 +4,14 @@ antigo app Flask."""
 import json
 import re
 import threading
-from datetime import date
+from datetime import date, datetime
 from typing import Iterator
 
 import bpa_gerador as bpa
 
 from bpa_local import postgres
 from bpa_local.cache import cache
+from bpa_local.config import BASE
 from bpa_local.services import limpar
 
 
@@ -101,6 +102,14 @@ _COLUNAS_ATUALIZAVEIS = [
     "CEPPCN", "IBGE", "NACIONALIDADE", "DDTEL_PCNTE", "TEL_PCNTE",
 ]
 _SQL_UPDATE = f"UPDATE CADCNS SET {', '.join(c + ' = ?' for c in _COLUNAS_ATUALIZAVEIS)} WHERE NUM_CPF = ?"
+
+
+def _campos_alterados(antigo: tuple | None, novo: tuple) -> list[str]:
+    """Quais colunas mudaram entre o que estava no Firebird e o que chegou do
+    Postgres -- pra dizer exatamente o que foi corrigido em cada atualização."""
+    if antigo is None:
+        return list(_COLUNAS_ATUALIZAVEIS)
+    return [c for c, a, n in zip(_COLUNAS_ATUALIZAVEIS, antigo, novo) if a != n]
 
 
 def mes_padrao() -> str:
@@ -215,6 +224,7 @@ def migrar(query: str) -> Iterator[dict]:
         yield {
             "tipo": "fim", "inseridos": 0, "duplicatas": 0, "atualizados": 0,
             "erros": 0, "cpf_invalidos": 0, "sem_documento": 0,
+            "detalhes": {"novos": [], "atualizados": [], "erros": []}, "relatorio": None,
         }
         pg.close()
         return
@@ -237,6 +247,12 @@ def migrar(query: str) -> Iterator[dict]:
 
     inseridos = duplicatas = atualizados = erros = cpf_invalidos = sem_documento = 0
     LOTE = 50
+    # Quem especificamente entrou/mudou/deu erro -- a tela mostra ao vivo no log
+    # (cada linha abaixo também vira um evento "log") e fica salvo em disco no
+    # fim, pra não depender de manter a aba aberta pra conferir depois.
+    detalhes_novos: list[dict] = []
+    detalhes_atualizados: list[dict] = []
+    detalhes_erros: list[dict] = []
 
     for i, row in enumerate(rows, 1):
         cns_r, cpf_r, nome_r, dn_r, sexo_r, raca_r, mae_r, \
@@ -249,15 +265,17 @@ def migrar(query: str) -> Iterator[dict]:
             chave = chave_nome_nasc(nome_r, dn_r)
             if not chave[0] or not chave[1]:
                 erros += 1
+                detalhes_erros.append({"cpf": "", "nome": str(nome_r or ""), "erro": "sem nome/nascimento completos"})
                 yield {"tipo": "log", "msg": f"Sem CPF e sem nome/nascimento completos, pulado: {nome_r!r}"}
             elif chave in nome_nasc:
                 duplicatas += 1
             else:
                 max_id += 1
+                nome_fmt = _texto(nome_r, 30) or "SEM NOME"
                 try:
                     fb_cur.execute(_SQL_INSERT, [
                         max_id, "", "",
-                        _texto(nome_r, 30) or "SEM NOME",
+                        nome_fmt,
                         _dtnasc(dn_r),
                         _sexo(sexo_r),
                         _texto(raca_r, 2) or "03",
@@ -275,8 +293,11 @@ def migrar(query: str) -> Iterator[dict]:
                     inseridos += 1
                     sem_documento += 1
                     nome_nasc.add(chave)
+                    detalhes_novos.append({"cpf": "", "nome": nome_fmt})
+                    yield {"tipo": "log", "msg": f"Novo (sem documento): {nome_fmt}"}
                 except Exception as e:
                     erros += 1
+                    detalhes_erros.append({"cpf": "", "nome": nome_fmt, "erro": str(e)})
                     yield {"tipo": "log", "msg": f"Erro ao inserir {nome_r} (sem CPF): {e}"}
             if i % LOTE == 0:
                 fb.commit()
@@ -297,12 +318,16 @@ def migrar(query: str) -> Iterator[dict]:
                 nome_r, sexo_r, raca_r, mae_r, log_r, num_r, bairro_r, cep_r, ibge_r, nac_r, ddd_r, tel_r,
             )
             if dados_novos != cpf_dados.get(cpf):
+                campos = _campos_alterados(cpf_dados.get(cpf), dados_novos)
                 try:
                     fb_cur.execute(_SQL_UPDATE, [*dados_novos, cpf])
                     atualizados += 1
                     cpf_dados[cpf] = dados_novos
+                    detalhes_atualizados.append({"cpf": cpf, "nome": dados_novos[0], "campos": campos})
+                    yield {"tipo": "log", "msg": f"Atualizado {dados_novos[0]} ({cpf}): {', '.join(campos)}"}
                 except Exception as e:
                     erros += 1
+                    detalhes_erros.append({"cpf": cpf, "nome": nome_r, "erro": str(e)})
                     yield {"tipo": "log", "msg": f"Erro ao atualizar CPF {cpf}: {e}"}
             else:
                 duplicatas += 1
@@ -327,8 +352,11 @@ def migrar(query: str) -> Iterator[dict]:
                 # grava CNS (ver acima), então só o CPF entra no cache.
                 cpf_set.add(cpf)
                 nome_nasc.add(chave_nome_nasc(nome_r, dn_r))
+                detalhes_novos.append({"cpf": cpf, "nome": nome})
+                yield {"tipo": "log", "msg": f"Novo: {nome} ({cpf})"}
             except Exception as e:
                 erros += 1
+                detalhes_erros.append({"cpf": cpf, "nome": nome_r, "erro": str(e)})
                 yield {"tipo": "log", "msg": f"Erro CPF {cpf}: {e}"}
 
         if i % LOTE == 0:
@@ -349,6 +377,19 @@ def migrar(query: str) -> Iterator[dict]:
     pg.close()
     cache.carregar_pacientes()
 
+    pasta_rel = BASE / "migracao_relatorios"
+    arquivo_rel = pasta_rel / f"{datetime.now():%Y%m%d_%H%M%S}.json"
+    try:
+        pasta_rel.mkdir(exist_ok=True)
+        arquivo_rel.write_text(json.dumps({
+            "quando": datetime.now().isoformat(timespec="seconds"),
+            "novos": detalhes_novos, "atualizados": detalhes_atualizados, "erros": detalhes_erros,
+        }, ensure_ascii=False, indent=1), encoding="utf-8")
+        yield {"tipo": "log", "msg": f"Relatório detalhado (quem entrou/mudou/deu erro) salvo em {arquivo_rel}"}
+    except Exception as e:
+        arquivo_rel = None
+        yield {"tipo": "log", "msg": f"Não consegui salvar o relatório detalhado: {e}"}
+
     yield {
         "tipo": "fim",
         "msg": f"Concluído! Inseridos: {inseridos} (sem CPF: {sem_documento}) | "
@@ -356,4 +397,6 @@ def migrar(query: str) -> Iterator[dict]:
                f"CPF inválido: {cpf_invalidos} | Erros: {erros}",
         "inseridos": inseridos, "atualizados": atualizados, "duplicatas": duplicatas, "erros": erros,
         "cpf_invalidos": cpf_invalidos, "sem_documento": sem_documento,
+        "detalhes": {"novos": detalhes_novos, "atualizados": detalhes_atualizados, "erros": detalhes_erros},
+        "relatorio": str(arquivo_rel) if arquivo_rel else None,
     }
