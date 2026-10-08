@@ -51,6 +51,7 @@ function CartaoAutomatica({ m }) {
           {m.situacao === "ok" && (
             <div className="bp-kpis">
               <div className="bp-kpi"><strong>{fmtNum(m.inseridos)}</strong><span>novos</span></div>
+              <div className="bp-kpi"><strong>{fmtNum(m.atualizados)}</strong><span>atualizados</span></div>
               <div className="bp-kpi"><strong>{fmtNum(m.duplicatas)}</strong><span>já estavam</span></div>
               <div className="bp-kpi">
                 <strong className={m.erros || m.cpf_invalidos ? "alerta" : ""}>{fmtNum((m.erros || 0) + (m.cpf_invalidos || 0))}</strong>
@@ -138,7 +139,7 @@ export default function Migracao({ migracaoAuto, aoTerminar }) {
     };
   }
 
-  const aFazer = resumo ? resumo.novos : 0;
+  const aFazer = resumo ? resumo.novos + (resumo.atualizar || 0) : 0;
   const pct = progresso?.total ? Math.round((progresso.i / progresso.total) * 100) : 0;
 
   return (
@@ -148,13 +149,18 @@ export default function Migracao({ migracaoAuto, aoTerminar }) {
 
         <section className="bp-cartao">
           <h2>Manual — por competência</h2>
-          <p className="bp-desc">Para rodar de novo no meio do dia ou migrar um mês inteiro.</p>
+          <p className="bp-desc">
+            Para rodar de novo no meio do dia, migrar um mês inteiro, ou escolher "Todos os períodos" pra
+            corrigir de uma vez cadastros antigos que mudaram na recepção (nome, endereço, telefone etc.)
+            depois de já migrados.
+          </p>
           <div className="bp-linha">
             <div style={{ flex: 1 }}>
               <label className="bp-rot" htmlFor="mig-mes">Competência</label>
               <select id="mig-mes" className="bp-campo" value={mes} disabled={rodando}
                       onChange={(e) => { setMes(e.target.value); setResumo(null); setFim(null); }}>
-                {competencias.length === 0 && <option value={mes}>{mes.slice(4)}/{mes.slice(0, 4)}</option>}
+                <option value="TODOS">🗂️ Todos os períodos (corrigir tudo)</option>
+                {competencias.length === 0 && mes !== "TODOS" && <option value={mes}>{mes.slice(4)}/{mes.slice(0, 4)}</option>}
                 {competencias.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
@@ -165,11 +171,13 @@ export default function Migracao({ migracaoAuto, aoTerminar }) {
               {rodando ? "Migrando…" : resumo ? (aFazer ? `Migrar (${fmtNum(aFazer)})` : "Nada a migrar") : "Migrar"}
             </button>
           </div>
+          {mes === "TODOS" && <div className="bp-aviso alerta">Todos os períodos: consulta e migração podem levar vários minutos.</div>}
           {autoRodando && <div className="bp-aviso alerta">A migração automática do dia está rodando — a manual libera quando ela terminar.</div>}
           {consultando && <p className="bp-vazio">Consultando servidor e Firebird… pode levar alguns minutos em meses grandes.</p>}
           {resumo && (
             <div className="bp-kpis">
               <div className="bp-kpi"><strong>{fmtNum(resumo.novos)}</strong><span>novos</span></div>
+              <div className="bp-kpi"><strong>{fmtNum(resumo.atualizar)}</strong><span>dados mudaram</span></div>
               <div className="bp-kpi"><strong>{fmtNum(resumo.ja_existem)}</strong><span>já no Firebird</span></div>
               <div className="bp-kpi"><strong className={resumo.cpf_invalido ? "alerta" : ""}>{fmtNum(resumo.cpf_invalido)}</strong><span>CPF inválido</span></div>
             </div>
@@ -193,7 +201,8 @@ export default function Migracao({ migracaoAuto, aoTerminar }) {
             {fim && (
               <div className={`bp-aviso ${fim.erros ? "alerta" : "ok"}`}>
                 <b>Migração concluída:</b> {fmtNum(fim.inseridos)} novos ·
-                {" "}{fmtNum(fim.duplicatas)} já estavam · {fmtNum(fim.cpf_invalidos)} CPF inválido · {fmtNum(fim.erros)} erro(s)
+                {" "}{fmtNum(fim.atualizados)} atualizados · {fmtNum(fim.duplicatas)} já estavam ·
+                {" "}{fmtNum(fim.cpf_invalidos)} CPF inválido · {fmtNum(fim.erros)} erro(s)
               </div>
             )}
             {log.length > 0 && <div className="bp-log" ref={logRef}>{log.join("\n")}</div>}

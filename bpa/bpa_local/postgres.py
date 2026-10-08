@@ -66,6 +66,21 @@ def query_pacientes_mes(mes_aaaamm: str) -> str:
     """
 
 
+def query_pacientes_todos() -> str:
+    """Mesma consulta da migração, sem filtro de competência -- todos os
+    pacientes que já tiveram atendimento, de qualquer época. Usada pela opção
+    "Corrigir tudo de uma vez" (pega cadastro antigo com nome/endereço/telefone
+    corrigido na recepção depois de já ter sido migrado, não só o mês atual)."""
+    return """
+        SELECT DISTINCT p.cns, p.num_cpf, p.nome, p.dtnasc, p.sexo, p.raca, p.maepcn,
+            p.logpcn, p.numpcn, p.bairro_pcnte, p.ceppcn, p.ibge,
+            p.nacionalidade, p.ddtel_pcnte, p.tel_pcnte
+        FROM pacientes p
+        INNER JOIN recepcao_atendimentos ra ON ra.paciente_id = p.id
+        ORDER BY p.nome
+    """
+
+
 def query_pacientes_periodo(inicio, fim) -> str:
     """Mesma consulta da migração, por intervalo de datas [inicio, fim) —
     usada pela migração automática (janela dos últimos dias)."""

@@ -74,7 +74,8 @@ function MigrarAgora({ aoTerminar }) {
         m = (await bpaLocal.status()).migracao_auto;
       } while (m?.situacao === "rodando");
       setRes(m?.situacao === "ok"
-        ? { ok: true, texto: `Migração concluída: ${fmtNum(m.inseridos)} paciente(s) novo(s).` }
+        ? { ok: true, texto: `Migração concluída: ${fmtNum(m.inseridos)} paciente(s) novo(s)`
+            + (m.atualizados ? `, ${fmtNum(m.atualizados)} atualizado(s)` : "") + "." }
         : { ok: false, texto: m?.erro || "Migração não terminou." });
       aoTerminar();
     } catch (e) {
