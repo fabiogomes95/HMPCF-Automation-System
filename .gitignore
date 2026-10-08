@@ -15,6 +15,7 @@ frontend-teste/
 # Segredos — nunca commitar
 .env
 **/.env
+**/.env.bak*
 scripts/servidor/.backup_passphrase
 DEPLOY_LOGIN_PRODUCAO.md
 RODAR__NO_PC_PRODUÇÃO.MD
@@ -67,6 +68,10 @@ backend/backups_mescla/
 bpa/migracao_auto.json
 bpa/backup_lotes.json
 bpa/backup_cadcns_duplicados_*.json
+
+# Relatorios detalhados de cada migracao manual (nome/CPF de paciente —
+# nunca commitar, mesma regra dos lotes BPA)
+bpa/migracao_relatorios/
 
 # Planilhas (dados de pacientes) nunca vão pro git — ficam em C:\HMPCF\planilhas_manuais
 *.xlsx
