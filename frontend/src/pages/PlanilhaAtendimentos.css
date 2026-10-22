@@ -283,7 +283,58 @@
   text-decoration: underline dotted;
 }
 
+/* ── Ajustes manuais (ordem/hora) -- só visual ────────────────────────── */
+.planilha-plantao-acoes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-ordem-automatica {
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 3px;
+  background: transparent;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-ordem-automatica:hover { background: rgba(255, 255, 255, 0.15); }
+
+.cel-mover {
+  padding: 2px !important;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.cel-mover button {
+  display: block;
+  width: 22px;
+  height: 14px;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #64748b;
+  font-size: 9px;
+  line-height: 14px;
+  cursor: pointer;
+}
+
+.cel-mover button:hover:not(:disabled) { color: #2563eb; }
+.cel-mover button:disabled { visibility: hidden; }
+
+.cel-hora-edit input { width: 84px; }
+
+.hora-ajustada {
+  color: #b45309;
+  font-weight: 600;
+}
+
 @media print {
   .no-print { display: none !important; }
   .registro-editavel { text-decoration: none; }
+  .hora-ajustada { color: inherit; font-weight: inherit; }
 }

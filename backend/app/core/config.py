@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     # Pasta do backup diário (scripts/servidor/backup_postgres.bat) -- o Painel mostra se está em dia
     BACKUP_DIR: str = "C:/HMPCF/backups"
 
+    # Ordem/hora ajustadas à mão na Planilha de Atendimentos -- só visual,
+    # fica neste arquivo e não no banco (ver app/services/planilha_ajustes_service.py)
+    PLANILHA_AJUSTES_FILE: str = "C:/HMPCF/planilha_ajustes.json"
+
     # Autenticação (sessão por cookie httpOnly — ver app/services/auth_service.py)
     SESSION_COOKIE_NAME: str = "hmpcf_session"
     SESSION_TTL_HOURS: int = 12

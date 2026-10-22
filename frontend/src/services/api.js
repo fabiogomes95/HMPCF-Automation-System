@@ -103,6 +103,14 @@ export function buscarPlanilhaPlantao(dia, turno) {
   return api.get("/recepcao/planilha/plantao", { params: { dia, turno } });
 }
 
+// Ordem/hora ajustadas à mão na planilha -- só visual, ficam fora do banco.
+export function buscarAjustesPlanilha(ano, mes) {
+  return api.get("/recepcao/planilha/ajustes", { params: { ano, mes } });
+}
+export function salvarAjustesPlanilha(dia, turno, ordem, horas) {
+  return api.put("/recepcao/planilha/ajustes", { ordem, horas }, { params: { dia, turno } });
+}
+
 export function criarRecepcao(dados) {
   return api.post("/recepcao/", dados);
 }

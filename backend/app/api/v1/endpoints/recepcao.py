@@ -2,6 +2,7 @@ from datetime import date
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Query
+from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUser, DBSession, TIUser
 from app.models.usuario import Usuario
@@ -14,6 +15,7 @@ from app.schemas.recepcao import (
     RecepcaoResponse,
     RecepcaoUpdate,
 )
+from app.services import planilha_ajustes_service
 from app.services.recepcao_service import RecepcaoService
 
 router = APIRouter()
@@ -109,6 +111,36 @@ async def planilha_plantao(
     turno: Literal["DIURNO", "NOTURNO"] = Query(...),
 ) -> PlanilhaMensalResponse:
     return await _svc(session, usuario).planilha_plantao(dia=dia, turno=turno)
+
+
+class AjustesPlantao(BaseModel):
+    ordem: list[int] = Field(default_factory=list, max_length=2000)
+    horas: dict[str, str] = Field(default_factory=dict)
+
+
+@router.get(
+    "/planilha/ajustes",
+    summary="Ordem/hora ajustadas à mão na planilha do mês (só visual, fora do banco)",
+)
+async def planilha_ajustes(
+    _: CurrentUser,
+    ano: int = Query(..., ge=2020, le=2100),
+    mes: int = Query(..., ge=1, le=12),
+) -> dict:
+    return planilha_ajustes_service.do_mes(ano, mes)
+
+
+@router.put(
+    "/planilha/ajustes",
+    summary="Grava a ordem/hora ajustadas de um plantão (vazio = volta ao automático)",
+)
+async def salvar_planilha_ajustes(
+    body: AjustesPlantao,
+    _: CurrentUser,
+    dia: date = Query(...),
+    turno: Literal["DIURNO", "NOTURNO"] = Query(...),
+) -> dict:
+    return planilha_ajustes_service.salvar(dia, turno, body.ordem, body.horas)
 
 
 @router.get(

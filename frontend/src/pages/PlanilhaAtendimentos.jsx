@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { buscarPlanilhaMensal, buscarPlanilhaPlantao, excluirAtendimentoRepetido, atualizarRegistroAtendimento, mensagemErro } from "../services/api";
+import {
+  buscarPlanilhaMensal, buscarPlanilhaPlantao, excluirAtendimentoRepetido, atualizarRegistroAtendimento, mensagemErro,
+  buscarAjustesPlanilha, salvarAjustesPlanilha,
+} from "../services/api";
 import { formatCPF, formatCNS, formatTelefone, parseDateFromDB, idsRepetidosPorPlantao } from "../utils";
 import "./PlanilhaAtendimentos.css";
 
@@ -154,6 +157,56 @@ function porHorario(a, b) {
   return new Date(a.data_atendimento) - new Date(b.data_atendimento);
 }
 
+// Ajustes manuais (ordem/hora) que a recepção faz na planilha -- só visual,
+// guardados no servidor fora do banco (planilha_ajustes_service.py).
+function chaveAjuste(diaReferencia, turno) {
+  return `${diaReferencia}|${turno}`;
+}
+
+// Minutos desde o começo do plantão: no noturno, 01:00 vem depois de 23:00.
+function minutosNoPlantao(hhmm, turno) {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m + (turno === "NOTURNO" && h < 7 ? 24 * 60 : 0);
+}
+
+// Ordem de um plantão: pelo registro (01, 02...); quem não tem registro
+// entra pelo horário, logo depois de quem chegou antes dele. Se a recepção
+// arrumou a ordem à mão, vale a dela -- paciente novo (que ainda não estava
+// na ordem salva) entra logo depois de quem vem antes dele na ordem automática.
+function ordenarPlantao(items, turno, ajuste) {
+  const horas = ajuste?.horas || {};
+  const minutos = new Map(items.map(i => [
+    i.atendimento_id,
+    minutosNoPlantao(horas[i.atendimento_id] ?? formatHora(i.data_atendimento), turno),
+  ]));
+  const t = item => minutos.get(item.atendimento_id);
+
+  const lista = items.filter(i => i.registro != null).sort((a, b) => a.registro - b.registro || t(a) - t(b));
+  const semRegistro = items.filter(i => i.registro == null).sort((a, b) => t(a) - t(b));
+  for (const item of semRegistro) {
+    let pos = 0;
+    lista.forEach((outro, i) => { if (t(outro) <= t(item)) pos = i + 1; });
+    lista.splice(pos, 0, item);
+  }
+
+  const ordemSalva = ajuste?.ordem;
+  if (!ordemSalva?.length) return lista;
+  const porId = new Map(lista.map(i => [i.atendimento_id, i]));
+  const final = ordemSalva.filter(id => porId.has(id)).map(id => porId.get(id));
+  const naLista = new Set(final);
+  lista.forEach((item, idx) => {
+    if (naLista.has(item)) return;
+    let pos = 0;
+    for (let j = idx - 1; j >= 0; j--) {
+      const k = final.indexOf(lista[j]);
+      if (k >= 0) { pos = k + 1; break; }
+    }
+    final.splice(pos, 0, item);
+    naLista.add(item);
+  });
+  return final;
+}
+
 export default function PlanilhaAtendimentos() {
   // Ao abrir a página: mês/dia/turno já vêm no plantão vigente (evita
   // renderizar o mês inteiro de cara -- com ~6mil atendimentos/mês isso
@@ -171,8 +224,24 @@ export default function PlanilhaAtendimentos() {
   const [excluidoMsg, setExcluidoMsg] = useState("");
   const [editRegId, setEditRegId]     = useState(null);
   const [editRegVal, setEditRegVal]   = useState("");
+  const [ajustes, setAjustes]         = useState({});
+  const [editHoraId, setEditHoraId]   = useState(null);
+  const [editHoraVal, setEditHoraVal] = useState("");
   const primeiraCargaRef = useRef(true);
   const manterDiaRef = useRef(false);
+  // Sobe a cada gravação: resposta de busca que saiu antes dela é descartada
+  // (senão o refresh traria de volta a ordem antiga por alguns segundos).
+  const versaoAjustesRef = useRef(0);
+
+  async function carregarAjustes(ano, mesNum) {
+    const versao = versaoAjustesRef.current;
+    try {
+      const res = await buscarAjustesPlanilha(ano, mesNum);
+      if (versao === versaoAjustesRef.current) setAjustes(res.data);
+    } catch {
+      // sem os ajustes a planilha continua na ordem automática
+    }
+  }
 
   useEffect(() => {
     const [ano, mesNum] = mes.split("-").map(Number);
@@ -185,6 +254,7 @@ export default function PlanilhaAtendimentos() {
     } else {
       setDiaFiltro("TODOS");
     }
+    carregarAjustes(ano, mesNum);
     buscarPlanilhaMensal(ano, mesNum)
       .then(res => {
         setItems(res.data.items);
@@ -210,6 +280,7 @@ export default function PlanilhaAtendimentos() {
       if (document.hidden || refreshEmAndamento.current) return;
       refreshEmAndamento.current = true;
       try {
+        await carregarAjustes(ano, mesNum); // o outro computador pode ter mexido na ordem
         if (plantaoFixo) {
           // Troca só as linhas desse plantão; o resto do mês fica como está.
           const res = await buscarPlanilhaPlantao(diaFiltro, turnoFiltro);
@@ -274,24 +345,34 @@ export default function PlanilhaAtendimentos() {
     return () => clearInterval(id);
   }, [diaFiltro, turnoFiltro, mes]);
 
-  const itemsFiltrados = useMemo(() => {
-    const termo = pacienteFiltro.trim().toUpperCase();
-    return items.filter(item => {
-      if (turnoFiltro !== "TODOS" && item.turno !== turnoFiltro) return false;
-      if (diaFiltro !== "TODOS" && item.dia_referencia !== diaFiltro) return false;
-      if (termo) {
-        const nome = (item.nome || "").toUpperCase();
-        const cpf  = (item.num_cpf || "").replace(/\D/g, "");
-        const termoDigitos = termo.replace(/\D/g, "");
-        const matchNome = nome.includes(termo);
-        const matchCpf  = termoDigitos.length > 0 && cpf.includes(termoDigitos);
-        if (!matchNome && !matchCpf) return false;
-      }
-      return true;
-    });
-  }, [items, turnoFiltro, diaFiltro, pacienteFiltro]);
+  // Plantões completos e já na ordem certa -- a ordem é calculada antes do
+  // filtro de paciente, pra mover alguém sempre considerar o plantão inteiro.
+  const gruposOrdenados = useMemo(() => {
+    const doFiltro = items.filter(item =>
+      (turnoFiltro === "TODOS" || item.turno === turnoFiltro) &&
+      (diaFiltro === "TODOS" || item.dia_referencia === diaFiltro));
+    return agruparPorPlantao(doFiltro).map(g => ({
+      ...g,
+      items: ordenarPlantao(g.items, g.turno, ajustes[chaveAjuste(g.dia_referencia, g.turno)]),
+    }));
+  }, [items, turnoFiltro, diaFiltro, ajustes]);
 
-  const grupos = useMemo(() => agruparPorPlantao(itemsFiltrados), [itemsFiltrados]);
+  const termoPaciente = pacienteFiltro.trim().toUpperCase();
+  const grupos = useMemo(() => {
+    if (!termoPaciente) return gruposOrdenados;
+    const termoDigitos = termoPaciente.replace(/\D/g, "");
+    return gruposOrdenados
+      .map(g => ({
+        ...g,
+        items: g.items.filter(item => {
+          const nome = (item.nome || "").toUpperCase();
+          const cpf  = (item.num_cpf || "").replace(/\D/g, "");
+          return nome.includes(termoPaciente) || (termoDigitos.length > 0 && cpf.includes(termoDigitos));
+        }),
+      }))
+      .filter(g => g.items.length > 0);
+  }, [gruposOrdenados, termoPaciente]);
+  const totalVisivel = grupos.reduce((soma, g) => soma + g.items.length, 0);
 
   // Calculado sobre o mês todo (não só o filtrado), pra marcação não mudar
   // conforme o filtro de paciente/dia.
@@ -318,6 +399,52 @@ export default function PlanilhaAtendimentos() {
       setExcluidoMsg(mensagemErro(err, "Erro ao salvar registro."));
       setTimeout(() => setExcluidoMsg(""), 3000);
     }
+  }
+
+  // Grava na hora na tela e depois no servidor; se falhar, avisa e o próximo
+  // refresh traz de volta o que está salvo.
+  async function gravarAjuste(grupo, novo) {
+    const chave = chaveAjuste(grupo.dia_referencia, grupo.turno);
+    versaoAjustesRef.current += 1;
+    setAjustes(prev => {
+      const proximo = { ...prev };
+      if (novo.ordem.length || Object.keys(novo.horas).length) proximo[chave] = novo;
+      else delete proximo[chave];
+      return proximo;
+    });
+    try {
+      await salvarAjustesPlanilha(grupo.dia_referencia, grupo.turno, novo.ordem, novo.horas);
+      versaoAjustesRef.current += 1;
+    } catch (err) {
+      setExcluidoMsg(mensagemErro(err, "Não foi possível salvar o ajuste da planilha."));
+      setTimeout(() => setExcluidoMsg(""), 3000);
+    }
+  }
+
+  function ajusteDo(grupo) {
+    return ajustes[chaveAjuste(grupo.dia_referencia, grupo.turno)] || { ordem: [], horas: {} };
+  }
+
+  function handleMover(grupo, indice, passo) {
+    const ids = grupo.items.map(i => i.atendimento_id);
+    const destino = indice + passo;
+    if (destino < 0 || destino >= ids.length) return;
+    [ids[indice], ids[destino]] = [ids[destino], ids[indice]];
+    gravarAjuste(grupo, { ...ajusteDo(grupo), ordem: ids });
+  }
+
+  function handleSalvarHora(grupo, item) {
+    const horas = { ...ajusteDo(grupo).horas };
+    // Vazio ou igual à do sistema: volta a mostrar a hora original.
+    if (!editHoraVal || editHoraVal === formatHora(item.data_atendimento)) delete horas[item.atendimento_id];
+    else horas[item.atendimento_id] = editHoraVal;
+    setEditHoraId(null);
+    gravarAjuste(grupo, { ...ajusteDo(grupo), horas });
+  }
+
+  function handleOrdemAutomatica(grupo) {
+    if (!window.confirm("Voltar este plantão para a ordem automática (pelo registro e, sem registro, pela hora)?")) return;
+    gravarAjuste(grupo, { ...ajusteDo(grupo), ordem: [] });
   }
 
   async function handleExcluirDuplicata(item) {
@@ -348,7 +475,7 @@ export default function PlanilhaAtendimentos() {
           <h2>Planilha de Atendimentos</h2>
           {!loading && (
             <span className="planilha-total">
-              {itemsFiltrados.length} de {total} atendimento{total !== 1 ? "s" : ""}
+              {totalVisivel} de {total} atendimento{total !== 1 ? "s" : ""}
             </span>
           )}
         </div>
@@ -407,11 +534,24 @@ export default function PlanilhaAtendimentos() {
           <div className="planilha-vazio">Nenhum atendimento encontrado para este filtro.</div>
         )}
 
-        {!loading && !erro && grupos.map(grupo => (
+        {!loading && !erro && grupos.map(grupo => {
+          const ajuste = ajusteDo(grupo);
+          const podeMover = !termoPaciente; // com filtro de paciente o plantão aparece pela metade
+          return (
           <div className="planilha-grupo" key={`${grupo.dia_referencia}-${grupo.turno}`}>
             <div className={`planilha-plantao planilha-plantao-${grupo.turno.toLowerCase()}`}>
               PLANTÃO {grupo.turno} — {formatDiaReferencia(grupo.dia_referencia)}
-              <span className="planilha-plantao-contador">{grupo.items.length} atendimento{grupo.items.length !== 1 ? "s" : ""}</span>
+              <span className="planilha-plantao-acoes">
+                {ajuste.ordem.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn-ordem-automatica no-print"
+                    onClick={() => handleOrdemAutomatica(grupo)}
+                    title="A ordem deste plantão foi arrumada à mão"
+                  >↺ Ordem automática</button>
+                )}
+                <span className="planilha-plantao-contador">{grupo.items.length} atendimento{grupo.items.length !== 1 ? "s" : ""}</span>
+              </span>
             </div>
 
             <div className="planilha-tabela-scroll">
@@ -419,6 +559,7 @@ export default function PlanilhaAtendimentos() {
               <thead>
                 <tr>
                   <th style={{ width: 36 }} className="no-print"></th>
+                  {podeMover && <th style={{ width: 30 }} className="no-print" title="Mudar a posição na planilha"></th>}
                   <th style={{ width: 60 }}>Registro</th>
                   <th>Nome</th>
                   <th style={{ width: 90 }}>Nascimento</th>
@@ -435,9 +576,12 @@ export default function PlanilhaAtendimentos() {
                 </tr>
               </thead>
               <tbody>
-                {grupo.items.map(item => {
+                {grupo.items.map((item, indice) => {
                   const duplicata = repetidos.has(item.atendimento_id);
                   const dtnascBR = parseDateFromDB(item.dtnasc);
+                  const horaSistema = formatHora(item.data_atendimento);
+                  const horaAjustada = ajuste.horas[item.atendimento_id];
+                  const hora = horaAjustada ?? horaSistema;
                   const campos = [
                     item.registro ?? "",
                     item.nome || "",
@@ -446,7 +590,7 @@ export default function PlanilhaAtendimentos() {
                     item.sexo || "",
                     formatRaca(item.raca) === "—" ? "" : formatRaca(item.raca),
                     item.cidade || "",
-                    formatHora(item.data_atendimento),
+                    hora,
                     item.num_cpf ? formatCPF(item.num_cpf) : "",
                     item.cns ? formatCNS(item.cns) : "",
                     LABEL_PROCEDENCIA[item.procedencia] ?? item.procedencia ?? "",
@@ -475,6 +619,12 @@ export default function PlanilhaAtendimentos() {
                           </button>
                         )}
                       </td>
+                      {podeMover && (
+                        <td className="cel-mover no-print">
+                          <button type="button" onClick={() => handleMover(grupo, indice, -1)} disabled={indice === 0} title="Subir">▲</button>
+                          <button type="button" onClick={() => handleMover(grupo, indice, 1)} disabled={indice === grupo.items.length - 1} title="Descer">▼</button>
+                        </td>
+                      )}
                       <td>
                         {editRegId === item.atendimento_id ? (
                           <span className="cel-registro-edit no-print">
@@ -515,7 +665,31 @@ export default function PlanilhaAtendimentos() {
                       <td>{item.sexo || "—"}</td>
                       <td>{formatRaca(item.raca)}</td>
                       <td>{item.cidade || "—"}</td>
-                      <td>{formatHora(item.data_atendimento)}</td>
+                      <td>
+                        {editHoraId === item.atendimento_id ? (
+                          <span className="cel-registro-edit cel-hora-edit no-print">
+                            <input
+                              type="time"
+                              value={editHoraVal}
+                              onChange={e => setEditHoraVal(e.target.value)}
+                              onKeyDown={e => { if (e.key === "Enter") handleSalvarHora(grupo, item); if (e.key === "Escape") setEditHoraId(null); }}
+                              autoFocus
+                            />
+                            <button className="btn-salvar-registro" onClick={() => handleSalvarHora(grupo, item)}>✓</button>
+                            <button className="btn-cancelar-registro" onClick={() => setEditHoraId(null)}>✕</button>
+                          </span>
+                        ) : (
+                          <span
+                            className={`registro-editavel${horaAjustada ? " hora-ajustada" : ""}`}
+                            title={horaAjustada
+                              ? `Hora ajustada na planilha (no sistema: ${horaSistema}). Clique para mudar; apague para voltar.`
+                              : "Clique para ajustar a hora (só na planilha)"}
+                            onClick={() => { setEditHoraId(item.atendimento_id); setEditHoraVal(hora); }}
+                          >
+                            {hora}
+                          </span>
+                        )}
+                      </td>
                       <td>{item.num_cpf ? formatCPF(item.num_cpf) : "—"}</td>
                       <td>{item.cns ? formatCNS(item.cns) : "—"}</td>
                       <td className="cel-aba">{LABEL_PROCEDENCIA[item.procedencia] ?? item.procedencia ?? ""}</td>
@@ -528,7 +702,8 @@ export default function PlanilhaAtendimentos() {
             </table>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
