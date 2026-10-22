@@ -77,11 +77,12 @@ class Entrada:
 
 
 def mes_da_aba(nome_aba: str) -> tuple[Optional[int], Optional[int]]:
-    """'MAIO2025' -> (5, 2025); 'DEZEMBRO' -> (12, None); 'Página42' -> (None, None)."""
+    """'MAIO2025' -> (5, 2025); 'DEZEMBRO' -> (12, None); 'Página42' -> (None, None).
+    Com a data inteira no nome ('MARCO 20032025' = 20/03/2025) vale o ÚLTIMO ano."""
     s = sem_acento(nome_aba).upper()
     mes = next((n for nome, n in MESES.items() if nome in s), None)
-    ano = re.search(r"(20\d{2})", s)
-    return mes, (int(ano.group(1)) if ano else None)
+    anos = re.findall(r"20\d{2}", s)
+    return mes, (int(anos[-1]) if anos else None)
 
 
 # ── Células ─────────────────────────────────────────────────────────────────

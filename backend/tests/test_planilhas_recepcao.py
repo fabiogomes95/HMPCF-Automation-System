@@ -1,7 +1,7 @@
 """Leitura das planilhas manuais da recepção — casos tirados das planilhas reais."""
 from datetime import date, datetime, time
 
-from app.importacao.planilhas_recepcao import _cpf, ano_das_abas, ler_aba, nome_busca
+from app.importacao.planilhas_recepcao import _cpf, ano_das_abas, ler_aba, mes_da_aba, nome_busca
 
 
 def pac(nome, hora, cpf=None, nasc=None, n=1.0):
@@ -92,3 +92,10 @@ def test_ano_das_abas_sem_ano_e_nome_busca():
     anos = ano_das_abas(["SETEMBRO", "DEZEMBRO", "JANEIRO 2022", "MAIO2025", "Página42"])
     assert anos == {"SETEMBRO": 2021, "DEZEMBRO": 2021, "JANEIRO 2022": 2022, "MAIO2025": 2025, "Página42": None}
     assert nome_busca("  José  da Conceição ") == "JOSE DA CONCEICAO"
+
+
+def test_aba_com_a_data_inteira_no_nome():
+    # 'MARCO 20032025' é 20/03/2025 — o "2003" não é o ano
+    assert mes_da_aba("MARCO 20032025") == (3, 2025)
+    assert mes_da_aba("MARCO 24032025") == (3, 2025)
+    assert mes_da_aba("JUNHO2024") == (6, 2024)
