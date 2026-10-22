@@ -57,7 +57,15 @@
   text-align: center;
 }
 
+.app-rodape {
+  padding: 18px 16px 14px;
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
 @media print {
   .app-nav { display: none !important; }
+  .app-rodape { display: none !important; }
   .app-aviso-relogin { display: none !important; }
 }

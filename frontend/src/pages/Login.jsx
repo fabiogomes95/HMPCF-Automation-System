@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { login } from "../services/auth";
+import { AVISO_AUTORIA } from "../autoria";
 import "./Login.css";
 
 export default function Login({ onLogin }) {
@@ -69,6 +70,7 @@ export default function Login({ onLogin }) {
           {carregando ? "Entrando…" : "Entrar"}
         </button>
       </form>
+      <p className="login-autoria">{AVISO_AUTORIA}</p>
     </div>
   );
 }

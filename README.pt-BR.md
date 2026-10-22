@@ -242,4 +242,4 @@ Copyright (c) 2026 Fabio Gomes. Todos os direitos reservados.
 
 Disponível publicamente para fins de estudo, demonstração técnica e
 portfólio. Não é permitido uso comercial, institucional ou implantação em
-produção sem autorização explícita do autor.
+produção sem autorização explícita do autor. Ver [`LICENSE`](LICENSE).

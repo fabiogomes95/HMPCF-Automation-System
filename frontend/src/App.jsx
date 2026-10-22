@@ -12,6 +12,7 @@ import AlterarSenha from "./pages/AlterarSenha";
 import Login from "./pages/Login";
 import { getMe, logout } from "./services/auth";
 import { setOnUnauthorized } from "./services/api";
+import { AVISO_AUTORIA } from "./autoria";
 import "./App.css";
 
 // Abas do menu e quais papéis enxergam cada uma. O backend também bloqueia
@@ -195,6 +196,8 @@ export default function App() {
       )}
       {telaAtual === "senha" && <AlterarSenha />}
       {telaAtual === "bpa" && <Bpa />}
+
+      <footer className="app-rodape no-print">{AVISO_AUTORIA}</footer>
     </>
   );
 }

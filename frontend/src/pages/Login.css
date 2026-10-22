@@ -1,9 +1,21 @@
 .login-page {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 18px;
   background: #0f172a;
+}
+
+.login-autoria {
+  max-width: 320px;
+  margin: 0;
+  padding: 0 16px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #64748b;
 }
 
 .login-card {

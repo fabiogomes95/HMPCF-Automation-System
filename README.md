@@ -53,4 +53,4 @@ Copyright (c) 2026 Fabio Gomes. All rights reserved.
 
 Published for study, technical demonstration, and portfolio purposes.
 Commercial, institutional, or production use is not permitted without the
-author's explicit authorization.
+author's explicit authorization. See [`LICENSE`](LICENSE).
