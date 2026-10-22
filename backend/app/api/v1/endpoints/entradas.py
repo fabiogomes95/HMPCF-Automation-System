@@ -2,8 +2,8 @@
 sistema e/ou nas planilhas manuais — ver app/services/entradas_service.py."""
 from fastapi import APIRouter, Query
 
-from app.api.deps import DBSession, FaturamentoUser
-from app.services import entradas_service
+from app.api.deps import DBSession, FaturamentoUser, TIUser
+from app.services import entradas_service, importacao_planilhas_service
 from app.services.entradas_service import Fonte
 
 router = APIRouter()
@@ -23,3 +23,15 @@ async def buscar_entradas(
 async def resumo_planilhas(session: DBSession, _: FaturamentoUser) -> dict:
     """Quantas entradas das planilhas estão carregadas, de quando a quando."""
     return await entradas_service.resumo_planilhas(session)
+
+
+@router.get("/planilhas/importacao")
+async def situacao_importacao(_: TIUser) -> dict:
+    """Se a reimportação está rodando, e o log dela."""
+    return importacao_planilhas_service.situacao()
+
+
+@router.post("/planilhas/importacao")
+async def reimportar_planilhas(usuario: TIUser) -> dict:
+    """Relê todas as planilhas da pasta (planilha nova ou corrigida). Só TI."""
+    return importacao_planilhas_service.iniciar(usuario.username)

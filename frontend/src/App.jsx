@@ -187,7 +187,7 @@ export default function App() {
       )}
       {telaAtual === "planilha" && <PlanilhaAtendimentos />}
       {telaAtual === "painel" && <Painel />}
-      {telaAtual === "entradas" && <Entradas />}
+      {telaAtual === "entradas" && <Entradas podeImportar={usuario.role === "ti"} />}
       {telaAtual === "auditoria" && <Auditoria />}
       {telaAtual === "usuarios" && <GerenciarUsuarios />}
       {telaAtual === "correcao" && (

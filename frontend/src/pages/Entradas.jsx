@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { buscarEntradas, mensagemErro, resumoPlanilhas } from "../services/api";
+import {
+  buscarEntradas, mensagemErro, reimportarPlanilhas, resumoPlanilhas, situacaoImportacao,
+} from "../services/api";
 import "./Entradas.css";
 
 // Aba Entradas (faturamento e TI): em que dias o paciente deu entrada e quantas
@@ -76,7 +78,71 @@ function Pessoa({ p }) {
   );
 }
 
-export default function Entradas() {
+// Só TI: relê as planilhas da pasta do servidor (planilha nova ou corrigida).
+// A importação roda em segundo plano (~3 min); o painel mostra o log enquanto isso.
+function Importacao({ onTerminou }) {
+  const [aberto, setAberto] = useState(false);
+  const [sit, setSit] = useState(null);
+  const [erro, setErro] = useState("");
+  const rodava = useRef(false);
+
+  async function atualizar() {
+    try {
+      const r = await situacaoImportacao();
+      setSit(r.data);
+      if (rodava.current && !r.data.rodando) onTerminou();
+      rodava.current = r.data.rodando;
+    } catch (e) {
+      setErro(mensagemErro(e, "Não foi possível ver a importação."));
+    }
+  }
+
+  useEffect(() => { if (aberto) atualizar(); }, [aberto]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!sit?.rodando) return undefined;
+    const t = setInterval(atualizar, 3000);
+    return () => clearInterval(t);
+  }, [sit?.rodando]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function iniciar() {
+    setErro("");
+    try {
+      const r = await reimportarPlanilhas();
+      rodava.current = true;
+      setSit(r.data);
+    } catch (e) {
+      setErro(mensagemErro(e, "Não foi possível iniciar a importação."));
+    }
+  }
+
+  if (!aberto) {
+    return <button type="button" className="en-link" onClick={() => setAberto(true)}>Atualizar planilhas…</button>;
+  }
+  return (
+    <div className="en-importacao">
+      <p>
+        Para incluir uma planilha nova ou corrigida, copie o arquivo <b>.xlsx</b> para{" "}
+        <code>{sit?.pasta || String.raw`C:\HMPCF\planilhas_manuais`}</code> no servidor e clique em Reimportar.
+        Tudo é relido do zero (leva uns 3 minutos); se der erro, os dados antigos continuam.
+      </p>
+      {sit?.planilhas?.length > 0 && (
+        <p className="en-imp-arquivos">Na pasta: {sit.planilhas.join(" · ")}</p>
+      )}
+      <div className="en-imp-acoes">
+        <button type="button" onClick={iniciar} disabled={!sit || sit.rodando}>
+          {sit?.rodando ? "Importando…" : "Reimportar planilhas"}
+        </button>
+        <button type="button" className="en-link" onClick={() => setAberto(false)} disabled={sit?.rodando}>Fechar</button>
+        {sit && !sit.rodando && sit.ok === true && <span className="en-imp-ok">Importação concluída.</span>}
+        {sit && !sit.rodando && sit.ok === false && <span className="en-imp-falha">A importação falhou — veja o log. Os dados antigos foram mantidos.</span>}
+      </div>
+      {erro && <div className="en-erro">{erro}</div>}
+      {sit?.log && <pre className="en-imp-log">{sit.log}</pre>}
+    </div>
+  );
+}
+
+export default function Entradas({ podeImportar = false }) {
   const [q, setQ] = useState("");
   const [fonte, setFonte] = useState("ambos");
   const [resultado, setResultado] = useState(null);
@@ -85,9 +151,10 @@ export default function Entradas() {
   const [planilhas, setPlanilhas] = useState(null);
   const ultima = useRef({ q: "", fonte: "" });
 
-  useEffect(() => {
+  function carregarResumo() {
     resumoPlanilhas().then((r) => setPlanilhas(r.data)).catch(() => setPlanilhas(null));
-  }, []);
+  }
+  useEffect(carregarResumo, []);
 
   async function buscar(termo = q, fonteBusca = fonte) {
     const t = termo.trim();
@@ -139,6 +206,7 @@ export default function Entradas() {
             {" "}· meses que não estão nas planilhas não aparecem.
           </p>
         )}
+        {podeImportar && <Importacao onTerminou={carregarResumo} />}
       </div>
 
       {erro && <div className="en-erro">{erro}</div>}

@@ -154,6 +154,8 @@ export function buscarPainel(periodo) { return api.get("/ti/painel", { params: {
 // Aba Entradas (faturamento e TI)
 export function buscarEntradas(q, fonte) { return api.get("/entradas", { params: { q, fonte } }); }
 export function resumoPlanilhas() { return api.get("/entradas/planilhas"); }
+export function situacaoImportacao() { return api.get("/entradas/planilhas/importacao"); }
+export function reimportarPlanilhas() { return api.post("/entradas/planilhas/importacao"); }
 
 // ── Alterar própria senha ─────────────────────────────────────────────────────
 export function alterarSenha(senha_atual, senha_nova) { return api.post("/auth/change-password", { senha_atual, senha_nova }); }

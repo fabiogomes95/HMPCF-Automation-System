@@ -47,6 +47,19 @@
 }
 .en-fontes-sel button.ativo { background: var(--en-cartao); color: var(--en-texto); font-weight: 600; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12); }
 .en-cobertura { margin: 10px 0 0; font-size: 12.5px; color: var(--en-texto-3); }
+.en-link { background: none; border: 0; padding: 0; margin-top: 8px; color: var(--en-azul); font-size: 12.5px; cursor: pointer; }
+.en-link:disabled { color: var(--en-texto-3); cursor: default; }
+.en-importacao { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--en-borda); font-size: 13px; color: var(--en-texto-2); }
+.en-importacao p { margin: 0 0 8px; }
+.en-importacao code { background: var(--en-fundo); padding: 1px 5px; border-radius: 4px; }
+.en-imp-arquivos { font-size: 12.5px; color: var(--en-texto-3); word-break: break-word; }
+.en-imp-acoes { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.en-imp-acoes > button:first-child { background: var(--en-azul); color: #fff; border: 0; border-radius: 8px; padding: 8px 14px; font-size: 13.5px; cursor: pointer; }
+.en-imp-acoes > button:first-child:disabled { opacity: 0.6; cursor: default; }
+.en-imp-acoes .en-link { margin-top: 0; }
+.en-imp-ok { color: var(--en-verde); font-weight: 600; }
+.en-imp-falha { color: #b91c1c; font-weight: 600; }
+.en-imp-log { margin: 10px 0 0; max-height: 260px; overflow: auto; background: #0f172a; color: #e2e8f0; padding: 10px 12px; border-radius: 8px; font-size: 11.5px; line-height: 1.45; white-space: pre-wrap; }
 
 .en-erro, .en-aviso {
   border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px;
