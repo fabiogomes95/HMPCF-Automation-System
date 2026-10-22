@@ -138,8 +138,8 @@ cada acesso, nunca as senhas; elas vão em papel lacrado ou num gerenciador de s
 
 O código fica em `C:\HMPCF-Automation-System`, com o histórico completo; ele
 basta para manter e reinstalar o sistema, mesmo sem acesso ao GitHub. O uso
-pelo hospital é autorizado pelo autor (ver `LICENSE`); suporte e novas funções
-dependem de ajuste próprio com ele.
+pelo hospital é autorizado pelo autor (ver `LICENSE`). Depois da saída dele,
+suporte, manutenção e novas funções só mediante contratação específica.
 
 ## Se for só restaurar o banco (o servidor continua de pé)
 
