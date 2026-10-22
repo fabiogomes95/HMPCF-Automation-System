@@ -114,6 +114,33 @@ ou a aba **Usuários** (TI).
       falando com o servidor
 - [ ] No dia seguinte: faixa do backup mostra "último … 23:0x"
 
+## Passagem para outro responsável
+
+Quando o responsável atual (Fabio Gomes) deixar o hospital, o sistema continua
+funcionando sozinho: os serviços sobem com o Windows e o backup roda todo dia.
+Para alguém assumir, entregue os itens abaixo. Esta lista diz quem precisa ter
+cada acesso, nunca as senhas; elas vão em papel lacrado ou num gerenciador de senhas.
+
+| Acesso | Para quê | Entregue a |
+|---|---|---|
+| Usuário administrador do Windows do servidor | reiniciar serviços, instalar atualizações | [nome] |
+| Senha do `postgres` (`backend\.env`) | manutenção do banco | [nome] |
+| **Senha de criptografia do backup** | abrir qualquer backup | [nome] (e cópia no cofre) |
+| Senha do `bpa_leitura` | reinstalar o BPA nos notebooks | [nome] |
+| Conta Google do Drive dos backups | conferir a cópia na nuvem | [nome] |
+| Conta **TI** no sistema | Painel, Auditoria, Usuários | criar uma conta TI para o novo responsável; depois desativar a do anterior |
+
+- [ ] Todos os acessos da tabela entregues e testados por quem assume
+- [ ] Backup do dia anterior conferido no Painel (faixa verde) e no Drive
+- [ ] Um backup aberto de teste com `decrypt_backup.ps1`, para provar que a senha confere
+- [ ] Quem assume sabe reiniciar o `HMPCF-Backend-Svc` (ver *StopPending* no README)
+- [ ] Este guia e o README lidos por quem assume
+
+O código fica em `C:\HMPCF-Automation-System`, com o histórico completo; ele
+basta para manter e reinstalar o sistema, mesmo sem acesso ao GitHub. O uso
+pelo hospital é autorizado pelo autor (ver `LICENSE`); suporte e novas funções
+dependem de ajuste próprio com ele.
+
 ## Se for só restaurar o banco (o servidor continua de pé)
 
 Pare o `HMPCF-Backend-Svc`, recrie o banco (passo 3), rode
