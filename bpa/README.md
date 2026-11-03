@@ -2,7 +2,7 @@
 
 Programa que roda em cada notebook do BPA, ao lado do Firebird e do BPA
 Magnético (`C:\BPA`). As telas ficam no sistema do hospital
-(`http://192.168.1.29:8001`, aba **BPA**); quem faz o trabalho no Firebird é
+(`http://192.168.1.229:8001`, aba **BPA**); quem faz o trabalho no Firebird é
 este programa, em `http://localhost:8503` (só aceita chamadas do sistema).
 
 ## Instalar / atualizar
