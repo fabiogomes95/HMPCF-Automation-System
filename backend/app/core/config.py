@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     # Acesso feito na própria máquina (loopback, ex.: terminal fixo da
     # recepção abrindo http://localhost:8001) pula a tela de login e usa
     # direto este usuário. Acesso de outra máquina pela rede (ex.:
-    # http://192.168.1.229:8001) continua exigindo login normalmente —
+    # http://192.168.1.29:8001) continua exigindo login normalmente —
     # ver app/api/deps.py. Desligado por padrão -- precisa ser ligado
     # explicitamente no .env de cada máquina que deve ter esse
     # comportamento (ex.: só o terminal fixo da recepção).

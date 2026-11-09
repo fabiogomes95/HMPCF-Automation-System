@@ -1,6 +1,6 @@
 # Recuperação do servidor — montar o sistema do zero
 
-Para quando o PC da recepção (servidor, `192.168.1.229`, `DESKTOP-9C4S1CO`)
+Para quando o PC da recepção (servidor, `192.168.1.29`, `DESKTOP-9C4S1CO`)
 morrer, for trocado ou formatado. Leva algumas horas; o que não pode faltar é
 o **backup** e os **dois segredos** abaixo.
 
@@ -17,7 +17,7 @@ cofre, gerenciador de senhas) — ela nunca vai pro git nem pro Google Drive.
 
 ## 1. Programas
 
-- Windows 10/11 com **IP fixo `192.168.1.229`** (os notebooks do BPA e o
+- Windows 10/11 com **IP fixo `192.168.1.29`** (os notebooks do BPA e o
   `BPA_ORIGENS_PERMITIDAS` usam esse endereço). Se o IP mudar, ajuste
   `BPA_ORIGENS_PERMITIDAS` no `bpa\.env` dos notebooks.
 - **PostgreSQL 16** (instalador oficial, serviço `postgresql-x64-16`). A senha
@@ -106,7 +106,7 @@ ou a aba **Usuários** (TI).
 ## 7. Conferir
 
 - [ ] `http://localhost:8001/health` → `{"status":"ok"}`
-- [ ] Login funciona de outro PC em `http://192.168.1.229:8001`
+- [ ] Login funciona de outro PC em `http://192.168.1.29:8001`
 - [ ] Aba **Painel** (TI): faixa do backup verde depois do primeiro backup
       (force um criando o arquivo `C:\HMPCF\backups\RODAR_AGORA`)
 - [ ] `backend\.venv\Scripts\python -m alembic check` → nenhuma diferença

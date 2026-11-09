@@ -32,7 +32,7 @@ PORTA = int(os.getenv("BPA_DIGITACAO_PORT", "8503"))
 ORIGENS_SISTEMA = {
     o.strip().rstrip("/")
     for o in os.getenv(
-        "BPA_ORIGENS_PERMITIDAS", "http://192.168.1.229:8001,http://desktop-9c4s1co:8001"
+        "BPA_ORIGENS_PERMITIDAS", "http://192.168.1.29:8001,http://desktop-9c4s1co:8001"
     ).split(",")
     if o.strip()
 }

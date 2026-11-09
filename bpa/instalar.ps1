@@ -109,7 +109,7 @@ Get-ChildItem $desktop -Filter *.lnk -ErrorAction SilentlyContinue | ForEach-Obj
         Write-Host "[OK] Atalho antigo removido: $($_.Name)"
     }
 }
-$url = "http://192.168.1.229:8001"
+$url = "http://192.168.1.29:8001"
 $lnk = $shell.CreateShortcut((Join-Path $desktop "HMPCF - BPA.lnk"))
 $lnk.TargetPath = Join-Path $env:WINDIR "System32\wscript.exe"
 $lnk.Arguments = '"' + (Join-Path $bpa "abrir_bpa.vbs") + '"'

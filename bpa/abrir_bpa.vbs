@@ -3,7 +3,7 @@
 ' escondido. Se o BPA ja estiver rodando, o executar.py percebe e sai sozinho.
 Option Explicit
 
-Const URL_SISTEMA = "http://192.168.1.229:8001/"
+Const URL_SISTEMA = "http://192.168.1.29:8001/"
 Const URL_BPA = "http://127.0.0.1:8503/api/status"
 
 Dim fso, sh, pasta, i

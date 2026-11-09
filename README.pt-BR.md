@@ -29,7 +29,7 @@ abre nela —, Entradas, Recepção, Histórico, Planilha, Correção) · **TI**
 ## Como funciona
 
 ```
- Notebooks do faturamento (x2)                 Servidor (PC da recepção, 192.168.1.229)
+ Notebooks do faturamento (x2)                 Servidor (PC da recepção, 192.168.1.29)
  ┌──────────────────────────────┐              ┌──────────────────────────────────────┐
  │ Chrome ── telas do sistema ──┼── :8001 ────▶│ HMPCF-Backend-Svc (FastAPI + telas)  │
  │   │                          │              │   └─ PostgreSQL 16 (hmpcf)           │
@@ -76,7 +76,7 @@ Detalhes das camadas: [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
 | Backup | serviço `HMPCF-Backup-Svc`: todo dia às 23:00 (ou na hora, criando `C:\HMPCF\backups\RODAR_AGORA`) → `pg_dump` → criptografia AES → `C:\HMPCF\backups` (30 dias) + `C:\HMPCF\backups_nuvem`, que o Google Drive sincroniza |
 | Conferir o backup | faixa no topo da aba **Painel** (vermelha se atrasar ou não chegar na nuvem) |
 
-Acesso: `http://192.168.1.229:8001`. O terminal da recepção entra sozinho
+Acesso: `http://192.168.1.29:8001`. O terminal da recepção entra sozinho
 (auto-login local); os outros PCs usam login e senha.
 
 **Atualizar o servidor:** `git pull`, `npm run build` em `frontend/` (telas —
