@@ -104,6 +104,10 @@ class PacienteService:
         for doc in ("num_cpf", "cns"):
             if not update_data.get(doc) or update_data[doc] == getattr(paciente, doc):
                 update_data.pop(doc, None)
+        # Obrigatórios do cadastro: vazio também é "não mexer", nunca apaga.
+        for obrigatorio in ("nome", "dtnasc", "sexo"):
+            if update_data.get(obrigatorio) is None:
+                update_data.pop(obrigatorio, None)
 
         novo_cpf = update_data.get("num_cpf")
         if novo_cpf:

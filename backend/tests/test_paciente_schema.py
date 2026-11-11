@@ -27,3 +27,19 @@ async def test_criar_com_cpf_nao_marca_sem_documento(session: AsyncSession):
     svc = PacienteService(session)
     resultado = await svc.criar(PacienteCreate(**DADOS_BASE, num_cpf="52998224725"))
     assert resultado.sem_documento is False
+
+
+@pytest.mark.asyncio
+async def test_atualizar_com_obrigatorios_vazios_nao_apaga_o_cadastro(session: AsyncSession):
+    """Nome/nascimento/sexo vazios no update são "não mexer" -- nunca apagam."""
+    from app.schemas.paciente import PacienteUpdate
+
+    svc = PacienteService(session)
+    criado = await svc.criar(PacienteCreate(**DADOS_BASE, num_cpf="52998224725"))
+    atualizado = await svc.atualizar(
+        criado.id, PacienteUpdate(nome="", dtnasc="", sexo=None, cidade="NATAL")
+    )
+    assert atualizado.nome == "TESTE SEM DOCUMENTO"
+    assert atualizado.dtnasc == "19900101"
+    assert atualizado.sexo == "M"
+    assert atualizado.cidade == "NATAL"

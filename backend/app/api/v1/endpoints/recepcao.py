@@ -5,6 +5,7 @@ from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUser, DBSession, FaturamentoUser, TIUser
+from app.core.exceptions import ValidationError
 from app.models.usuario import Usuario
 from app.schemas.common import PaginatedResponse
 from app.schemas.recepcao import (
@@ -16,7 +17,7 @@ from app.schemas.recepcao import (
     RecepcaoUpdate,
 )
 from app.services import planilha_ajustes_service
-from app.services.conferencia_planilha_service import ConferenciaPlanilhaService
+from app.services.conferencia_planilha_service import TAMANHO_MAXIMO, ConferenciaPlanilhaService
 from app.services.recepcao_service import RecepcaoService
 
 router = APIRouter()
@@ -224,5 +225,8 @@ async def conferencia_planilha(
 ) -> dict:
     """O arquivo vai cru no corpo (application/octet-stream) -- evita depender
     de python-multipart só pra isso. Ver ConferenciaPlanilhaService."""
+    # Recusa antes de ler: o limite do service só vale depois do arquivo inteiro na memória
+    if int(request.headers.get("content-length") or 0) > TAMANHO_MAXIMO:
+        raise ValidationError("Planilha grande demais (máx. 60 MB).")
     conteudo = await request.body()
     return await ConferenciaPlanilhaService(session, usuario).executar(conteudo, abas, aplicar)

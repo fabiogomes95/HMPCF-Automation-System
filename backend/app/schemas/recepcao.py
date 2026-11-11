@@ -1,10 +1,21 @@
 from datetime import date, datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, field_validator
 
 from app.models.recepcao_atendimento import ClassificacaoRisco
 from app.schemas.common import BaseSchema
+
+
+_FUSO_HOSPITAL = ZoneInfo("America/Sao_Paulo")
+
+
+def _hora_de_brasilia(v: Optional[datetime]) -> Optional[datetime]:
+    """A tela manda "2026-11-11T14:00:00", sem fuso. Sem isto, quem decidia o
+    fuso era o timezone do PostgreSQL -- num banco restaurado em UTC as horas
+    novas sairiam 3 h erradas. Hora sem fuso é sempre a do hospital."""
+    return v.replace(tzinfo=_FUSO_HOSPITAL) if v is not None and v.tzinfo is None else v
 
 
 class PacienteResumo(BaseSchema):
@@ -33,6 +44,11 @@ class RecepcaoCreate(BaseSchema):
     historia_clinica:     Optional[str] = None
     hipotese_diagnostica: Optional[str] = None
 
+    @field_validator("data_atendimento")
+    @classmethod
+    def _fuso(cls, v: Optional[datetime]) -> Optional[datetime]:
+        return _hora_de_brasilia(v)
+
 
 class RecepcaoUpdate(BaseSchema):
     """Todos os campos opcionais — semântica PATCH."""
@@ -47,6 +63,11 @@ class RecepcaoUpdate(BaseSchema):
     observacoes:          Optional[str] = None
     historia_clinica:     Optional[str] = None
     hipotese_diagnostica: Optional[str] = None
+
+    @field_validator("data_atendimento")
+    @classmethod
+    def _fuso(cls, v: Optional[datetime]) -> Optional[datetime]:
+        return _hora_de_brasilia(v)
 
 
 class RecepcaoResponse(BaseSchema):

@@ -23,6 +23,7 @@ from typing import Optional
 
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -51,6 +52,14 @@ TAMANHO_MAXIMO = 60 * 1024 * 1024
 
 def _idade(nasc: date, em: date) -> str:
     return str(em.year - nasc.year - ((em.month, em.day) < (nasc.month, nasc.day)))
+
+
+def _erro_curto(e: Exception) -> str:
+    """IntegrityError (ex.: outro PC cadastrou o mesmo CPF no mesmo instante)
+    traz o SQL inteiro no texto -- na tela basta dizer o que houve."""
+    if isinstance(e, IntegrityError):
+        return "já existe no sistema (cadastrado por outro computador ao mesmo tempo?)"
+    return str(e)
 
 
 def _motivo_validacao(e: PydanticValidationError) -> str:
@@ -198,8 +207,8 @@ class ConferenciaPlanilhaService:
                                     criado = await pacientes_svc.criar(novo)
                                 item["paciente_id"] = criado.id
                                 resposta["resumo"]["pacientes_criados"] += 1
-                            except HMPCFError as err:
-                                item["resultado"] = f"erro no cadastro: {err}"
+                            except (HMPCFError, IntegrityError) as err:
+                                item["resultado"] = f"erro no cadastro: {_erro_curto(err)}"
                                 resposta["resumo"]["erros"] += 1
                         else:
                             item["paciente_id"] = -1  # marcador: será criado
@@ -222,7 +231,7 @@ class ConferenciaPlanilhaService:
                         ))
                     item["resultado"] = f"lançada (atendimento {atd.id})"
                     resposta["resumo"]["entradas_lancadas"] += 1
-                except (HMPCFError, PydanticValidationError) as err:
-                    item["resultado"] = f"erro na entrada: {err}"
+                except (HMPCFError, PydanticValidationError, IntegrityError) as err:
+                    item["resultado"] = f"erro na entrada: {_erro_curto(err)}"
                     resposta["resumo"]["erros"] += 1
         return resposta
