@@ -87,7 +87,20 @@ $n = "C:\HMPCF-Automation-System\nssm\nssm.exe"   # nssm.exe fora do git: baixe 
 & $n start HMPCF-Backend-Svc
 
 powershell -ExecutionPolicy Bypass -File scripts\servidor\instalar_servico_backup.ps1
+powershell -ExecutionPolicy Bypass -File scripts\servidor\instalar_servico_monitor.ps1
 ```
+
+O monitor (avisos no grupo **HMPCF Avisos** do Telegram: sistema ou banco fora
+do ar, backup atrasado e um "bom dia" às 07:30) precisa antes do arquivo
+`C:\HMPCF\telegram.env`, fora do git:
+
+```
+TELEGRAM_TOKEN=<token do bot @hmpcf_avisos_bot; perdeu? /token no @BotFather>
+TELEGRAM_CHAT=-5452174424
+```
+
+Teste: `backend\.venv\Scripts\python.exe scripts\servidor\monitor.py --teste`.
+Se o "bom dia" das 07:30 não chegar, o servidor (ou o monitor) está desligado.
 
 No **Google Drive para computador**: *Configurações → Meu computador →
 Adicionar pasta* → `C:\HMPCF\backups_nuvem` → *Sincronizar com o Google Drive*.
@@ -151,6 +164,7 @@ cada acesso, nunca as senhas; elas vão em papel lacrado ou num gerenciador de s
 | **Senha de criptografia do backup** | abrir qualquer backup | [nome] (e cópia no cofre) |
 | Senha do `bpa_leitura` | reinstalar o BPA nos notebooks | [nome] |
 | Conta Google do Drive dos backups | conferir a cópia na nuvem | [nome] |
+| Grupo **HMPCF Avisos** no Telegram (e dono do bot `@hmpcf_avisos_bot`) | receber os avisos do monitor | adicionar ao grupo; passar o bot pelo @BotFather |
 | Conta **TI** no sistema | Painel, Auditoria, Usuários | criar uma conta TI para o novo responsável; depois desativar a do anterior |
 
 - [ ] Todos os acessos da tabela entregues e testados por quem assume
