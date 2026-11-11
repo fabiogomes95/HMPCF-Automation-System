@@ -37,6 +37,12 @@ async def origem_autorizada(request: Request, call_next):
     do_sistema = origem in config.ORIGENS_SISTEMA
     if origem and not do_sistema and origem not in config.ORIGENS_LOCAIS:
         return JSONResponse({"ok": False, "erro": "Origem não autorizada"}, status_code=403)
+    # Sem Origin: o navegador ainda diz de onde veio. "cross-site"/"same-site" é
+    # outra página (ex.: <img src=".../api/migracao/stream"> num site qualquer,
+    # que gravaria no Firebird). Sistema e /ui mandam Origin ou "same-origin";
+    # endereço digitado manda "none"; scripts locais não mandam o cabeçalho.
+    if not origem and request.headers.get("sec-fetch-site") in ("cross-site", "same-site"):
+        return JSONResponse({"ok": False, "erro": "Origem não autorizada"}, status_code=403)
 
     resp = Response(status_code=204) if request.method == "OPTIONS" else await call_next(request)
     if do_sistema:

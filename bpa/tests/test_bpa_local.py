@@ -336,3 +336,30 @@ def test_busca_sem_doc_lista_quem_nao_tem_cpf(cliente, monkeypatch):
         assert [p["nome"] for p in r] == ["ANA SEM", "ZULMIRA SEM"], termo   # só sem CPF, por nome
     # busca normal não muda
     assert [p["nome"] for p in cliente.get("/api/buscar", params={"q": "MARIA"}).json()] == ["MARIA COM"]
+
+
+# ── Quem pode chamar o BPA local ─────────────────────────────────────────────
+def test_pagina_de_outro_site_sem_origin_e_recusada(cliente, monkeypatch):
+    """<img src="http://localhost:8503/api/migracao/stream"> num site qualquer:
+    sem Origin, mas o navegador manda Sec-Fetch-Site: cross-site."""
+    chamou = []
+    monkeypatch.setattr(migracao, "stream", lambda mes: chamou.append(mes) or iter(["x"]))
+    for site in ("cross-site", "same-site"):
+        r = cliente.get("/api/migracao/stream", params={"mes": "2026-09"}, headers={"Sec-Fetch-Site": site})
+        assert r.status_code == 403
+    assert chamou == []
+
+
+def test_origem_desconhecida_continua_recusada(cliente):
+    r = cliente.get("/api/status", headers={"Origin": "http://site-qualquer.com"})
+    assert r.status_code == 403
+
+
+def test_quem_deve_entrar_continua_entrando(cliente):
+    from bpa_local import config
+
+    sistema = sorted(config.ORIGENS_SISTEMA)[0]
+    assert cliente.get("/api/status", headers={"Origin": sistema, "Sec-Fetch-Site": "cross-site"}).status_code == 200
+    assert cliente.get("/api/status", headers={"Sec-Fetch-Site": "same-origin"}).status_code == 200  # tela /ui
+    assert cliente.get("/api/status", headers={"Sec-Fetch-Site": "none"}).status_code == 200         # endereço digitado
+    assert cliente.get("/api/status").status_code == 200                                              # script local
