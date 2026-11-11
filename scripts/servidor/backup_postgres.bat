@@ -38,8 +38,19 @@ if /i not "%USERNAME%"=="%COMPUTERNAME%$" (
     powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0copiar_backup_nuvem.ps1" -Path "%OUTFILE%.enc"
 )
 
+REM Ordem/hora ajustadas a mao na Planilha ficam num JSON fora do banco
+REM (PLANILHA_AJUSTES_FILE do backend\.env) -- o pg_dump nao pega. So ids de
+REM atendimento e horas, nenhum dado pessoal: vai sem criptografia.
+if exist "C:\HMPCF\planilha_ajustes.json" (
+    echo Copiando ajustes da Planilha...
+    copy /y "C:\HMPCF\planilha_ajustes.json" "%BACKUP_DIR%\planilha_ajustes_%DATESTAMP%.json" >nul
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0copiar_backup_nuvem.ps1" -Path "%BACKUP_DIR%\planilha_ajustes_%DATESTAMP%.json" -DestinoPasta "C:\HMPCF\backups_nuvem"
+    if errorlevel 1 echo [AVISO] Copia externa dos ajustes da Planilha falhou -- copia local OK.
+)
+
 REM Expurgo: 30 dias, agora sobre os arquivos .enc (o .sql em claro ja foi apagado)
-powershell -NoProfile -Command "Get-ChildItem '%BACKUP_DIR%' -Filter *.sql.enc | Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } | Remove-Item -Force"
+REM e as copias diarias dos ajustes da Planilha
+powershell -NoProfile -Command "Get-ChildItem '%BACKUP_DIR%' | Where-Object { ($_.Name -like '*.sql.enc' -or $_.Name -like 'planilha_ajustes_*.json') -and $_.LastWriteTime -lt (Get-Date).AddDays(-30) } | Remove-Item -Force"
 
 REM Logs do backend ja trocados pelo nssm (a cada 10 MB, nssm_backend-<data>.log):
 REM o nssm nunca apaga os antigos, entao o expurgo de 90 dias fica aqui.

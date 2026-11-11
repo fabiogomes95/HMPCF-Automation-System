@@ -51,8 +51,10 @@ try {
     $destino = Join-Path $DestinoPasta (Split-Path $Path -Leaf)
     Copy-Item -Path $Path -Destination $destino -Force
 
-    Get-ChildItem $DestinoPasta -Filter *.sql.enc |
-        Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$RetencaoDias) } |
+    # Backups do banco e as cópias diárias dos ajustes da Planilha (backup_postgres.bat)
+    Get-ChildItem $DestinoPasta |
+        Where-Object { ($_.Name -like '*.sql.enc' -or $_.Name -like 'planilha_ajustes_*.json') -and
+                       $_.LastWriteTime -lt (Get-Date).AddDays(-$RetencaoDias) } |
         Remove-Item -Force
 
     Write-Host "[OK] Copia externa: $destino"
