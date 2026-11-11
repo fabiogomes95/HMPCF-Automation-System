@@ -127,6 +127,7 @@ if DIST.exists():
         app.mount("/img", StaticFiles(directory=DIST / "img"), name="static-img")
 
     _NO_CACHE = {"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"}
+    _DIST_REAL = DIST.resolve()
 
     @app.get("/", include_in_schema=False)
     async def serve_index():
@@ -139,7 +140,8 @@ if DIST.exists():
         # index.html, a tela receberia HTML no lugar de JSON e ficaria em branco.
         if full_path == "api" or full_path.startswith("api/"):
             return JSONResponse(status_code=404, content={"error": "NOT_FOUND", "message": "Rota da API não encontrada"})
-        p = DIST / full_path
-        if p.is_file():
+        # resolve() + is_relative_to: "../../backend/.env" (ou %2e%2e) nunca sai de frontend/dist
+        p = (DIST / full_path).resolve()
+        if p.is_relative_to(_DIST_REAL) and p.is_file():
             return FileResponse(p)
         return FileResponse(DIST / "index.html", headers=_NO_CACHE)
