@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { bpaLocal, fmtNum } from "../../services/bpaLocal";
+import PacientesEmDobro from "./PacientesEmDobro";
+import PlanilhaRecepcao from "./PlanilhaRecepcao";
 
 // Migração de pacientes servidor (PostgreSQL) → Firebird deste notebook.
 // A automática roda sozinha na 1ª abertura do dia (últimos 40 dias); a manual
@@ -143,6 +145,7 @@ export default function Migracao({ migracaoAuto, aoTerminar }) {
   const pct = progresso?.total ? Math.round((progresso.i / progresso.total) * 100) : 0;
 
   return (
+    <>
     <div className="bp-grade bp-grade-meio">
       <div className="bp-coluna">
         <CartaoAutomatica m={migracaoAuto} />
@@ -210,5 +213,8 @@ export default function Migracao({ migracaoAuto, aoTerminar }) {
         )}
       </section>
     </div>
+    <PacientesEmDobro />
+    <PlanilhaRecepcao />
+    </>
   );
 }

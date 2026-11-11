@@ -1,10 +1,10 @@
 from datetime import date
 from typing import Literal, Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, Field
 
-from app.api.deps import CurrentUser, DBSession, TIUser
+from app.api.deps import CurrentUser, DBSession, FaturamentoUser, TIUser
 from app.models.usuario import Usuario
 from app.schemas.common import PaginatedResponse
 from app.schemas.recepcao import (
@@ -16,6 +16,7 @@ from app.schemas.recepcao import (
     RecepcaoUpdate,
 )
 from app.services import planilha_ajustes_service
+from app.services.conferencia_planilha_service import ConferenciaPlanilhaService
 from app.services.recepcao_service import RecepcaoService
 
 router = APIRouter()
@@ -208,3 +209,20 @@ async def remover_atendimento(
     usuario: TIUser,
 ) -> None:
     await _svc(session, usuario).remover(atendimento_id)
+
+
+@router.post(
+    "/conferencia-planilha",
+    summary="Confere a planilha da recepção (.xlsx no corpo) e lança o que faltou no sistema",
+)
+async def conferencia_planilha(
+    request: Request,
+    session: DBSession,
+    usuario: FaturamentoUser,
+    abas: Optional[list[str]] = Query(None, description="Abas de mês a conferir (padrão: as duas últimas)"),
+    aplicar: bool = Query(False, description="False = só confere; True = cadastra e lança"),
+) -> dict:
+    """O arquivo vai cru no corpo (application/octet-stream) -- evita depender
+    de python-multipart só pra isso. Ver ConferenciaPlanilhaService."""
+    conteudo = await request.body()
+    return await ConferenciaPlanilhaService(session, usuario).executar(conteudo, abas, aplicar)

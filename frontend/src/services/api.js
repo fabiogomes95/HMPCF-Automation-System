@@ -166,6 +166,17 @@ export function situacaoImportacao() { return api.get("/entradas/planilhas/impor
 export function reimportarPlanilhas() { return api.post("/entradas/planilhas/importacao"); }
 
 // ── Alterar própria senha ─────────────────────────────────────────────────────
+// Aba BPA › Migração: confere a planilha da recepção (arquivo .xlsx cru no
+// corpo) e, com aplicar=true, cadastra/lança o que faltou. Leitura leva ~20 s.
+export function conferirPlanilhaRecepcao(arquivo, { abas, aplicar = false } = {}) {
+  return api.post("/recepcao/conferencia-planilha", arquivo, {
+    params: { abas: abas?.length ? abas : undefined, aplicar },
+    paramsSerializer: { indexes: null }, // abas=X&abas=Y (o que o FastAPI espera)
+    headers: { "Content-Type": "application/octet-stream" },
+    timeout: 10 * 60 * 1000,
+  });
+}
+
 export function alterarSenha(senha_atual, senha_nova) { return api.post("/auth/change-password", { senha_atual, senha_nova }); }
 
 // ── Correção manual de atendimento ────────────────────────────────────────────
