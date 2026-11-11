@@ -307,12 +307,30 @@ def test_dividir_em_lotes_lista_vazia():
     assert bpa.dividir_em_lotes([], ["DR TESTE"], "15/06/2026") == ""
 
 
-def test_dividir_por_profissionais_round_robin():
-    documentos = [str(i).zfill(11) for i in range(150)]
-    profissionais = [{"cns": "111", "nome": "A"}, {"cns": "222", "nome": "B"}]
-    resultado = bpa.dividir_por_profissionais(documentos, profissionais)
-    assert len(resultado["111"]) == 99
-    assert len(resultado["222"]) == 51
+def test_dividir_por_profissionais_reparte_entre_todos():
+    """180 pacientes e 4 enfermeiros: 45 pra cada (antes: 99/81/0/0)."""
+    import random
+    documentos = [str(i).zfill(11) for i in range(180)]
+    profissionais = [{"cns": c, "nome": c} for c in ("111", "222", "333", "444")]
+    resultado = bpa.dividir_por_profissionais(documentos, profissionais, random.Random(1))
+    assert [len(resultado[c]) for c in ("111", "222", "333", "444")] == [45, 45, 45, 45]
+    todos = [d for docs in resultado.values() for d in docs]
+    assert sorted(todos) == documentos                      # ninguém some nem repete
+    assert resultado["111"] != documentos[:45]              # sorteado, não por ordem
+    for docs in resultado.values():                         # mantém a ordem de digitação
+        assert docs == sorted(docs)
+
+
+def test_dividir_por_profissionais_sobra_sorteada():
+    import random
+    documentos = [str(i).zfill(11) for i in range(10)]
+    profissionais = [{"cns": c, "nome": c} for c in ("A", "B", "C")]
+    tamanhos = set()
+    for semente in range(30):
+        r = bpa.dividir_por_profissionais(documentos, profissionais, random.Random(semente))
+        assert sorted(len(v) for v in r.values()) == [3, 3, 4]
+        tamanhos.add(tuple(len(r[c]) for c in "ABC"))
+    assert len(tamanhos) > 1                                # quem leva o +1 varia
 
 
 def test_dividir_por_profissionais_sem_profissionais():

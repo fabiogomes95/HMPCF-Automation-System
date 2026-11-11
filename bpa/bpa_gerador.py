@@ -13,6 +13,7 @@ do frontend/. Credenciais do Firebird no bpa/.env (ver bpa/bpa_local/config.py).
 from __future__ import annotations
 
 import os
+import random
 import re
 from datetime import date, datetime
 from pathlib import Path
@@ -814,22 +815,34 @@ def criar_cabecalho_lote(nome_arquivo: str, medico: str, data: str, cns: str = "
         f.write(f"PROFISSIONAL: {medico.upper()}{cns_part} | DATA: {data}\n")
 
 
-def dividir_por_profissionais(documentos: list[str], profissionais: list[dict]) -> dict[str, list[str]]:
-    """Distribui documentos em blocos de até 99 (limite de folha do BPA) entre os
-    profissionais informados, em rodízio — mesma lógica de `dividir_em_lotes`,
-    mas indexada por CNS real (Firebird) em vez de nome digitado à mão.
+def dividir_por_profissionais(documentos: list[str], profissionais: list[dict],
+                              rng: random.Random | None = None) -> dict[str, list[str]]:
+    """Reparte os documentos do dia entre TODOS os profissionais marcados, em
+    partes iguais e por sorteio (quem fica com cada paciente e quem leva a sobra
+    da divisão). 180 pacientes / 4 enfermeiros = 45 pra cada.
+
+    Até 11/11/2026 era em blocos de 99 por rodízio: com 180 pacientes e 4
+    enfermeiros dava 99 / 81 / 0 / 0. O limite de 99 é por FOLHA, e a geração
+    já abre folha nova sozinha (calcular_atendimentos_producao/montar_linhas).
 
     profissionais: [{"cns": ..., "nome": ...}, ...]
-    Retorna {cns: [documentos]}.
+    Retorna {cns: [documentos]} (cada lista na ordem original de digitação).
     """
     if not profissionais:
         return {}
-    TAMANHO_LOTE = 99
-    por_cns: dict[str, list[str]] = {p["cns"]: [] for p in profissionais}
+    rng = rng or random.Random()
     ordem = [p["cns"] for p in profissionais]
-    for i, idx in enumerate(range(0, len(documentos), TAMANHO_LOTE)):
-        chunk = documentos[idx:idx + TAMANHO_LOTE]
-        por_cns[ordem[i % len(ordem)]].extend(chunk)
+    por_cns: dict[str, list[str]] = {c: [] for c in ordem}
+    base, sobra = divmod(len(documentos), len(ordem))
+    tamanhos = [base + 1] * sobra + [base] * (len(ordem) - sobra)
+    rng.shuffle(tamanhos)                         # quem leva +1 é sorteado
+    posicoes = list(range(len(documentos)))
+    rng.shuffle(posicoes)                         # qual paciente vai pra quem
+    inicio = 0
+    for cns, n in zip(ordem, tamanhos):
+        for pos in sorted(posicoes[inicio:inicio + n]):
+            por_cns[cns].append(documentos[pos])
+        inicio += n
     return por_cns
 
 
