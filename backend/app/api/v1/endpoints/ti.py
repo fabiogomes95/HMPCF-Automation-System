@@ -2,7 +2,6 @@
 from datetime import datetime
 from typing import Optional
 
-import bcrypt
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
@@ -12,6 +11,7 @@ from app.models.usuario import Usuario
 from app.repositories.sessao_repository import SessaoRepository
 from app.repositories.usuario_repository import UsuarioRepository
 from app.services.auditoria_service import AuditoriaService
+from app.services.auth_service import gerar_hash_senha
 from app.services.recepcao_service import RecepcaoService
 from app.services.painel_service import Periodo, montar_painel
 
@@ -54,7 +54,7 @@ class UsuarioOut(BaseModel):
 @router.get("/usuarios", response_model=list[UsuarioOut])
 async def listar_usuarios(session: DBSession, _: TIUser) -> list[UsuarioOut]:
     repo = UsuarioRepository(session)
-    users = await repo.list(order_by=Usuario.username)
+    users = await repo.list(order_by=Usuario.username, limit=1000)  # padrão do repo é 20
     return [UsuarioOut.model_validate(u) for u in users]
 
 
@@ -69,7 +69,7 @@ async def criar_usuario(dados: CriarUsuarioInput, session: DBSession, usuario: T
     repo = UsuarioRepository(session)
     if await repo.get_by_username(username):
         raise ConflictError(f"Usuário '{username}' já existe")
-    pw_hash = bcrypt.hashpw(dados.password.encode(), bcrypt.gensalt()).decode()
+    pw_hash = await gerar_hash_senha(dados.password)
     user = await repo.add(Usuario(username=username, password_hash=pw_hash, role=dados.role))
     await AuditoriaService(session).registrar(usuario, "criar", "usuario", user.id, campos_alterados=["role"])
     return UsuarioOut.model_validate(user)
@@ -82,7 +82,7 @@ async def resetar_senha(usuario_id: int, dados: ResetarSenhaInput, session: DBSe
     user = await repo.get(usuario_id)
     if not user:
         raise NotFoundError("Usuário", usuario_id)
-    user.password_hash = bcrypt.hashpw(dados.nova_senha.encode(), bcrypt.gensalt()).decode()
+    user.password_hash = await gerar_hash_senha(dados.nova_senha)
     # Senha resetada = quem estava logado com a senha antiga precisa entrar de novo.
     await SessaoRepository(session).delete_do_usuario(usuario_id)
     await session.flush()

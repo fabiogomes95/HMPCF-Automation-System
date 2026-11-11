@@ -52,7 +52,11 @@ async def me(usuario: CurrentUser) -> UsuarioResponse:
 
 
 @router.post("/change-password", summary="Alterar própria senha")
-async def change_password(dados: AlterarSenhaInput, usuario: CurrentUser, session: DBSession) -> dict:
-    await AuthService(session).alterar_senha(usuario, dados.senha_atual, dados.senha_nova)
+async def change_password(
+    dados: AlterarSenhaInput, request: Request, usuario: CurrentUser, session: DBSession
+) -> dict:
+    # Os outros logins desse usuário caem; o deste navegador (cookie atual) fica.
+    token = request.cookies.get(settings.SESSION_COOKIE_NAME)
+    await AuthService(session).alterar_senha(usuario, dados.senha_atual, dados.senha_nova, token_atual=token)
     await AuditoriaService(session).registrar(usuario, "atualizar", "usuario", usuario.id, campos_alterados=["senha"])
     return {"status": "ok"}
