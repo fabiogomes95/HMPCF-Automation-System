@@ -217,7 +217,7 @@ export default function PlanilhaAtendimentos() {
   const [diaFiltro, setDiaFiltro]     = useState(() => turnoVigenteInfo().diaISO);
   const [pacienteFiltro, setPacienteFiltro] = useState("");
   const [items, setItems]     = useState([]);
-  const [total, setTotal]     = useState(0);
+  const total = items.length; // o backend devolve total = quantidade de itens
   const [loading, setLoading] = useState(false);
   const [erro, setErro]       = useState("");
   const [copiadoId, setCopiadoId] = useState(null);
@@ -233,11 +233,13 @@ export default function PlanilhaAtendimentos() {
   // (senão o refresh traria de volta a ordem antiga por alguns segundos).
   const versaoAjustesRef = useRef(0);
 
-  async function carregarAjustes(ano, mesNum) {
+  // ativo(): false quando o mês/filtro mudou enquanto a busca estava no ar --
+  // a resposta é de outro mês e não pode cobrir a tela atual.
+  async function carregarAjustes(ano, mesNum, ativo = () => true) {
     const versao = versaoAjustesRef.current;
     try {
       const res = await buscarAjustesPlanilha(ano, mesNum);
-      if (versao === versaoAjustesRef.current) setAjustes(res.data);
+      if (versao === versaoAjustesRef.current && ativo()) setAjustes(res.data);
     } catch {
       // sem os ajustes a planilha continua na ordem automática
     }
@@ -254,18 +256,21 @@ export default function PlanilhaAtendimentos() {
     } else {
       setDiaFiltro("TODOS");
     }
-    carregarAjustes(ano, mesNum);
+    // Trocou de mês antes desta busca voltar: a resposta é descartada
+    let ativo = true;
+    carregarAjustes(ano, mesNum, () => ativo);
     buscarPlanilhaMensal(ano, mesNum)
       .then(res => {
+        if (!ativo) return;
         setItems(res.data.items);
-        setTotal(res.data.total);
       })
       .catch(() => {
+        if (!ativo) return;
         setItems([]);
-        setTotal(0);
         setErro("Não foi possível carregar a planilha deste mês.");
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (ativo) setLoading(false); });
+    return () => { ativo = false; };
   }, [mes]);
 
   // Auto-refresh silencioso — não reseta filtros. Pula quando a aba está em
@@ -276,24 +281,26 @@ export default function PlanilhaAtendimentos() {
     const [ano, mesNum] = mes.split("-").map(Number);
     if (!ano || !mesNum) return;
 
+    // Filtro mudou com o refresh no ar: a resposta é do filtro antigo e é descartada
+    let ativo = true;
+
     async function atualizar() {
       if (document.hidden || refreshEmAndamento.current) return;
       refreshEmAndamento.current = true;
       try {
-        await carregarAjustes(ano, mesNum); // o outro computador pode ter mexido na ordem
+        await carregarAjustes(ano, mesNum, () => ativo); // o outro computador pode ter mexido na ordem
         if (plantaoFixo) {
           // Troca só as linhas desse plantão; o resto do mês fica como está.
           const res = await buscarPlanilhaPlantao(diaFiltro, turnoFiltro);
+          if (!ativo) return;
           setItems(prev => {
             const outros = prev.filter(i => !(i.dia_referencia === diaFiltro && i.turno === turnoFiltro));
-            const juntos = [...outros, ...res.data.items].sort(porHorario);
-            setTotal(juntos.length);
-            return juntos;
+            return [...outros, ...res.data.items].sort(porHorario);
           });
         } else {
           const res = await buscarPlanilhaMensal(ano, mesNum);
+          if (!ativo) return;
           setItems(res.data.items);
-          setTotal(res.data.total);
         }
       } catch {
         // silencioso -- tenta de novo no próximo ciclo
@@ -303,7 +310,7 @@ export default function PlanilhaAtendimentos() {
     }
 
     const id = setInterval(atualizar, plantaoFixo ? REFRESH_PLANTAO_MS : REFRESH_MES_MS);
-    return () => clearInterval(id);
+    return () => { ativo = false; clearInterval(id); };
   }, [mes, plantaoFixo, diaFiltro, turnoFiltro]);
 
   const diasDisponiveis = useMemo(() => {
@@ -394,7 +401,6 @@ export default function PlanilhaAtendimentos() {
       const [ano, mesNum] = mes.split("-").map(Number);
       const res = await buscarPlanilhaMensal(ano, mesNum);
       setItems(res.data.items);
-      setTotal(res.data.total);
     } catch (err) {
       setExcluidoMsg(mensagemErro(err, "Erro ao salvar registro."));
       setTimeout(() => setExcluidoMsg(""), 3000);
@@ -459,7 +465,6 @@ export default function PlanilhaAtendimentos() {
       const [ano, mesNum] = mes.split("-").map(Number);
       const res = await buscarPlanilhaMensal(ano, mesNum);
       setItems(res.data.items);
-      setTotal(res.data.total);
       setExcluidoMsg("Atendimento excluído.");
       setTimeout(() => setExcluidoMsg(""), 3000);
     } catch (err) {
