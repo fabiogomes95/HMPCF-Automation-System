@@ -114,6 +114,29 @@ ou a aba **Usuários** (TI).
       falando com o servidor
 - [ ] No dia seguinte: faixa do backup mostra "último … 23:0x"
 
+## Atualizar o sistema (versão nova no GitHub)
+
+No PowerShell como administrador:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\HMPCF-Automation-System\scripts\servidor\atualizar.ps1
+```
+
+O script baixa a versão nova, instala, monta as telas, reinicia (5 a 10 s fora
+do ar, ninguém perde o login) e confere se o sistema respondeu. **Se algo der
+errado, ele volta sozinho para a versão que estava rodando.** O resultado
+aparece na tela e fica em `C:\HMPCF\atualizacoes.log`:
+
+| Mensagem | O que fazer |
+|---|---|
+| `[OK] Atualizado` ou `Nada a fazer` | nada |
+| `[PARADO]` | nada foi mexido; leia o motivo (arquivo alterado à mão, mudança no banco) |
+| `[VOLTOU]` | o sistema está no ar na versão anterior; a nova ficou para depois |
+| `[URGENTE]` | o sistema não subiu; ver `backend\nssm_backend.log` e os passos 4 e 5 acima |
+
+Versão que muda o banco (pasta `backend/migrations`) o script não aplica: faça
+o backup antes e rode `alembic upgrade head` à mão.
+
 ## Passagem para outro responsável
 
 Quando o responsável atual (Fabio Gomes) deixar o hospital, o sistema continua
@@ -134,6 +157,7 @@ cada acesso, nunca as senhas; elas vão em papel lacrado ou num gerenciador de s
 - [ ] Backup do dia anterior conferido no Painel (faixa verde) e no Drive
 - [ ] Um backup aberto de teste com `decrypt_backup.ps1`, para provar que a senha confere
 - [ ] Quem assume sabe reiniciar o `HMPCF-Backend-Svc` (ver *StopPending* no README)
+- [ ] Quem assume sabe atualizar com `atualizar.ps1` (seção acima)
 - [ ] Este guia e o README lidos por quem assume
 
 O código fica em `C:\HMPCF-Automation-System`, com o histórico completo; ele
