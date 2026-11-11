@@ -65,6 +65,8 @@ export const bpaLocal = {
   migracaoPreview: (mes) => req("/api/migracao/preview", { metodo: "POST", corpo: { mes }, timeout: LONGO }),
   migrarAgora: () => req("/api/migracao/agora", { metodo: "POST" }),
   migracaoStreamUrl: (mes) => `${URL_BPA_LOCAL}/api/migracao/stream?mes=${encodeURIComponent(mes)}`,
+  // Paciente em dobro no Firebird (sem CPF + com CPF): aplicar=false só mostra
+  unificar: (aplicar) => req("/api/unificar", { metodo: "POST", corpo: { aplicar }, timeout: LONGO }),
 
   situacaoDia: (data) => req("/api/situacao_dia", { params: { data }, timeout: LONGO }),
 

@@ -16,7 +16,11 @@ from bpa_local.services import limpar
 
 
 def _texto(valor, max_len=9999) -> str:
-    return str(valor).strip().upper()[:max_len] if valor is not None else ""
+    """Maiúsculo, cortado no tamanho da coluna do Firebird -- e sem espaço no
+    fim DEPOIS do corte: "FULANO BELTRANO CICRANO TESTE DE MELO" cortado em 30
+    termina em "DE ". Lido de volta do Firebird o espaço some, a comparação com
+    o Postgres nunca batia e o mesmo paciente era "atualizado" toda migração."""
+    return str(valor).strip().upper()[:max_len].rstrip() if valor is not None else ""
 
 
 def _sexo(valor) -> str:
@@ -41,30 +45,38 @@ def chave_nome_nasc(nome, dtnasc) -> tuple[str, str]:
     return (re.sub(r"\s+", " ", str(nome or "").strip().upper()[:30]).strip(), _dtnasc(dtnasc) or "")
 
 
-def _carregar_existentes_fb(cur) -> tuple[set, set, dict]:
+def _carregar_existentes_fb(cur) -> tuple[set, set, dict, dict]:
     """Carrega de uma vez (1 consulta) o que já está no Firebird, pra checar em
     memória em vez de 1 SELECT por paciente (CADCNS não tem índice em NUM_CPF).
 
-    Retorna (cpf_set, nome_nasc, cpf_dados):
-      cpf_set   — CPFs já gravados.
-      nome_nasc — (nome, nascimento) de todos os cadastros: paciente SEM CPF
-                  só entra se ninguém com o mesmo nome e nascimento existir.
-      cpf_dados — CPF -> dados atuais no Firebird (mesma ordem/normalização de
-                  _DADOS_ATUALIZAVEIS), pra comparar com o Postgres e detectar
-                  nome/endereço/telefone etc. que mudaram desde a última migração.
+    Retorna (cpf_set, nome_nasc, cpf_dados, sem_cpf_ids):
+      cpf_set     — CPFs já gravados.
+      nome_nasc   — (nome, nascimento) de todos os cadastros: paciente SEM CPF
+                    só entra se ninguém com o mesmo nome e nascimento existir.
+      cpf_dados   — CPF -> dados atuais no Firebird (mesma ordem/normalização de
+                    _DADOS_ATUALIZAVEIS), pra comparar com o Postgres e detectar
+                    nome/endereço/telefone etc. que mudaram desde a última migração.
+      sem_cpf_ids — (nome, nascimento) -> ID_CADCNS do cadastro SEM CPF (o mais
+                    antigo). Quando o paciente ganha CPF na recepção, a migração
+                    COMPLETA esse cadastro em vez de criar outro (até 11/11/2026
+                    criava: 46 pacientes ficaram em dobro, um sem e um com CPF).
 
     Desde 24/09/2026 não existe mais "completar CPF" em cadastro antigo só com
     SUS: o Firebird foi migrado de novo só com CPF (ninguém tem SUS lá)."""
     cur.execute(
         "SELECT NUM_CPF, NOME, DTNASC, SEXO, RACA, MAEPCN, LOGPCN, NUMPCN, "
-        "BAIRRO_PCNTE, CEPPCN, IBGE, NACIONALIDADE, DDTEL_PCNTE, TEL_PCNTE FROM CADCNS"
+        "BAIRRO_PCNTE, CEPPCN, IBGE, NACIONALIDADE, DDTEL_PCNTE, TEL_PCNTE, ID_CADCNS FROM CADCNS"
     )
     cpf_set: set = set()
     nome_nasc: set = set()
     cpf_dados: dict = {}
-    for cpf, nome, dtnasc, sexo, raca, mae, log, num, bairro, cep, ibge, nac, ddd, tel in cur.fetchall():
-        nome_nasc.add(chave_nome_nasc(nome, dtnasc))
+    sem_cpf_ids: dict = {}
+    for cpf, nome, dtnasc, sexo, raca, mae, log, num, bairro, cep, ibge, nac, ddd, tel, id_cad in cur.fetchall():
+        chave = chave_nome_nasc(nome, dtnasc)
+        nome_nasc.add(chave)
         cpf = (cpf or "").strip()
+        if not cpf and chave[0] and chave[1] and (chave not in sem_cpf_ids or id_cad < sem_cpf_ids[chave]):
+            sem_cpf_ids[chave] = id_cad
         if cpf:
             cpf_set.add(cpf)
             cpf_dados[cpf] = (
@@ -73,7 +85,7 @@ def _carregar_existentes_fb(cur) -> tuple[set, set, dict]:
                 (cep or "").strip(), (ibge or "").strip(), _texto(nac, 3),
                 (ddd or "").strip(), (tel or "").strip(),
             )
-    return cpf_set, nome_nasc, cpf_dados
+    return cpf_set, nome_nasc, cpf_dados, sem_cpf_ids
 
 
 def _dados_atualizaveis(nome, sexo, raca, mae, log, num, bairro, cep, ibge, nac, ddd, tel) -> tuple:
@@ -102,6 +114,12 @@ _COLUNAS_ATUALIZAVEIS = [
     "CEPPCN", "IBGE", "NACIONALIDADE", "DDTEL_PCNTE", "TEL_PCNTE",
 ]
 _SQL_UPDATE = f"UPDATE CADCNS SET {', '.join(c + ' = ?' for c in _COLUNAS_ATUALIZAVEIS)} WHERE NUM_CPF = ?"
+# Paciente que estava sem CPF e ganhou CPF: completa o mesmo cadastro (mantém o
+# ID_CADCNS, que pode estar num lote como "ID:nnn").
+_SQL_COMPLETAR_CPF = (
+    f"UPDATE CADCNS SET NUM_CPF = ?, {', '.join(c + ' = ?' for c in _COLUNAS_ATUALIZAVEIS)} "
+    "WHERE ID_CADCNS = ? AND (NUM_CPF IS NULL OR NUM_CPF = '')"
+)
 
 
 def _campos_alterados(antigo: tuple | None, novo: tuple) -> list[str]:
@@ -145,7 +163,7 @@ def preview(d: dict) -> dict:
 
         fb = bpa.conectar()
         fb_cur = fb.cursor()
-        cpf_set, nome_nasc, cpf_dados = _carregar_existentes_fb(fb_cur)
+        cpf_set, nome_nasc, cpf_dados, sem_cpf_ids = _carregar_existentes_fb(fb_cur)
         fb.close()
 
         novos = ja_existem = novos_sem_doc = atualizar = 0
@@ -156,8 +174,12 @@ def preview(d: dict) -> dict:
                 novos_sem_doc += 1
         for r in validos:
             cpf = limpar(r[1])
-            if cpf not in cpf_set:
+            if cpf not in cpf_set and sem_cpf_ids.pop(chave_nome_nasc(r[2], r[3]), None) is not None:
+                atualizar += 1  # vai completar o CPF do cadastro que estava sem
+                cpf_set.add(cpf)
+            elif cpf not in cpf_set:
                 novos += 1
+                cpf_set.add(cpf)
             elif _dados_atualizaveis(r[2], *r[4:]) != cpf_dados.get(cpf):
                 atualizar += 1
             else:
@@ -242,7 +264,7 @@ def migrar(query: str) -> Iterator[dict]:
     fb_cur.execute("SELECT MAX(ID_CADCNS) FROM CADCNS")
     max_id = fb_cur.fetchone()[0] or 0
 
-    cpf_set, nome_nasc, cpf_dados = _carregar_existentes_fb(fb_cur)
+    cpf_set, nome_nasc, cpf_dados, sem_cpf_ids = _carregar_existentes_fb(fb_cur)
     yield {"tipo": "log", "msg": f"{len(cpf_set)} CPF(s) já cadastrados carregados em memória."}
 
     inseridos = duplicatas = atualizados = erros = cpf_invalidos = sem_documento = 0
@@ -293,6 +315,7 @@ def migrar(query: str) -> Iterator[dict]:
                     inseridos += 1
                     sem_documento += 1
                     nome_nasc.add(chave)
+                    sem_cpf_ids[chave] = max_id
                     detalhes_novos.append({"cpf": "", "nome": nome_fmt})
                     yield {"tipo": "log", "msg": f"Novo (sem documento): {nome_fmt}"}
                 except Exception as e:
@@ -331,6 +354,25 @@ def migrar(query: str) -> Iterator[dict]:
                     yield {"tipo": "log", "msg": f"Erro ao atualizar CPF {cpf}: {e}"}
             else:
                 duplicatas += 1
+
+        elif (id_sem_cpf := sem_cpf_ids.get(chave_nome_nasc(nome_r, dn_r))) is not None:
+            # Estava no Firebird SEM CPF (mesmo nome e nascimento) e agora tem
+            # CPF: completa aquele cadastro em vez de criar um segundo.
+            dados_novos = _dados_atualizaveis(
+                nome_r, sexo_r, raca_r, mae_r, log_r, num_r, bairro_r, cep_r, ibge_r, nac_r, ddd_r, tel_r,
+            )
+            try:
+                fb_cur.execute(_SQL_COMPLETAR_CPF, [cpf, *dados_novos, id_sem_cpf])
+                atualizados += 1
+                del sem_cpf_ids[chave_nome_nasc(nome_r, dn_r)]
+                cpf_set.add(cpf)
+                cpf_dados[cpf] = dados_novos
+                detalhes_atualizados.append({"cpf": cpf, "nome": dados_novos[0], "campos": ["NUM_CPF"]})
+                yield {"tipo": "log", "msg": f"CPF completado no cadastro sem CPF (ID {id_sem_cpf}): {dados_novos[0]} ({cpf})"}
+            except Exception as e:
+                erros += 1
+                detalhes_erros.append({"cpf": cpf, "nome": nome_r, "erro": str(e)})
+                yield {"tipo": "log", "msg": f"Erro ao completar CPF {cpf} no ID {id_sem_cpf}: {e}"}
 
         else:  # novo
             max_id += 1

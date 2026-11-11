@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from bpa_local import postgres
 from bpa_local.cache import cache
-from bpa_local.services import backup_lotes, digitacao, geracao, migracao, migracao_auto, nutricao, producao
+from bpa_local.services import backup_lotes, digitacao, geracao, migracao, migracao_auto, nutricao, producao, unificar
 
 router = APIRouter(prefix="/api")
 
@@ -135,3 +135,10 @@ def migracao_stream(mes: str = ""):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ── Paciente em dobro no Firebird (sem CPF + com CPF) ─────────────────────────
+@router.post("/unificar")
+def unificar_pacientes(d: Corpo = Body(None)):
+    """{"aplicar": false} só mostra; {"aplicar": true} corrige. Ver services/unificar.py."""
+    return unificar.executar(aplicar=bool(_corpo(d).get("aplicar")))

@@ -40,6 +40,7 @@ Mudança só nas telas não precisa: basta F5.
 | Log do BPA | `bpa\bpa_local.log` |
 | Cópia dos lotes no servidor | tabela `bpa_lotes_backup` (restaurar: `ferramentas\restaurar_lotes.py`) |
 | Limpar paciente sem CPF repetido no Firebird | `ferramentas\limpar_duplicados_sem_cpf.py` (sem `--apagar` só mostra) |
+| Paciente em dobro (um sem CPF + um com CPF) | aba BPA › Migração › **Pacientes em dobro no Firebird**, ou `ferramentas\unificar_sem_cpf_com_cpf.py` (sem `--aplicar` só mostra) |
 
 A barra do topo da aba BPA mostra "lotes em …" — confira se é a pasta certa.
 

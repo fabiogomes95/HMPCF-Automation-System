@@ -129,6 +129,106 @@ def test_sem_cpf_com_espaco_duplo_e_nome_longo_nao_duplica():
     assert migracao.chave_nome_nasc(" maria  da silva ", "1990-01-15") == ("MARIA DA SILVA", "19900115")
 
 
+def test_corte_terminando_em_espaco_nao_atualiza_todo_dia():
+    # Casos reais: corte em 30/5 letras parava num espaço ("...DE ", "82 - ").
+    # O Firebird devolve sem o espaço; a comparação tem que dar igual.
+    pg = ("FULANO BELTRANO CICRANO TESTE DE MELO", "M", "03", "MARIA DE TESTE DA SILVA SAURO DE MELO",
+          "RUA DOS TESTES DA SILVA SAURO JUNIOR", "12 - 09", "CENTRO", "59575000", "240360", "010", "84", "999999999")
+    gravado = migracao._dados_atualizaveis(*pg)
+    lido_do_firebird = tuple(migracao._texto(v) for v in gravado)
+    assert migracao._dados_atualizaveis(*pg) == lido_do_firebird
+    assert migracao._texto("FULANO BELTRANO CICRANO TESTE DE MELO", 30) == "FULANO BELTRANO CICRANO TESTE"
+
+
+def test_paciente_que_ganhou_cpf_completa_o_cadastro_sem_cpf(monkeypatch, tmp_path):
+    """Estava no Firebird sem CPF (ID 50); na recepção ganhou CPF. A migração
+    tem que completar o ID 50 -- antes criava um 2º cadastro (com CPF)."""
+    executados = []
+    cadcns = [  # NUM_CPF, NOME, DTNASC, SEXO, RACA, MAE, LOG, NUM, BAIRRO, CEP, IBGE, NAC, DDD, TEL, ID
+        ("", "JOANA SEM CPF", "19900101", "F", "03", "", "RUA A", "1", "CENTRO", "59575000", "240360", "010", "84", "999999999", 50),
+    ]
+
+    class FbCur:
+        def execute(self, sql, params=None):
+            executados.append((sql, params))
+            self._sql = sql
+        def fetchone(self): return (50,)
+        def fetchall(self): return cadcns if "FROM CADCNS" in self._sql else []
+
+    class Fb:
+        def cursor(self): return FbCur()
+        def commit(self): pass
+        def close(self): pass
+
+    pg_rows = [  # cns, cpf, nome, dtnasc, sexo, raca, mae, log, num, bairro, cep, ibge, nac, ddd, tel
+        ("", "12345678909", "JOANA SEM CPF", "19900101", "F", "03", "", "RUA A", "1", "CENTRO", "59575000", "240360", "010", "84", "999999999"),
+    ]
+
+    class PgCur:
+        def execute(self, sql, params=None): pass
+        def fetchall(self): return pg_rows
+
+    class Pg:
+        def cursor(self): return PgCur()
+        def close(self): pass
+
+    monkeypatch.setattr(migracao.postgres, "conectar", lambda: Pg())
+    monkeypatch.setattr(bpa, "conectar", lambda: Fb())
+    monkeypatch.setattr(migracao.cache, "carregar_pacientes", lambda: None)
+    monkeypatch.setattr(migracao, "BASE", tmp_path)
+
+    fim = list(migracao.migrar("SELECT ..."))[-1]
+    assert fim["tipo"] == "fim", fim
+    assert fim["inseridos"] == 0 and fim["atualizados"] == 1
+    assert not any(sql.startswith("INSERT") for sql, _ in executados)
+    sql, params = next((s, p) for s, p in executados if s.startswith("UPDATE"))
+    assert "WHERE ID_CADCNS = ?" in sql and params[0] == "12345678909" and params[-1] == 50
+
+
+def test_unificar_planejamento():
+    from bpa_local.services import unificar
+
+    def cad(id_, cpf, nome, nasc="19900101", tel=""):
+        return {"ID_CADCNS": id_, "NUM_CPF": cpf, "NOME": nome, "DTNASC": nasc, "TEL_PCNTE": tel,
+                **{c: "" for c in unificar.COLUNAS if c not in ("NOME", "TEL_PCNTE")}}
+
+    linhas = [
+        cad(10, "", "ANA SEM E COM"), cad(90, "12345678909", "ANA SEM E COM", tel="999999999"),  # unifica
+        cad(11, "", "BIA PRESA"), cad(91, "98765432100", "BIA PRESA"),                         # 91 em lote
+        cad(12, "11111111111", "CARLA DOIS CPFS"), cad(92, "22222222222", "CARLA DOIS CPFS"),  # à mão
+        cad(13, "", "DORA SO SEM"), cad(14, "33333333333", "EVA SO COM"),                      # nada
+    ]
+    acoes, avisos, difs = unificar.planejar(linhas, usados={91})
+    assert [(a["fica"], a["sai"], a["cpf"], a["dados"]["TEL_PCNTE"]) for a in acoes] == \
+        [(10, [90], "12345678909", "999999999")]
+    assert len(avisos) == 1 and "BIA PRESA" in avisos[0]
+    assert [d["nome"] for d in difs] == ["CARLA DOIS CPFS"]
+
+    # CPFs diferentes: vale o que o servidor tem hoje; o outro sai
+    acoes, _, difs = unificar.planejar(linhas, usados=set(), no_servidor={"22222222222"})
+    carla = next(a for a in acoes if a["nome"] == "CARLA DOIS CPFS")
+    assert (carla["fica"], carla["sai"], carla["dados"]) == (92, [12], None) and difs == []
+
+    # mesmo nome + mãe, nascimento diferente: sai o sem CPF se ele não existe mais no servidor
+    sem = cad(20, "", "PACIENTE TESTE NASC", nasc="19820402") | {"MAEPCN": "MAE DE TESTE"}
+    com = cad(21, "52998224725", "PACIENTE TESTE NASC", nasc="19820404") | {"MAEPCN": "MAE DE TESTE"}
+    pares = unificar.candidatos_nasc_errado([sem, com, cad(22, "", "OUTRO")])
+    assert pares == [(sem, com)]
+    acoes, avisos = unificar.planejar_nasc_errado(pares, set(), existe=lambda s: False)
+    assert [(a["fica"], a["sai"]) for a in acoes] == [(21, [20])]
+    acoes, avisos = unificar.planejar_nasc_errado(pares, set(), existe=lambda s: True)
+    assert acoes == [] and "conferir à mão" in avisos[0]
+
+
+def test_rota_unificar_so_mostra(cliente, monkeypatch):
+    from bpa_local.services import unificar
+    chamadas = []
+    monkeypatch.setattr(unificar, "executar", lambda aplicar=False: chamadas.append(aplicar) or {"ok": True})
+    assert cliente.post("/api/unificar", json={}).json() == {"ok": True}
+    cliente.post("/api/unificar", json={"aplicar": True})
+    assert chamadas == [False, True]
+
+
 def test_manual_e_automatica_nunca_juntas(cliente, monkeypatch):
     monkeypatch.setenv("BPA_MIGRACAO_AUTO", "1")
     migracao.TRAVA.acquire()

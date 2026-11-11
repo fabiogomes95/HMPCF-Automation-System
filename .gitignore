@@ -68,6 +68,7 @@ backend/backups_mescla/
 bpa/migracao_auto.json
 bpa/backup_lotes.json
 bpa/backup_cadcns_duplicados_*.json
+bpa/backup_cadcns_unificados_*.json
 
 # Relatorios detalhados de cada migracao manual (nome/CPF de paciente —
 # nunca commitar, mesma regra dos lotes BPA)
