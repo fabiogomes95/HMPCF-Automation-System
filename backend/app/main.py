@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -19,14 +21,35 @@ from app.core.exceptions import (
     UnauthorizedError,
     ValidationError,
 )
-from app.database.session import engine
+from app.database.session import AsyncSessionLocal, engine
+from app.services.auditoria_service import AuditoriaService
 
 DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
 
+log = logging.getLogger("uvicorn.error")  # o logger que o uvicorn já manda pro nssm_backend.log
+
+
+async def _limpar_consultas_antigas() -> None:
+    """Registros de CONSULTA da auditoria com mais de 1 ano saem sozinhos:
+    na subida do sistema e depois 1x por dia."""
+    while True:
+        try:
+            async with AsyncSessionLocal() as session:
+                apagados = await AuditoriaService(session).apagar_consultas_antigas()
+                await session.commit()
+            if apagados:
+                log.info("Auditoria: %d registros de consulta com mais de 1 ano apagados", apagados)
+        except Exception:
+            log.exception("Auditoria: falha ao apagar consultas antigas (tenta de novo amanhã)")
+        await asyncio.sleep(24 * 60 * 60)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    limpeza = asyncio.create_task(_limpar_consultas_antigas())
     yield
+    limpeza.cancel()
     await engine.dispose()
 
 

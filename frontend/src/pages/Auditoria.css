@@ -66,6 +66,8 @@
 .auditoria-tabela tr.acao-criar    td { border-left: 3px solid #22c55e; }
 .auditoria-tabela tr.acao-atualizar td { border-left: 3px solid #f59e0b; }
 .auditoria-tabela tr.acao-remover  td { border-left: 3px solid #ef4444; }
+.auditoria-tabela tr.acao-consultar td,
+.auditoria-tabela tr.acao-buscar_doc td { border-left: 3px solid #94a3b8; }
 
 .cel-data    { white-space: nowrap; color: #555; }
 .cel-usuario { font-weight: 600; }

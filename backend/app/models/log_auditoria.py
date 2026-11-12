@@ -9,7 +9,9 @@ from app.database.base import Base
 
 class LogAuditoria(Base):
     """
-    Registro de escrita (criar/atualizar/remover) em pacientes/atendimentos.
+    Registro de escrita (criar/atualizar/remover) em pacientes/atendimentos e
+    de consulta a dados de paciente (consultar/buscar_doc -- saem após 1 ano,
+    ver AuditoriaService.apagar_consultas_antigas).
     Só metadados — nunca CPF/CNS/endereço/dado de saúde em si (mesmo
     cuidado já adotado pros logs de aplicação, ver docs/HISTORICO.md).
 
@@ -30,7 +32,7 @@ class LogAuditoria(Base):
     )
     usuario_username: Mapped[str] = mapped_column(String(50), nullable=False)
 
-    acao:    Mapped[str] = mapped_column(String(20), nullable=False)  # criar | atualizar | remover
+    acao:    Mapped[str] = mapped_column(String(20), nullable=False)  # criar | atualizar | remover | consultar | buscar_doc
     recurso: Mapped[str] = mapped_column(String(30), nullable=False)  # paciente | atendimento | usuario
     recurso_id: Mapped[int] = mapped_column(Integer, nullable=False)
 

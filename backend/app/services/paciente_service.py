@@ -10,7 +10,7 @@ from app.repositories.paciente_repository import PacienteRepository
 from app.repositories.recepcao_repository import RecepcaoRepository
 from app.schemas.common import PaginatedResponse
 from app.schemas.paciente import PacienteCreate, PacienteResponse, PacienteUpdate
-from app.services.auditoria_service import AuditoriaService
+from app.services.auditoria_service import BUSCAR_DOC, AuditoriaService
 
 
 class PacienteService:
@@ -59,6 +59,7 @@ class PacienteService:
         paciente = await self._repo.get(paciente_id)
         if paciente is None:
             raise NotFoundError("Paciente", paciente_id)
+        await self._auditoria.registrar_consulta(self._usuario, paciente.id)
         return PacienteResponse.model_validate(paciente)
 
     async def buscar_por_documento(self, documento: str) -> PacienteResponse:
@@ -69,6 +70,7 @@ class PacienteService:
         paciente = await self._repo.get_by_documento(doc)
         if paciente is None:
             raise NotFoundError("Paciente", documento)
+        await self._auditoria.registrar_consulta(self._usuario, paciente.id, BUSCAR_DOC)
         return PacienteResponse.model_validate(paciente)
 
     # ── Escrita ────────────────────────────────────────────────────────────────

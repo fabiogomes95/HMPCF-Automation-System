@@ -17,7 +17,7 @@ faturamento, ao lado do Firebird e do BPA Magnético (que continuam offline).
 |---|---|---|
 | **Recepção** | cadastro de pacientes, atendimento com boletim A4, histórico, planilha mensal por plantão, correção | servidor (`backend/` + `frontend/`) |
 | **Painel** (TI) | atendimentos do dia/plantão/mês, movimento por hora, perfil, qualidade do cadastro e **saúde do backup** — só números agregados | servidor, `GET /api/v1/ti/painel` |
-| **Auditoria e usuários** (TI) | quem criou/editou/apagou o quê; gestão de contas | servidor |
+| **Auditoria e usuários** (TI) | quem criou/editou/apagou o quê e quem consultou cada paciente (LGPD); gestão de contas | servidor |
 | **Entradas** (faturamento, TI) | em que dias o paciente deu entrada e quantas vezes — no sistema e nas **planilhas manuais desde ago/2021** — pra achar o boletim impresso (guardado por data) | servidor, `GET /api/v1/entradas` |
 | **BPA** (faturamento) | Digitação (médicos), Enfermeiros, **Nutrição do mês**, Migração pro Firebird, Conferência, Buscar prontuário → arquivos BPA-I pra importar no BPA Magnético | telas no servidor, trabalho no notebook (`bpa/`) |
 
@@ -179,7 +179,7 @@ perfil TI (403 para os outros).
 | `recepcao` | `GET /recepcao` · `/recentes` · `/pacientes/agrupado` · `/paciente/{id}` · `/planilha` · `/planilha/plantao` · `GET/PUT /recepcao/{id}` · `POST /recepcao` · `DELETE /recepcao/{id}/repetido` (duplicata real, até 15 min) |
 | `ti` | `GET/POST /ti/usuarios` · `PATCH /ti/usuarios/{id}/senha` · `PATCH /ti/usuarios/{id}/ativo` · `DELETE /ti/atendimentos/{id}` · `GET /ti/painel` — **TI** |
 | `entradas` | `GET /entradas?q=&fonte=ambos\|sistema\|planilhas` · `GET /entradas/planilhas` — faturamento e TI |
-| `auditoria` | `GET /auditoria` **TI** |
+| `auditoria` | `GET /auditoria` (`paciente_documento=` CPF/CNS: todos os acessos a esse paciente) **TI** |
 | infra | `GET /health` |
 
 O BPA local (`localhost:8503/api/...`) tem a própria API, usada só pelas telas

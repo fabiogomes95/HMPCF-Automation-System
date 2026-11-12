@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 import "./Auditoria.css";
 
-const LABEL_ACAO = { criar: "Criou", atualizar: "Editou", remover: "Removeu" };
+const LABEL_ACAO = {
+  criar: "Criou", atualizar: "Editou", remover: "Removeu",
+  consultar: "Consultou", buscar_doc: "Buscou por CPF/SUS",
+};
 const LABEL_RECURSO = { paciente: "Paciente", atendimento: "Atendimento", usuario: "Usuário" };
 
 function formatDataHora(iso) {
@@ -21,6 +24,7 @@ export default function Auditoria() {
   const [filtroAcao, setFiltroAcao]       = useState("TODOS");
   const [filtroRecurso, setFiltroRecurso] = useState("TODOS");
   const [filtroUsuario, setFiltroUsuario] = useState("");
+  const [filtroPaciente, setFiltroPaciente] = useState("");
   const [desde, setDesde]                 = useState("");
   const [ate, setAte]                     = useState("");
 
@@ -36,6 +40,7 @@ export default function Auditoria() {
       if (filtroRecurso !== "TODOS") params.set("recurso", filtroRecurso);
       if (filtroAcao !== "TODOS") params.set("acao", filtroAcao);
       if (filtroUsuario.trim()) params.set("usuario_username", filtroUsuario.trim());
+      if (filtroPaciente.trim()) params.set("paciente_documento", filtroPaciente.trim());
       if (desde) params.set("desde", desde);
       if (ate) params.set("ate", ate);
       api.get(`/auditoria/?${params}`)
@@ -47,7 +52,7 @@ export default function Auditoria() {
         .finally(() => setLoading(false));
     }, 300);
     return () => clearTimeout(t);
-  }, [page, filtroRecurso, filtroAcao, filtroUsuario, desde, ate]);
+  }, [page, filtroRecurso, filtroAcao, filtroUsuario, filtroPaciente, desde, ate]);
 
   const logsFiltrados = logs;
 
@@ -77,7 +82,13 @@ export default function Auditoria() {
             <option value="criar">Criou</option>
             <option value="atualizar">Editou</option>
             <option value="remover">Removeu</option>
+            <option value="consultar">Consultou</option>
+            <option value="buscar_doc">Buscou por CPF/SUS</option>
           </select>
+        </label>
+        <label title="Tudo sobre esse paciente: quem consultou, cadastrou, editou e os atendimentos dele">
+          Paciente (CPF ou SUS)
+          <input value={filtroPaciente} placeholder="acessos a este paciente" onChange={e => { setFiltroPaciente(e.target.value); setPage(1); }} />
         </label>
         <label>
           Usuário

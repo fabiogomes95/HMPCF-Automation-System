@@ -1,12 +1,16 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.endpoints.auditoria import listar_auditoria
 from app.models.log_auditoria import LogAuditoria
 from app.models.paciente import Paciente
 from app.models.usuario import Usuario
 from app.schemas.paciente import PacienteCreate, PacienteUpdate
 from app.schemas.recepcao import RecepcaoCreate, RecepcaoUpdate
+from app.services.auditoria_service import AuditoriaService
 from app.services.paciente_service import PacienteService
 from app.services.recepcao_service import RecepcaoService
 
@@ -20,7 +24,7 @@ async def _criar_usuario_teste(session: AsyncSession, username: str = "teste_aud
 
 
 async def _logs(session: AsyncSession) -> list[LogAuditoria]:
-    result = await session.execute(select(LogAuditoria))
+    result = await session.execute(select(LogAuditoria).order_by(LogAuditoria.id))
     return list(result.scalars().all())
 
 
@@ -76,20 +80,69 @@ async def test_remover_paciente_gera_log(session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_listar_e_obter_nao_geram_log(session: AsyncSession):
+async def test_consultas_ao_paciente_geram_log_e_lista_por_nome_nao(session: AsyncSession):
+    """LGPD: abrir a ficha/histórico e achar por CPF/CNS ficam registrados;
+    lista por nome não (seria 1 linha por paciente da lista)."""
     usuario = await _criar_usuario_teste(session)
     svc = PacienteService(session, usuario)
-
     resposta = await svc.criar(
         PacienteCreate(nome="ANA AUDITADA", num_cpf="50443332479", sexo="F", dtnasc="19900101")
     )
-    logs_apos_criar = await _logs(session)
+    antes = len(await _logs(session))
 
-    await svc.listar(q=None, page=1, page_size=20)
+    await svc.listar(q="ANA", page=1, page_size=20)
+    assert len(await _logs(session)) == antes
+
     await svc.obter(resposta.id)
+    await svc.buscar_por_documento("504.433.324-79")
+    recepcao = RecepcaoService(session, usuario)
+    await recepcao.listar_por_paciente(resposta.id, page=1, page_size=10)
+    await recepcao.listar_por_paciente(resposta.id, page=2, page_size=10)  # mesma abertura, outra página
 
-    logs_apos_leitura = await _logs(session)
-    assert len(logs_apos_leitura) == len(logs_apos_criar)
+    novos = (await _logs(session))[antes:]
+    assert [(l.acao, l.recurso, l.recurso_id) for l in novos] == [
+        ("consultar", "paciente", resposta.id),
+        ("buscar_doc", "paciente", resposta.id),
+        ("consultar", "paciente", resposta.id),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_consultas_com_mais_de_1_ano_saem_e_escritas_ficam(session: AsyncSession):
+    usuario = await _criar_usuario_teste(session)
+    velho = datetime.now(timezone.utc) - timedelta(days=400)
+    recente = datetime.now(timezone.utc) - timedelta(days=30)
+    for acao, quando in [("consultar", velho), ("buscar_doc", velho), ("consultar", recente), ("atualizar", velho)]:
+        session.add(LogAuditoria(usuario_id=usuario.id, usuario_username=usuario.username,
+                                 acao=acao, recurso="paciente", recurso_id=1, criado_em=quando))
+    await session.flush()
+
+    assert await AuditoriaService(session).apagar_consultas_antigas() == 2
+    session.expire_all()
+    assert sorted(l.acao for l in await _logs(session)) == ["atualizar", "consultar"]
+
+
+@pytest.mark.asyncio
+async def test_filtro_por_paciente_traz_consultas_cadastro_e_atendimentos_dele(
+    session: AsyncSession, paciente: Paciente, paciente2: Paciente,
+):
+    ti = await _criar_usuario_teste(session, "teste_ti_filtro")
+    usuario = await _criar_usuario_teste(session, "teste_recepcao_filtro")
+    recepcao = RecepcaoService(session, usuario)
+    atd = await recepcao.criar(RecepcaoCreate(paciente_id=paciente.id))
+    await PacienteService(session, usuario).buscar_por_documento(paciente.num_cpf)
+    await PacienteService(session, usuario).buscar_por_documento(paciente2.num_cpf)  # outro paciente
+
+    res = await listar_auditoria(session, ti, recurso=None, recurso_id=None, acao=None,
+                                 paciente_documento=paciente.cns, usuario_username=None,
+                                 desde=None, ate=None, page=1, page_size=20)
+    assert {(i.acao, i.recurso, i.recurso_id) for i in res.items} == {
+        ("criar", "atendimento", atd.id), ("buscar_doc", "paciente", paciente.id),
+    }
+    nenhum = await listar_auditoria(session, ti, recurso=None, recurso_id=None, acao=None,
+                                    paciente_documento="00000000000", usuario_username=None,
+                                    desde=None, ate=None, page=1, page_size=20)
+    assert nenhum.total == 0
 
 
 @pytest.mark.asyncio

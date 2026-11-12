@@ -185,6 +185,7 @@ class RecepcaoService:
         atendimento = await self._repo.get_by_id(atendimento_id)
         if atendimento is None:
             raise NotFoundError("Atendimento", atendimento_id)
+        await self._auditoria.registrar_consulta(self._usuario, atendimento.paciente_id)
         return RecepcaoResponse.model_validate(atendimento)
 
     async def listar_por_paciente(
@@ -195,6 +196,8 @@ class RecepcaoService:
     ) -> PaginatedResponse[RecepcaoListResponse]:
         if not await self._paciente_repo.get(paciente_id):
             raise NotFoundError("Paciente", paciente_id)
+        if page == 1:  # abrir o histórico = 1 registro, não 1 por página
+            await self._auditoria.registrar_consulta(self._usuario, paciente_id)
         offset = (page - 1) * page_size
         items = await self._repo.list_by_paciente(paciente_id, limit=page_size, offset=offset)
         total = await self._repo.count_by_paciente(paciente_id)

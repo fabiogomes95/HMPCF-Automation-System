@@ -52,6 +52,10 @@ Resposta de erro: `{"error": "ConflictError", "message": "..."}`. Rota
 
 **Auditoria**: toda escrita (pacientes, atendimentos, usuários) grava em
 `logs_auditoria` quem fez, o quê e quais campos mudaram — nunca senhas.
+Consultas também (LGPD): abrir a ficha/histórico do paciente (`consultar`) e
+achá-lo por CPF/CNS (`buscar_doc`); lista por nome e Planilha não. Registros de
+consulta com mais de 1 ano saem sozinhos (`app/main.py`, 1x por dia); escritas
+ficam pra sempre.
 
 **Painel** (`services/painel_service.py`): só agregados (contagens, médias,
 faixas), nenhum nome/CPF sai; inclui a saúde do backup
