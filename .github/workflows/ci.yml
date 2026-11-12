@@ -89,3 +89,31 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+
+  # Falhas de segurança conhecidas nas bibliotecas. Só o que vai pra
+  # produção e só gravidade alta no npm -- vite/esbuild são de montagem
+  # (não rodam no hospital) e ficariam avisando sem parar.
+  dependencias:
+    name: Bibliotecas (falhas de segurança conhecidas)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: pip-audit (servidor e BPA)
+        run: |
+          pip install pip-audit
+          pip-audit -r backend/requirements.txt
+          pip-audit -r bpa/requirements.txt
+
+      - name: npm audit (tela, só produção)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
