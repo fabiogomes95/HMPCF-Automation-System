@@ -15,6 +15,7 @@ from app.schemas.recepcao import (
     PlanilhaAtendimentoResponse,
     PlanilhaMensalResponse,
     RecepcaoCreate,
+    RegistroQueFica,
     RecepcaoListResponse,
     RecepcaoResponse,
     RecepcaoUpdate,
@@ -54,7 +55,9 @@ def _montar_endereco(logpcn: Optional[str], numpcn: Optional[str], bairro: Optio
     return rua_num or None
 
 
-# Janela de duplicata -- manter igual a JANELA_REPETIDO_MIN em frontend/src/utils.js
+# Janela de duplicata. Caso típico: a recepcionista registra, percebe
+# endereço/cidade errados, corrige e registra de novo -- sai um segundo
+# atendimento minutos depois. Retorno real (horas depois) NÃO é duplicata.
 JANELA_REPETIDO_MIN = 15
 
 
@@ -73,7 +76,32 @@ def _chaves_paciente(a: RecepcaoAtendimento) -> set:
     return chaves
 
 
-def _linha_planilha(a: RecepcaoAtendimento) -> PlanilhaAtendimentoResponse:
+def _repetidos(atendimentos: list[RecepcaoAtendimento]) -> dict[int, RecepcaoAtendimento]:
+    """Única regra de "atendimento repetido" do sistema -- a tela só mostra o
+    que vem marcado daqui e o DELETE /repetido confere com esta mesma função.
+
+    Mesmo paciente (_chaves_paciente), no MESMO PLANTÃO, registrado de novo:
+      - logo em seguida na lista (nenhum outro paciente no meio), ou
+      - até JANELA_REPETIDO_MIN minutos depois.
+    Mantém o ÚLTIMO registro (o corrigido) e marca o ANTERIOR.
+    Retorna {id do atendimento marcado: atendimento que fica no lugar dele}.
+    `atendimentos` em ordem cronológica (como vem de list_por_intervalo)."""
+    repetidos: dict[int, RecepcaoAtendimento] = {}
+    ultimo_por_chave: dict[tuple, int] = {}  # (plantão, chave) -> índice
+    for idx, a in enumerate(atendimentos):
+        plantao = _turno_e_dia_referencia(a.data_atendimento)
+        chaves = [(plantao, c) for c in _chaves_paciente(a)]
+        anterior = max((ultimo_por_chave[c] for c in chaves if c in ultimo_por_chave), default=None)
+        if anterior is not None:
+            b = atendimentos[anterior]
+            if anterior == idx - 1 or a.data_atendimento - b.data_atendimento <= timedelta(minutes=JANELA_REPETIDO_MIN):
+                repetidos[b.id] = a
+        for c in chaves:
+            ultimo_por_chave[c] = idx
+    return repetidos
+
+
+def _linha_planilha(a: RecepcaoAtendimento, fica: Optional[RecepcaoAtendimento] = None) -> PlanilhaAtendimentoResponse:
     turno, dia_referencia = _turno_e_dia_referencia(a.data_atendimento)
     p = a.paciente
     return PlanilhaAtendimentoResponse(
@@ -92,6 +120,9 @@ def _linha_planilha(a: RecepcaoAtendimento) -> PlanilhaAtendimentoResponse:
         telefone=f"{p.ddtel_pcnte or ''}{p.tel_pcnte or ''}".strip() or None if p else None,
         dia_referencia=dia_referencia,
         turno=turno,
+        repetido=RegistroQueFica(
+            atendimento_id=fica.id, registro=fica.registro, data_atendimento=fica.data_atendimento,
+        ) if fica else None,
     )
 
 
@@ -223,10 +254,11 @@ class RecepcaoService:
         fim_busca = datetime.combine(fim_mes + timedelta(days=1), time.min, tzinfo=timezone.utc)
 
         atendimentos = await self._repo.list_por_intervalo(inicio_busca, fim_busca)
+        repetidos = _repetidos(atendimentos)
 
         items = []
         for a in atendimentos:
-            linha = _linha_planilha(a)
+            linha = _linha_planilha(a, repetidos.get(a.id))
             if inicio_mes <= linha.dia_referencia < fim_mes:
                 items.append(linha)
 
@@ -240,7 +272,8 @@ class RecepcaoService:
         hora_inicio = _INICIO_DIURNO if turno == "DIURNO" else _INICIO_NOTURNO
         inicio = datetime.combine(dia, hora_inicio, tzinfo=_FUSO_HOSPITAL)
         atendimentos = await self._repo.list_por_intervalo(inicio, inicio + timedelta(hours=12))
-        items = [_linha_planilha(a) for a in atendimentos]
+        repetidos = _repetidos(atendimentos)
+        items = [_linha_planilha(a, repetidos.get(a.id)) for a in atendimentos]
         return PlanilhaMensalResponse(ano=dia.year, mes=dia.month, total=len(items), items=items)
 
     # ── Escrita ────────────────────────────────────────────────────────────────
@@ -290,11 +323,9 @@ class RecepcaoService:
         return RecepcaoResponse.model_validate(atendimento)
 
     async def remover_repetido(self, atendimento_id: int) -> None:
-        """Remove um atendimento SÓ se ele for duplicata (liberado pra recepção).
-        Mesma regra da tela (frontend/src/utils.js idsRepetidosPorPlantao): o
-        mesmo paciente foi registrado de novo, no mesmo plantão, logo em seguida
-        ou em até JANELA_REPETIDO_MIN minutos -- fica o registro mais novo e sai
-        este. Retorno real (horas depois) é recusado."""
+        """Remove um atendimento SÓ se ele for duplicata (liberado pra recepção),
+        pela mesma regra que marca REPETIDO na tela (_repetidos): fica o
+        registro mais novo e sai este. Retorno real (horas depois) é recusado."""
         atendimento = await self._repo.get_by_id(atendimento_id)
         if atendimento is None:
             raise NotFoundError("Atendimento", atendimento_id)
@@ -303,16 +334,7 @@ class RecepcaoService:
         hora_inicio = _INICIO_DIURNO if turno == "DIURNO" else _INICIO_NOTURNO
         inicio = datetime.combine(dia, hora_inicio, tzinfo=_FUSO_HOSPITAL)
         plantao = await self._repo.list_por_intervalo(inicio, inicio + timedelta(hours=12))
-
-        idx = next((i for i, a in enumerate(plantao) if a.id == atendimento_id), None)
-        chaves = _chaves_paciente(atendimento)
-        seguintes = plantao[idx + 1:] if idx is not None else []
-        limite = atendimento.data_atendimento + timedelta(minutes=JANELA_REPETIDO_MIN)
-        eh_repetido = any(
-            chaves & _chaves_paciente(b) and (pos == 0 or b.data_atendimento <= limite)
-            for pos, b in enumerate(seguintes)
-        )
-        if not eh_repetido:
+        if atendimento_id not in _repetidos(plantao):
             raise BusinessRuleError(
                 "Este atendimento não é repetido (não há registro do mesmo paciente logo "
                 f"em seguida nem em até {JANELA_REPETIDO_MIN} min no mesmo plantão)"

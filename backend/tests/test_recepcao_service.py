@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import BusinessRuleError, NotFoundError
 from app.models.paciente import Paciente
 from app.models.recepcao_atendimento import RecepcaoAtendimento
 from app.repositories.recepcao_repository import RecepcaoRepository
@@ -212,3 +212,72 @@ async def test_criar_atendimento(session: AsyncSession, paciente: Paciente):
     assert result.procedencia == "SAMU"
     assert result.paciente is not None
     assert result.paciente.nome == "MARIA SILVA"
+
+
+# ── Atendimento repetido (regra única: RecepcaoService._repetidos) ──────────
+
+_SP = ZoneInfo("America/Sao_Paulo")
+
+
+async def _registrar(session, paciente_id, hora, minuto, dia=10):
+    a = RecepcaoAtendimento(
+        paciente_id=paciente_id, data_atendimento=datetime(2026, 9, dia, hora, minuto, tzinfo=_SP),
+    )
+    session.add(a)
+    await session.flush()
+    return a
+
+
+@pytest.mark.asyncio
+async def test_repetido_marca_o_anterior_e_aponta_o_que_fica(
+    session: AsyncSession, paciente: Paciente, paciente2: Paciente,
+):
+    """Dentro de 15 min (mesmo com outro paciente no meio) é repetido; o mais
+    novo fica. Horas depois, no mesmo plantão, é retorno -- não é repetido."""
+    primeiro = await _registrar(session, paciente.id, 10, 0)
+    await _registrar(session, paciente2.id, 10, 5)
+    corrigido = await _registrar(session, paciente.id, 10, 12)
+    await _registrar(session, paciente2.id, 13, 0)
+    retorno = await _registrar(session, paciente.id, 15, 0)
+
+    itens = {i.atendimento_id: i for i in (await RecepcaoService(session).planilha_mensal(2026, 9)).items}
+    assert itens[primeiro.id].repetido.atendimento_id == corrigido.id
+    assert itens[corrigido.id].repetido is None
+    assert itens[retorno.id].repetido is None
+
+
+@pytest.mark.asyncio
+async def test_repetido_logo_em_seguida_vale_mesmo_passando_de_15_min(session: AsyncSession, paciente: Paciente):
+    a = await _registrar(session, paciente.id, 10, 0)
+    b = await _registrar(session, paciente.id, 10, 40)  # ninguém no meio
+
+    plantao = await RecepcaoService(session).planilha_plantao(date(2026, 9, 10), "DIURNO")
+    assert {i.atendimento_id: i.repetido and i.repetido.atendimento_id for i in plantao.items} == {a.id: b.id, b.id: None}
+
+
+@pytest.mark.asyncio
+async def test_repetido_nao_atravessa_plantao(session: AsyncSession, paciente: Paciente):
+    await _registrar(session, paciente.id, 18, 55)   # diurno
+    await _registrar(session, paciente.id, 19, 2)    # noturno
+
+    itens = (await RecepcaoService(session).planilha_mensal(2026, 9)).items
+    assert all(i.repetido is None for i in itens)
+
+
+@pytest.mark.asyncio
+async def test_remover_repetido_usa_a_mesma_regra_da_planilha(
+    session: AsyncSession, paciente: Paciente, paciente2: Paciente,
+):
+    svc = RecepcaoService(session)
+    primeiro = await _registrar(session, paciente.id, 10, 0)
+    await _registrar(session, paciente2.id, 10, 5)
+    await _registrar(session, paciente.id, 10, 12)
+    retorno_ida = await _registrar(session, paciente2.id, 14, 0)
+    await _registrar(session, paciente.id, 14, 30)
+    await _registrar(session, paciente2.id, 17, 0)
+
+    with pytest.raises(BusinessRuleError):
+        await svc.remover_repetido(retorno_ida.id)       # 3 h depois: retorno, fica
+    await svc.remover_repetido(primeiro.id)
+    assert await RecepcaoRepository(session).get_by_id(primeiro.id) is None
+    assert await RecepcaoRepository(session).get_by_id(retorno_ida.id) is not None

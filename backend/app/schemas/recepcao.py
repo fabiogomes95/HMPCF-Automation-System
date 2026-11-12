@@ -100,6 +100,14 @@ class PacienteAgrupadoResponse(BaseSchema):
     ultima_data: Optional[datetime] = None
 
 
+class RegistroQueFica(BaseSchema):
+    """O registro mais novo que fica no lugar de um atendimento repetido."""
+
+    atendimento_id: int
+    registro: Optional[int] = None
+    data_atendimento: datetime
+
+
 class PlanilhaAtendimentoResponse(BaseSchema):
     """Uma linha do relatório mensal estilo planilha (ver RecepcaoService.planilha_mensal)."""
 
@@ -118,6 +126,8 @@ class PlanilhaAtendimentoResponse(BaseSchema):
     telefone: Optional[str] = None
     dia_referencia: date
     turno: str
+    # Preenchido = este é REPETIDO (RecepcaoService._repetidos) e sai; o que fica é este outro
+    repetido: Optional[RegistroQueFica] = None
 
 
 class PlanilhaMensalResponse(BaseSchema):

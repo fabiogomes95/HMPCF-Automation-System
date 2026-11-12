@@ -3,7 +3,7 @@ import {
   buscarPlanilhaMensal, buscarPlanilhaPlantao, excluirAtendimentoRepetido, atualizarRegistroAtendimento, mensagemErro,
   buscarAjustesPlanilha, salvarAjustesPlanilha,
 } from "../services/api";
-import { formatCPF, formatCNS, formatTelefone, parseDateFromDB, idsRepetidosPorPlantao } from "../utils";
+import { formatCPF, formatCNS, formatTelefone, parseDateFromDB } from "../utils";
 import "./PlanilhaAtendimentos.css";
 
 const LABEL_PROCEDENCIA = {
@@ -381,10 +381,6 @@ export default function PlanilhaAtendimentos() {
   }, [gruposOrdenados, termoPaciente]);
   const totalVisivel = grupos.reduce((soma, g) => soma + g.items.length, 0);
 
-  // Calculado sobre o mês todo (não só o filtrado), pra marcação não mudar
-  // conforme o filtro de paciente/dia.
-  const repetidos = useMemo(() => idsRepetidosPorPlantao(items), [items]);
-
   async function handleCopiarLinha(item, linha) {
     const ok = await copiarTexto(linha);
     if (!ok) return;
@@ -454,7 +450,7 @@ export default function PlanilhaAtendimentos() {
   }
 
   async function handleExcluirDuplicata(item) {
-    const fica = repetidos.get(item.atendimento_id);
+    const fica = item.repetido; // marcado pelo servidor: o registro que fica
     if (!window.confirm(
       `Excluir este atendimento duplicado de ${item.nome || "?"}?\n` +
       `Sai:  ${formatHora(item.data_atendimento)} — Registro: ${item.registro ?? "—"}\n` +
@@ -582,7 +578,7 @@ export default function PlanilhaAtendimentos() {
               </thead>
               <tbody>
                 {grupo.items.map((item, indice) => {
-                  const duplicata = repetidos.has(item.atendimento_id);
+                  const duplicata = !!item.repetido;
                   const dtnascBR = parseDateFromDB(item.dtnasc);
                   const horaSistema = formatHora(item.data_atendimento);
                   const horaAjustada = ajuste.horas[item.atendimento_id];
@@ -659,7 +655,7 @@ export default function PlanilhaAtendimentos() {
                         {duplicata && (
                           <span
                             className="badge-duplicata no-print"
-                            title={`Registrado de novo às ${formatHora(repetidos.get(item.atendimento_id).data_atendimento)} — fica o registro mais novo`}
+                            title={`Registrado de novo às ${formatHora(item.repetido.data_atendimento)} — fica o registro mais novo`}
                           >
                             REPETIDO
                           </span>

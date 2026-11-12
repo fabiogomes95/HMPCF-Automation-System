@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { buscarPlanilhaMensal, excluirAtendimentoRepetido, mensagemErro } from "../services/api";
-import { dataLocalISO, idsRepetidosPorPlantao, isoParaBR, JANELA_REPETIDO_MIN } from "../utils";
+import { dataLocalISO, isoParaBR } from "../utils";
 import "./RepetidosMes.css";
 
 function mesAtual() {
@@ -43,13 +43,8 @@ export default function RepetidosMes() {
     setRepetidos([]);
     try {
       const res = await buscarPlanilhaMensal(ano, mesNum);
-      const items = res.data.items || [];
-      const marcados = idsRepetidosPorPlantao(items);
-      setRepetidos(
-        items
-          .filter(i => marcados.has(i.atendimento_id))
-          .map(i => ({ ...i, fica: marcados.get(i.atendimento_id) }))
-      );
+      // O servidor marca os repetidos (item.repetido = o registro que fica)
+      setRepetidos((res.data.items || []).filter(i => i.repetido).map(i => ({ ...i, fica: i.repetido })));
       setPesquisado(true);
     } catch (err) {
       aviso(mensagemErro(err, "Erro ao buscar planilha."));
@@ -86,7 +81,7 @@ export default function RepetidosMes() {
       <h3>Repetidos por mês</h3>
       <p className="rep-sub">
         Mesmo paciente (CPF, SUS ou nome + nascimento) registrado de novo no mesmo plantão logo em seguida
-        ou em até {JANELA_REPETIDO_MIN} minutos — normalmente correção de endereço/cidade. Fica o registro
+        ou poucos minutos depois — normalmente correção de endereço/cidade. Fica o registro
         mais novo; a lista mostra o anterior, que pode ser removido. Retornos horas depois não aparecem aqui.
       </p>
 
