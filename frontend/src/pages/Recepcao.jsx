@@ -5,8 +5,6 @@ import {
   atualizarPaciente,
   criarAtendimento,
   atualizarAtendimento,
-  iniciarSessao,
-  pingSessao,
 } from "../services/api";
 import {
   apenasNumeros,
@@ -97,16 +95,6 @@ export default function Recepcao({ edicao = null, manual = null, onVoltar = null
 
   useEffect(() => {
     cpfRef.current?.focus();
-    const nome = localStorage.getItem("terminal_nome");
-    if (nome) {
-      pingSessao(nome);
-    } else {
-      const id =
-        "RECEPCAO_" +
-        Math.random().toString(36).slice(2, 6).toUpperCase();
-      localStorage.setItem("terminal_nome", id);
-      iniciarSessao(id, window.location.hostname);
-    }
     if (manual) {
       setAtdInfo({ data: manual.data || dataAtual(), hora: manual.hora || horaAtual(), registro: "" });
       const doc = apenasNumeros(manual.documento || "");
@@ -131,14 +119,6 @@ export default function Recepcao({ edicao = null, manual = null, onVoltar = null
     }, 10000);
     return () => clearInterval(tick);
   }, [relogioAtivo]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const nome = localStorage.getItem("terminal_nome");
-      if (nome) pingSessao(nome);
-    }, 120000);
-    return () => clearInterval(interval);
-  }, []);
 
   function calcIdade(dtnasc) {
     const obj = calcularIdade(dtnasc);

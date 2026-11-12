@@ -29,18 +29,12 @@ RODAR__NO_PC_PRODUÇÃO.MD
 *.db-shm
 *.db-wal
 
-# Legado — arquivos ignorados que foram movidos para legado/
-legado/venv/
-legado/credentials.json
-legado/__pycache__/
 opencode/
 
 # Planilhas com dados de pacientes
 *.csv
 
 # Lotes BPA (CNS/CPF de pacientes — nunca commitar)
-legado/dashboard_streamlit/bpa_lotes/*.txt
-!legado/dashboard_streamlit/bpa_lotes/.gitkeep
 bpa/bpa_lotes/*.txt
 !bpa/bpa_lotes/.gitkeep
 
@@ -81,4 +75,3 @@ bpa/migracao_relatorios/
 *.csv
 *.tsv
 *.ods
-!legado/bpa_teste/nutricao_teste.xlsx

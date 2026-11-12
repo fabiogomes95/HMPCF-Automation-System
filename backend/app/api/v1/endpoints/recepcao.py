@@ -199,19 +199,6 @@ async def remover_atendimento_repetido(
     await _svc(session, usuario).remover_repetido(atendimento_id)
 
 
-@router.delete(
-    "/{atendimento_id}",
-    status_code=204,
-    summary="Remover atendimento (somente TI)",
-)
-async def remover_atendimento(
-    atendimento_id: int,
-    session: DBSession,
-    usuario: TIUser,
-) -> None:
-    await _svc(session, usuario).remover(atendimento_id)
-
-
 @router.post(
     "/conferencia-planilha",
     summary="Confere a planilha da recepção (.xlsx no corpo) e lança o que faltou no sistema",

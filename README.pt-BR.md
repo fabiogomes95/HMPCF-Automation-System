@@ -176,11 +176,10 @@ perfil TI (403 para os outros).
 |---|---|
 | `auth` | `POST /auth/login` · `POST /auth/logout` · `GET /auth/me` · `POST /auth/change-password` |
 | `pacientes` | `GET /pacientes` (`q`) · `GET /pacientes/busca` · `GET/PUT /pacientes/{id}` · `POST /pacientes` · `DELETE /pacientes/{id}` **TI** |
-| `recepcao` | `GET /recepcao` · `/recentes` · `/pacientes/agrupado` · `/paciente/{id}` · `/planilha` · `/planilha/plantao` · `GET/PUT /recepcao/{id}` · `POST /recepcao` · `DELETE /recepcao/{id}/repetido` (duplicata real, até 15 min) · `DELETE /recepcao/{id}` **TI** |
+| `recepcao` | `GET /recepcao` · `/recentes` · `/pacientes/agrupado` · `/paciente/{id}` · `/planilha` · `/planilha/plantao` · `GET/PUT /recepcao/{id}` · `POST /recepcao` · `DELETE /recepcao/{id}/repetido` (duplicata real, até 15 min) |
 | `ti` | `GET/POST /ti/usuarios` · `PATCH /ti/usuarios/{id}/senha` · `PATCH /ti/usuarios/{id}/ativo` · `DELETE /ti/atendimentos/{id}` · `GET /ti/painel` — **TI** |
 | `entradas` | `GET /entradas?q=&fonte=ambos\|sistema\|planilhas` · `GET /entradas/planilhas` — faturamento e TI |
 | `auditoria` | `GET /auditoria` **TI** |
-| `terminal` | `POST /terminal/start` · `POST /terminal/ping` |
 | infra | `GET /health` |
 
 O BPA local (`localhost:8503/api/...`) tem a própria API, usada só pelas telas
@@ -217,8 +216,12 @@ bpa/                BPA local dos notebooks
   instalar.ps1      instala/atualiza + liga com o Windows + atalho
 scripts/servidor/   backup (serviço, criptografia, nuvem)
 docs/               arquitetura, recuperação do servidor, pendências, histórico
-legado/             tudo que saiu de uso, só como referência
 ```
+
+O que saiu de uso (sistema antigo em Streamlit, BPA antigo, scripts de uso
+único) foi tirado do código em 12/11/2026: está no histórico do git, na
+etiqueta `legado-streamlit` (`git checkout legado-streamlit -- legado`), e numa
+cópia em `C:\HMPCF\legado` no servidor.
 
 ---
 

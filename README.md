@@ -42,8 +42,10 @@ frontend/           React/Vite UI served by the backend
 bpa/                local BPA service for the billing laptops (+ installer, tests)
 scripts/servidor/   server backup (service, encryption, cloud copy)
 docs/               architecture, server recovery, backlog, history
-legado/             everything retired, kept for reference only
 ```
+
+Retired code (old Streamlit system, old BPA, one-off scripts) was removed on
+2026-11-12; it lives in git history under the tag `legado-streamlit`.
 
 ---
 

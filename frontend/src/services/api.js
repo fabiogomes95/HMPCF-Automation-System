@@ -197,12 +197,5 @@ export function editarAtendimentoManual(id, { data, hora, registro }) {
   });
 }
 
-export function iniciarSessao(terminal_nome, ip_address) {
-  return api.post("/terminal/start", { terminal_nome, ip_address: ip_address || "" });
-}
-
-export function pingSessao(terminal_nome) {
-  return api.post("/terminal/ping", null, { params: { terminal_nome } });
-}
 
 export default api;

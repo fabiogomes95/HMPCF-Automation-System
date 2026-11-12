@@ -1,8 +1,8 @@
 # scripts/
 
 Só o que roda **no servidor**. O que é do BPA fica em `bpa/`; o que saiu de
-uso fica em `legado/` (o instalador antigo do servidor e o WinRM estão em
-`legado/instalacao_antiga/` — servidor novo: `docs/RECUPERACAO_SERVIDOR.md`).
+uso saiu do código (etiqueta git `legado-streamlit`; o instalador antigo do
+servidor e o WinRM estavam em `legado/instalacao_antiga/` — servidor novo: `docs/RECUPERACAO_SERVIDOR.md`).
 
 ## servidor/
 
