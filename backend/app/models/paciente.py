@@ -59,10 +59,10 @@ class Paciente(Base):
     )
 
     __table_args__ = (
-        # Nomes iguais aos do banco de produção (conferido com o Alembic em 24/09/2026)
+        # Nomes iguais aos do banco de produção (conferido com o Alembic em 24/09/2026).
+        # CPF e CNS já têm índice pelo unique (pacientes_num_cpf_key/pacientes_cns_key);
+        # os idx_pac_cpf/idx_pac_cns repetidos saíram na migração 0003.
         UniqueConstraint("num_cpf", name="pacientes_num_cpf_key"),
-        Index("idx_pac_cns",  "cns"),
-        Index("idx_pac_cpf",  "num_cpf"),
         Index("idx_pac_nome", "nome"),
     )
 
