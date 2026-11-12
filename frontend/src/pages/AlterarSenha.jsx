@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { alterarSenha, mensagemErro } from "../services/api";
+import { SENHA_MIN } from "../utils";
 import "./AlterarSenha.css";
 
 export default function AlterarSenha() {
@@ -20,7 +21,7 @@ export default function AlterarSenha() {
     e.preventDefault();
     if (!senhaAtual || !senhaNova || !confirmar) return aviso("Preencha todos os campos.", "erro");
     if (senhaNova !== confirmar)                  return aviso("As senhas não coincidem.", "erro");
-    if (senhaNova.length < 4)                     return aviso("Senha nova deve ter pelo menos 4 caracteres.", "erro");
+    if (senhaNova.length < SENHA_MIN)             return aviso(`A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`, "erro");
 
     setSalvando(true);
     try {

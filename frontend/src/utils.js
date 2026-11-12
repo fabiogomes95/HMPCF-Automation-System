@@ -184,3 +184,7 @@ const racasIBGE = [
 export function getRacas() {
   return racasIBGE;
 }
+
+// Mínimo pra senha NOVA -- manter igual a SENHA_MIN em backend/app/services/auth_service.py
+// (o servidor confere de novo; aqui é só pra avisar antes de mandar).
+export const SENHA_MIN = 6;

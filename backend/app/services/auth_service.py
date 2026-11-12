@@ -52,6 +52,16 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+# Vale só pra senha NOVA (criar usuário, resetar, trocar): quem já tem senha
+# mais curta continua entrando. Manter igual a SENHA_MIN no frontend.
+SENHA_MIN = 6
+
+
+def checar_senha_nova(senha: str) -> None:
+    if len(senha or "") < SENHA_MIN:
+        raise BusinessRuleError(f"A senha precisa ter pelo menos {SENHA_MIN} caracteres")
+
+
 async def conferir_senha(senha: str, password_hash: str) -> bool:
     """bcrypt leva ~0,2-0,3 s de propósito -- roda numa thread pra não parar
     o servidor inteiro (o uvicorn é um processo só) enquanto confere."""
@@ -159,8 +169,7 @@ class AuthService:
         # derrubar a sessão, e errar a senha atual não é sessão inválida.
         if not await conferir_senha(senha_atual, usuario.password_hash):
             raise BusinessRuleError("Senha atual incorreta")
-        if len(senha_nova or "") < 4:
-            raise BusinessRuleError("Senha nova deve ter pelo menos 4 caracteres")
+        checar_senha_nova(senha_nova)
         usuario.password_hash = await gerar_hash_senha(senha_nova)
         await self._sessoes.delete_do_usuario(
             usuario.id, exceto_token_hash=_hash_token(token_atual) if token_atual else None

@@ -11,21 +11,13 @@ from app.models.usuario import Usuario
 from app.repositories.sessao_repository import SessaoRepository
 from app.repositories.usuario_repository import UsuarioRepository
 from app.services.auditoria_service import AuditoriaService
-from app.services.auth_service import gerar_hash_senha
+from app.services.auth_service import checar_senha_nova, gerar_hash_senha
 from app.services.recepcao_service import RecepcaoService
 from app.services.painel_service import Periodo, montar_painel
 
 router = APIRouter()
 
 ROLES_VALIDOS = ("recepcao", "faturamento", "ti")
-SENHA_MIN = 4
-
-
-def _checar_senha(senha: str) -> None:
-    if len(senha or "") < SENHA_MIN:
-        raise BusinessRuleError(f"Senha deve ter pelo menos {SENHA_MIN} caracteres")
-
-
 class CriarUsuarioInput(BaseModel):
     username: str
     password: str
@@ -65,7 +57,7 @@ async def criar_usuario(dados: CriarUsuarioInput, session: DBSession, usuario: T
         raise BusinessRuleError("Login é obrigatório")
     if dados.role not in ROLES_VALIDOS:
         raise BusinessRuleError(f"Perfil inválido: use {' ou '.join(ROLES_VALIDOS)}")
-    _checar_senha(dados.password)
+    checar_senha_nova(dados.password)
     repo = UsuarioRepository(session)
     if await repo.get_by_username(username):
         raise ConflictError(f"Usuário '{username}' já existe")
@@ -77,7 +69,7 @@ async def criar_usuario(dados: CriarUsuarioInput, session: DBSession, usuario: T
 
 @router.patch("/usuarios/{usuario_id}/senha")
 async def resetar_senha(usuario_id: int, dados: ResetarSenhaInput, session: DBSession, usuario: TIUser) -> dict:
-    _checar_senha(dados.nova_senha)
+    checar_senha_nova(dados.nova_senha)
     repo = UsuarioRepository(session)
     user = await repo.get(usuario_id)
     if not user:

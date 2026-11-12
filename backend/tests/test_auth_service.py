@@ -4,7 +4,7 @@ import bcrypt
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import BusinessRuleError, UnauthorizedError
 from app.models.sessao import Sessao
 from app.models.usuario import Usuario
 from app.services.auth_service import AuthService, _hash_token
@@ -181,3 +181,18 @@ async def test_trocar_senha_derruba_os_outros_logins_e_mantem_o_atual(session: A
         await svc.validar_sessao(token_outro_pc)
     _, token = await svc.autenticar("teste_troca_senha", "senha-nova-456")
     assert token
+
+
+@pytest.mark.asyncio
+async def test_senha_nova_curta_recusada_mas_senha_antiga_curta_continua_entrando(session: AsyncSession):
+    """O mínimo vale só pra senha nova: quem já tinha senha curta não fica trancado."""
+    usuario = Usuario(username="teste_senha_curta", password_hash=bcrypt.hashpw(b"1234", bcrypt.gensalt()).decode(), role="recepcao")
+    session.add(usuario)
+    await session.flush()
+    svc = AuthService(session)
+
+    _, token = await svc.autenticar("teste_senha_curta", "1234")
+    assert token
+    with pytest.raises(BusinessRuleError):
+        await svc.alterar_senha(usuario, "1234", "12345")
+    await svc.alterar_senha(usuario, "1234", "123456")

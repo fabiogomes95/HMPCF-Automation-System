@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { listarUsuarios, criarUsuario, resetarSenhaUsuario, toggleAtivoUsuario, mensagemErro } from "../services/api";
+import { SENHA_MIN } from "../utils";
 import "./GerenciarUsuarios.css";
 
 const ROLES = ["recepcao", "faturamento", "ti"];
@@ -66,7 +67,7 @@ export default function GerenciarUsuarios() {
 
   async function handleResetSenha(id) {
     if (!resetSenha.trim()) return;
-    if (resetSenha.length < 4) return aviso("Senha deve ter pelo menos 4 caracteres.");
+    if (resetSenha.length < SENHA_MIN) return aviso(`A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`);
     try {
       await resetarSenhaUsuario(id, resetSenha);
       setResetId(null); setResetSenha("");
@@ -107,7 +108,7 @@ export default function GerenciarUsuarios() {
           </label>
           <label>
             Senha
-            <input type="password" value={novoSenha} onChange={e => setNovoSenha(e.target.value)} required minLength={4} />
+            <input type="password" value={novoSenha} onChange={e => setNovoSenha(e.target.value)} required minLength={SENHA_MIN} />
           </label>
           <label>
             Perfil
